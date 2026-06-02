@@ -109,6 +109,15 @@ const runSDK = ({ baseUrl, websiteToken }) => {
       });
     },
 
+    openArticle(slug) {
+      if (!slug) {
+        throw new Error('Article slug is required');
+      }
+
+      IFrameHelper.events.toggleBubble('open');
+      IFrameHelper.sendMessage('open-article', { slug });
+    },
+
     setUser(identifier, user) {
       if (typeof identifier !== 'string' && typeof identifier !== 'number') {
         throw new Error('Identifier should be a string or a number');

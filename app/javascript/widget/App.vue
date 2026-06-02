@@ -22,6 +22,10 @@ import { useRouter } from 'vue-router';
 import { useAvailability } from 'widget/composables/useAvailability';
 import { SDK_SET_BUBBLE_VISIBILITY } from '../shared/constants/sharedFrameEvents';
 import { emitter } from 'shared/helpers/mitt';
+import {
+  getMatchingLocale,
+  buildArticleViewerLink,
+} from 'shared/helpers/portalHelper';
 
 export default {
   name: 'App',
@@ -159,6 +163,21 @@ export default {
       } else if (hasLocaleWithoutVariation) {
         this.$root.$i18n.locale = localeWithoutVariation;
       }
+    },
+    openArticle(slug) {
+      const { portal } = window.chatwootWebChannel;
+      if (!portal || !slug) return;
+
+      const locale = getMatchingLocale(
+        this.$root.$i18n.locale,
+        portal.config?.allowed_locales
+      );
+      const link = buildArticleViewerLink({
+        link: `hc/${portal.slug}/articles/${slug}`,
+        locale,
+        prefersDarkMode: this.prefersDarkMode,
+      });
+      this.router.push({ name: 'article-viewer', query: { link } });
     },
     registerUnreadEvents() {
       emitter.on(ON_AGENT_MESSAGE_RECEIVED, () => {
@@ -316,6 +335,8 @@ export default {
           this.setBubbleLabel();
         } else if (message.event === 'set-color-scheme') {
           this.setColorScheme(message.darkMode);
+        } else if (message.event === 'open-article') {
+          this.openArticle(message.slug);
         } else if (message.event === 'toggle-open') {
           this.$store.dispatch('appConfig/toggleWidgetOpen', message.isOpen);
 
