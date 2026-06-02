@@ -69,5 +69,23 @@ RSpec.describe AppStore::ReviewBuilder do
 
       expect(inbox.conversations.last.messages.incoming.find_by(source_id: 'review-1').content).to include('Updated review body.')
     end
+
+    it 'updates an existing developer response message when Apple returns an edited response' do
+      described_class.new(review_payload: review_payload, channel: channel).perform
+      updated_payload = review_payload.deep_dup
+      updated_payload['response']['attributes']['responseBody'] = 'Updated response.'
+      updated_payload['response']['attributes']['state'] = 'PENDING_PUBLISH'
+      updated_payload['response']['attributes']['lastModifiedDate'] = '2026-05-20T12:00:00-00:00'
+
+      expect { described_class.new(review_payload: updated_payload, channel: channel).perform }
+        .not_to change(Message.where(inbox_id: inbox.id), :count)
+
+      response_message = inbox.conversations.last.messages.outgoing.find_by(source_id: 'response-1')
+      expect(response_message.content).to eq('Updated response.')
+      expect(response_message.content_attributes['app_store']).to include(
+        'response_state' => 'PENDING_PUBLISH',
+        'response_last_modified_date' => '2026-05-20T12:00:00-00:00'
+      )
+    end
   end
 end

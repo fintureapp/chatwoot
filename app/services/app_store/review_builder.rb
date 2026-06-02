@@ -113,7 +113,12 @@ class AppStore::ReviewBuilder
 
   def build_response_message
     return if response_id.blank?
-    return if @conversation.messages.exists?(source_id: response_id)
+
+    message = @conversation.messages.find_by(source_id: response_id)
+    if message
+      message.update!(content: response_body, content_attributes: response_metadata, updated_at: response_created_at)
+      return
+    end
 
     @conversation.messages.create!(
       account_id: inbox.account_id,
