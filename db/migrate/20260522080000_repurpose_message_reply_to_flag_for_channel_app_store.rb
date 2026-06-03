@@ -2,7 +2,7 @@ class RepurposeMessageReplyToFlagForChannelAppStore < ActiveRecord::Migration[7.
   def up
     # The message_reply_to flag (deprecated) has been renamed to channel_app_store.
     # Disable it on any accounts that had message_reply_to enabled so the repurposed
-    # flag starts in its intended default-off state.
+    # flag starts from plan/default configuration instead of inheriting stale state.
     Account.feature_channel_app_store.find_each(batch_size: 100) do |account|
       account.disable_features(:channel_app_store)
       account.save!(validate: false)

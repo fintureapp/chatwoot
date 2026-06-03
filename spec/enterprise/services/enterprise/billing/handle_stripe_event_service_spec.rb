@@ -272,6 +272,7 @@ describe Enterprise::Billing::HandleStripeEventService do
 
         # But other premium features should be disabled
         expect(account).not_to be_feature_enabled('channel_instagram')
+        expect(account).not_to be_feature_enabled('channel_app_store')
         expect(account).not_to be_feature_enabled('help_center')
       end
     end
@@ -333,6 +334,7 @@ describe Enterprise::Billing::HandleStripeEventService do
         account.reload
         # Spot check one startup feature
         expect(account).to be_feature_enabled('channel_instagram')
+        expect(account).to be_feature_enabled('channel_app_store')
         expect(account).not_to be_feature_enabled('sla')
         expect(account).not_to be_feature_enabled('custom_roles')
       end
@@ -350,6 +352,7 @@ describe Enterprise::Billing::HandleStripeEventService do
       it 'disables all premium features' do
         # Verify startup features were enabled
         expect(account).to be_feature_enabled('channel_instagram')
+        expect(account).to be_feature_enabled('channel_app_store')
 
         # Downgrade to Hacker (default) plan
         allow(subscription).to receive(:[]).with('plan')
@@ -359,6 +362,7 @@ describe Enterprise::Billing::HandleStripeEventService do
         account.reload
         # Spot check that premium features are disabled
         expect(account).not_to be_feature_enabled('channel_instagram')
+        expect(account).not_to be_feature_enabled('channel_app_store')
         expect(account).not_to be_feature_enabled('help_center')
       end
     end

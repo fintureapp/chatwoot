@@ -110,8 +110,7 @@
   premium: true
 - name: channel_app_store
   display_name: App Store Reviews Channel
-  enabled: false
-  chatwoot_internal: true
+  enabled: true
 - name: insert_article_in_reply
   display_name: Insert Article in Reply
   enabled: false
