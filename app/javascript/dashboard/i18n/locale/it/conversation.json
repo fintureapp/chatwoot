@@ -233,6 +233,7 @@
       "TIP_AUDIORECORDER_ERROR": "Impossibile aprire l'audio",
       "AUDIO_CONVERSION_FAILED": "Audio conversion failed. Please try again.",
       "DRAG_DROP": "Trascina qui per allegare",
+      "IMAGE_UPLOAD_SUCCESS": "Immagine caricata correttamente",
       "START_AUDIO_RECORDING": "Avvia registrazione audio",
       "STOP_AUDIO_RECORDING": "Interrompi registrazione audio",
       "COPILOT_THINKING": "Copilot sta pensando",
