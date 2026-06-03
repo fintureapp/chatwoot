@@ -7,8 +7,10 @@ class AppStore::ReviewBuilder
     ActiveRecord::Base.transaction do
       build_contact_inbox
       build_conversation
-      upsert_review_message
-      build_response_message if response_body.present?
+      @conversation.with_lock do
+        upsert_review_message
+        build_response_message if response_body.present?
+      end
     end
   end
 
