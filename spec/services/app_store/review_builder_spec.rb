@@ -74,6 +74,18 @@ RSpec.describe AppStore::ReviewBuilder do
       expect(review_message.content).to include('★★★★☆ (4/5)')
     end
 
+    it 'clamps the review rating before building the message content' do
+      invalid_rating_payload = review_payload.deep_dup
+      invalid_rating_payload['review']['attributes']['rating'] = 7
+      invalid_rating_payload['response'] = nil
+
+      described_class.new(review_payload: invalid_rating_payload, channel: channel).perform
+
+      review_message = inbox.conversations.last.messages.incoming.find_by(source_id: 'review-1')
+      expect(review_message.content).to include('★★★★★ (5/5)')
+      expect(review_message.content_attributes['app_store']).to include('rating' => 5)
+    end
+
     it 'falls back to current time when Apple timestamps are blank' do
       blank_timestamp_payload = review_payload.deep_dup
       blank_timestamp_payload['review']['attributes']['createdDate'] = ''

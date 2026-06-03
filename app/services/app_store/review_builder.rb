@@ -51,7 +51,7 @@ class AppStore::ReviewBuilder
   end
 
   def rating
-    attributes['rating'].to_i
+    attributes['rating'].to_i.clamp(0, 5)
   end
 
   def created_at
