@@ -31,8 +31,6 @@ class Api::V1::Accounts::InboxesController < Api::V1::Accounts::BaseController
   end
 
   def create
-    return render_app_store_feature_disabled if app_store_channel_requested? && !Current.account.feature_enabled?(:channel_app_store)
-
     ActiveRecord::Base.transaction do
       channel = create_channel
       @inbox = Current.account.inboxes.build(
@@ -100,14 +98,6 @@ class Api::V1::Accounts::InboxesController < Api::V1::Accounts::BaseController
 
   def allowed_channel_types
     %w[web_widget api email line telegram whatsapp sms app_store]
-  end
-
-  def app_store_channel_requested?
-    permitted_params.dig(:channel, :type) == 'app_store'
-  end
-
-  def render_app_store_feature_disabled
-    render json: { message: 'App Store Reviews channel is not enabled for this account' }, status: :forbidden
   end
 
   def update_inbox_working_hours
