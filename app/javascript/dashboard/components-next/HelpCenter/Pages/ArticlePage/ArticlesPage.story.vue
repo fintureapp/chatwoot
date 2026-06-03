@@ -59,13 +59,38 @@ const articles = [
     views: 400,
   },
 ];
+
+const categories = [
+  { id: 1, name: 'Getting started', icon: '🚀' },
+  { id: 2, name: 'Marketing', icon: '⚡️' },
+  { id: 3, name: 'Development', icon: '🛠️' },
+];
+
+const allowedLocales = [{ code: 'en', name: 'English' }];
+
+const portalName = 'Chatwoot Help Center';
+
+const meta = {
+  currentPage: 1,
+  allArticlesCount: articles.length,
+  articlesCount: articles.length,
+  mineArticlesCount: 2,
+  draftArticlesCount: 1,
+  archivedArticlesCount: 2,
+};
 </script>
 
 <template>
   <Story title="Pages/HelpCenter/ArticlesPage" :layout="{ type: 'single' }">
     <Variant title="All Articles">
       <div class="w-full min-h-screen bg-n-background">
-        <ArticlesPage :articles="articles" />
+        <ArticlesPage
+          :articles="articles"
+          :categories="categories"
+          :allowed-locales="allowedLocales"
+          :portal-name="portalName"
+          :meta="meta"
+        />
       </div>
     </Variant>
   </Story>
