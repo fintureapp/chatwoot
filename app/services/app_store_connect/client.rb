@@ -27,8 +27,8 @@ class AppStoreConnect::Client
     post('/v1/customerReviewResponses', review_response_payload(review_id, response_body))['data']
   end
 
-  def update_review_response(response_id, response_body)
-    patch("/v1/customerReviewResponses/#{response_id}", review_response_update_payload(response_id, response_body))['data']
+  def update_review_response(review_id, response_body)
+    post('/v1/customerReviewResponses', review_response_payload(review_id, response_body))['data']
   end
 
   private
@@ -67,10 +67,6 @@ class AppStoreConnect::Client
     request(:post, "#{Channel::AppStore::API_BASE_URL}#{path}", body: body)
   end
 
-  def patch(path, body)
-    request(:patch, "#{Channel::AppStore::API_BASE_URL}#{path}", body: body)
-  end
-
   def request(method, url, query: {}, body: nil)
     response = HTTParty.public_send(
       method,
@@ -94,7 +90,7 @@ class AppStoreConnect::Client
   end
 
   def token
-    @token ||= AppStoreConnect::TokenService.new(channel: channel).token
+    AppStoreConnect::TokenService.new(channel: channel).token
   end
 
   def review_response_payload(review_id, response_body)
@@ -116,21 +112,9 @@ class AppStoreConnect::Client
     }
   end
 
-  def review_response_update_payload(response_id, response_body)
-    {
-      data: {
-        type: 'customerReviewResponses',
-        id: response_id,
-        attributes: {
-          responseBody: response_body.to_s
-        }
-      }
-    }
-  end
-
   def log_rate_limit(response)
     rate_limit = response.headers['x-rate-limit']
-    Rails.logger.info("[APP_STORE_CONNECT] rate_limit=#{rate_limit}") if rate_limit.present?
+    Rails.logger.debug { "[APP_STORE_CONNECT] rate_limit=#{rate_limit}" } if rate_limit.present?
   end
 
   def error_message(response)

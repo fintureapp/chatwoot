@@ -71,6 +71,41 @@ RSpec.describe AppStoreConnect::Client do
       expect(review_payload['review']['id']).to eq('review-1')
       expect(review_payload['response']['id']).to eq('response-1')
     end
+
+    it 'fetches a fresh cached token for each request' do
+      first_token_service = instance_double(AppStoreConnect::TokenService, token: 'first-token')
+      second_token_service = instance_double(AppStoreConnect::TokenService, token: 'second-token')
+
+      allow(AppStoreConnect::TokenService).to receive(:new).with(channel: channel).and_return(first_token_service, second_token_service)
+
+      stub_request(:get, 'https://api.appstoreconnect.apple.com/v1/apps/123456789/customerReviews')
+        .with(
+          headers: { 'Authorization' => 'Bearer first-token' },
+          query: { include: 'response', limit: '200', sort: '-createdDate' }
+        )
+        .to_return(
+          status: 200,
+          body: {
+            data: [],
+            links: {
+              next: 'https://api.appstoreconnect.apple.com/v1/apps/123456789/customerReviews?page=2'
+            }
+          }.to_json,
+          headers: { 'Content-Type' => 'application/json' }
+        )
+
+      stub_request(:get, 'https://api.appstoreconnect.apple.com/v1/apps/123456789/customerReviews?page=2')
+        .with(headers: { 'Authorization' => 'Bearer second-token' })
+        .to_return(
+          status: 200,
+          body: { data: [] }.to_json,
+          headers: { 'Content-Type' => 'application/json' }
+        )
+
+      described_class.new(channel: channel).fetch_reviews
+
+      expect(AppStoreConnect::TokenService).to have_received(:new).twice
+    end
   end
 
   describe '#create_review_response' do
@@ -108,14 +143,21 @@ RSpec.describe AppStoreConnect::Client do
 
   describe '#update_review_response' do
     it 'updates an existing response' do
-      stub_request(:patch, 'https://api.appstoreconnect.apple.com/v1/customerReviewResponses/response-1')
+      stub_request(:post, 'https://api.appstoreconnect.apple.com/v1/customerReviewResponses')
         .with(
           body: {
             data: {
               type: 'customerReviewResponses',
-              id: 'response-1',
               attributes: {
                 responseBody: 'Updated response'
+              },
+              relationships: {
+                review: {
+                  data: {
+                    type: 'customerReviews',
+                    id: 'review-1'
+                  }
+                }
               }
             }
           }.to_json
@@ -126,7 +168,7 @@ RSpec.describe AppStoreConnect::Client do
           headers: { 'Content-Type' => 'application/json' }
         )
 
-      response = described_class.new(channel: channel).update_review_response('response-1', 'Updated response')
+      response = described_class.new(channel: channel).update_review_response('review-1', 'Updated response')
 
       expect(response['id']).to eq('response-1')
     end

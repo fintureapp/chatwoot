@@ -42,6 +42,9 @@ class AppStoreConnect::TokenService
   end
 
   def cache_key
-    "app_store_connect_token:#{channel.id}:#{channel.updated_at.to_i}"
+    identifier = channel.id || channel.object_id
+    version = channel.updated_at&.to_i || 'new'
+
+    "app_store_connect_token:#{identifier}:#{version}"
   end
 end

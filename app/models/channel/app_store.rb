@@ -37,7 +37,7 @@ class Channel::AppStore < ApplicationRecord
 
   def reply_to_review(review_id, response_body, response_id: nil)
     response = if response_id.present?
-                 app_store_client.update_review_response(response_id, response_body)
+                 app_store_client.update_review_response(review_id, response_body)
                else
                  app_store_client.create_review_response(review_id, response_body)
                end

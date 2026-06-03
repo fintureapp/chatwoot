@@ -2,14 +2,16 @@ class AppStore::ReviewBuilder
   pattr_initialize [:review_payload!, :channel!]
 
   def perform
-    return if review_id.blank? || review_body.blank?
+    return if review_id.blank?
 
     ActiveRecord::Base.transaction do
       build_contact_inbox
-      build_conversation
-      @conversation.with_lock do
-        upsert_review_message
-        build_response_message if response_body.present?
+      @contact_inbox.with_lock do
+        build_conversation
+        @conversation.with_lock do
+          upsert_review_message
+          build_response_message if response_body.present?
+        end
       end
     end
   end
@@ -53,7 +55,7 @@ class AppStore::ReviewBuilder
   end
 
   def created_at
-    Time.zone.parse(attributes['createdDate'].to_s)
+    Time.zone.parse(attributes['createdDate'].to_s).presence || Time.current
   rescue StandardError
     Time.current
   end
@@ -67,7 +69,7 @@ class AppStore::ReviewBuilder
   end
 
   def response_created_at
-    Time.zone.parse(response_attributes['lastModifiedDate'].to_s)
+    Time.zone.parse(response_attributes['lastModifiedDate'].to_s).presence || Time.current
   rescue StandardError
     Time.current
   end
@@ -170,6 +172,7 @@ class AppStore::ReviewBuilder
 
   def response_metadata
     {
+      external_echo: true,
       app_store: {
         response_id: response_id,
         response_state: response_attributes['state'],

@@ -387,6 +387,7 @@
       "APP_STORE": {
         "TITLE": "App Store Reviews",
         "DESC": "Manage and reply to your App Store reviews from Chatwoot.",
+        "LEARN_MORE": "Learn how to create App Store Connect credentials",
         "CHANNEL_NAME": {
           "LABEL": "Inbox Name",
           "PLACEHOLDER": "Please enter an inbox name",

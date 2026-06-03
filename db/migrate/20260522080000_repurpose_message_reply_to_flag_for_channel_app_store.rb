@@ -7,5 +7,14 @@ class RepurposeMessageReplyToFlagForChannelAppStore < ActiveRecord::Migration[7.
       account.disable_features(:channel_app_store)
       account.save!(validate: false)
     end
+
+    # Remove the stale message_reply_to entry from ACCOUNT_LEVEL_FEATURE_DEFAULTS.
+    # ConfigLoader only adds new flags; it never removes renamed ones.
+    config = InstallationConfig.find_by(name: 'ACCOUNT_LEVEL_FEATURE_DEFAULTS')
+    return if config&.value.blank?
+
+    config.value = config.value.reject { |feature| feature['name'] == 'message_reply_to' }
+    config.save!
+    GlobalConfig.clear_cache
   end
 end

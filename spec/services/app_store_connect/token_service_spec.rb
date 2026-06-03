@@ -36,5 +36,21 @@ RSpec.describe AppStoreConnect::TokenService do
 
       expect(described_class.new(channel: channel).token).to eq('cached-token')
     end
+
+    it 'generates a token before the channel is persisted' do
+      new_channel = instance_double(
+        Channel::AppStore,
+        id: nil,
+        updated_at: nil,
+        issuer_id: 'issuer-id',
+        key_id: 'key-id',
+        private_key: private_key
+      )
+
+      token = described_class.new(channel: new_channel).token
+      payload, = JWT.decode(token, nil, false)
+
+      expect(payload['iss']).to eq('issuer-id')
+    end
   end
 end

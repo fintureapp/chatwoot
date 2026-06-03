@@ -57,6 +57,35 @@ RSpec.describe AppStore::ReviewBuilder do
       )
       expect(response_message.content).to eq('Thanks for the feedback.')
       expect(response_message.status).to eq('delivered')
+      expect(response_message.content_attributes['external_echo']).to be true
+    end
+
+    it 'creates a conversation for a rating-only review' do
+      rating_only_payload = review_payload.deep_dup
+      rating_only_payload['review']['attributes']['title'] = ''
+      rating_only_payload['review']['attributes']['body'] = ''
+      rating_only_payload['response'] = nil
+
+      expect { described_class.new(review_payload: rating_only_payload, channel: channel).perform }
+        .to change(inbox.conversations, :count).by(1)
+        .and change(Message.where(inbox_id: inbox.id), :count).by(1)
+
+      review_message = inbox.conversations.last.messages.incoming.find_by(source_id: 'review-1')
+      expect(review_message.content).to include('★★★★☆ (4/5)')
+    end
+
+    it 'falls back to current time when Apple timestamps are blank' do
+      blank_timestamp_payload = review_payload.deep_dup
+      blank_timestamp_payload['review']['attributes']['createdDate'] = ''
+      blank_timestamp_payload['response']['attributes']['lastModifiedDate'] = ''
+
+      travel_to Time.zone.local(2026, 5, 22, 9, 0, 0) do
+        described_class.new(review_payload: blank_timestamp_payload, channel: channel).perform
+
+        conversation = inbox.conversations.last
+        expect(conversation.messages.incoming.find_by(source_id: 'review-1').created_at.to_i).to eq(Time.current.to_i)
+        expect(conversation.messages.outgoing.find_by(source_id: 'response-1').created_at.to_i).to eq(Time.current.to_i)
+      end
     end
 
     it 'updates an existing review message when Apple returns the same review again' do
