@@ -12,7 +12,7 @@ class Enterprise::Billing::HandleStripeEventService
     @event = event
 
     case @event.type
-    when 'customer.subscription.created', 'customer.subscription.updated'
+    when 'customer.subscription.updated'
       process_subscription_updated
     when 'customer.subscription.deleted'
       process_subscription_deleted
