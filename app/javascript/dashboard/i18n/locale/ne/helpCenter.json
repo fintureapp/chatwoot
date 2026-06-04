@@ -700,7 +700,25 @@
           "MAKE_DEFAULT": "पूर्वनिर्धारित बनाउनुहोस्",
           "MOVE_TO_DRAFT": "Move to draft",
           "PUBLISH_LOCALE": "Publish locale",
+          "CUSTOMIZE_CONTENT": "Localize content",
           "DELETE": "मेटाउनुहोस्"
+        }
+      },
+      "CONTENT_DIALOG": {
+        "TITLE": "Localize content",
+        "DESCRIPTION": "Set values specific to this locale. Anything left blank falls back to the default locale.",
+        "NAME": {
+          "LABEL": "Name"
+        },
+        "PAGE_TITLE": {
+          "LABEL": "पृष्ठ शीर्षक"
+        },
+        "HEADER_TEXT": {
+          "LABEL": "हेडर पाठ"
+        },
+        "API": {
+          "SUCCESS_MESSAGE": "Locale content updated successfully",
+          "ERROR_MESSAGE": "Unable to update locale content. Try again."
         }
       },
       "ADD_LOCALE_DIALOG": {
