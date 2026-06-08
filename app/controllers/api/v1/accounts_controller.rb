@@ -50,7 +50,6 @@ class Api::V1::AccountsController < Api::BaseController
   end
 
   def cache_keys
-    expires_in 10.seconds, public: false, stale_while_revalidate: 5.minutes
     render json: { cache_keys: cache_keys_for_account }, status: :ok
   end
 
