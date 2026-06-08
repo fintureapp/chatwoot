@@ -53,6 +53,12 @@ export const ChatwootProvider = ({
   };
 
   function initializeChatwootGlobals() {
+    // Log the build SHA so we can confirm which build a customer is running.
+    // eslint-disable-next-line no-console
+    console.log(
+      `[Chatwoot] react-components build ${import.meta.env.VITE_BUILD_SHA} (${import.meta.env.VITE_BUILD_TIME})`
+    );
+
     // Register Web Components
     registerVueWebComponents();
 

@@ -21,8 +21,25 @@ We need to edit the `asset:precompile` rake task to include the SDK in the preco
 import { defineConfig } from 'vite';
 import ruby from 'vite-plugin-ruby';
 import path from 'path';
+import { execFileSync } from 'child_process';
 import vue from '@vitejs/plugin-vue';
 import react from '@vitejs/plugin-react';
+
+const buildSha = (() => {
+  // Prefer CI-provided commit SHA, fall back to local git.
+  const fromEnv =
+    process.env.GIT_SHA ||
+    process.env.GITHUB_SHA ||
+    process.env.HEROKU_SLUG_COMMIT;
+  if (fromEnv) return fromEnv.slice(0, 10);
+  try {
+    return execFileSync('git', ['rev-parse', '--short=10', 'HEAD'])
+      .toString()
+      .trim();
+  } catch (e) {
+    return 'unknown';
+  }
+})();
 
 const isLibraryMode = process.env.BUILD_MODE === 'library';
 const uiMode = process.env.BUILD_MODE === 'ui';
@@ -98,6 +115,7 @@ export default defineConfig({
   plugins: plugins,
   define: {
     'import.meta.env.VITE_BUILD_TIME': JSON.stringify(buildTime),
+    'import.meta.env.VITE_BUILD_SHA': JSON.stringify(buildSha),
     'process.env.NODE_ENV': JSON.stringify('production'),
   },
   build: {
