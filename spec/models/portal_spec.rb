@@ -150,4 +150,22 @@ RSpec.describe Portal do
       expect(portal.display_title).to eq('Help Center | Acme')
     end
   end
+
+  describe 'inbox cache invalidation' do
+    # Portal name/slug are embedded as help_center into the cached inbox
+    # payload (api/v1/models/_inbox.json.jbuilder), so portal changes must bump
+    # the account's inbox cache key.
+    let(:account) { create(:account) }
+    let!(:portal) { create(:portal, account: account) }
+
+    it 'bumps the inbox cache key after update' do
+      expect(account).to receive(:update_cache_key).with('inbox')
+      portal.update!(name: 'Renamed Portal')
+    end
+
+    it 'bumps the inbox cache key after destroy' do
+      expect(account).to receive(:update_cache_key).with('inbox')
+      portal.destroy!
+    end
+  end
 end

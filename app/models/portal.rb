@@ -50,6 +50,13 @@ class Portal < ApplicationRecord
                  schema: PortalConfigSchema::CONFIG_PARAMS_SCHEMA,
                  attribute_resolver: ->(record) { record.config }
 
+  # Portal name/slug are embedded as help_center into the cached inbox payload
+  # (api/v1/models/_inbox.json.jbuilder), so portal changes must bump the
+  # account's inbox cache key. Destroy is covered too: dependent: :nullify
+  # detaches inboxes via update_all and skips their callbacks.
+  after_update_commit -> { account.update_cache_key('inbox') }
+  after_destroy_commit -> { account.update_cache_key('inbox') }
+
   scope :active, -> { where(archived: false) }
 
   # TODO: 'website_token' is an unused reserved key; remove with a migration that scrubs it from existing portals' config
