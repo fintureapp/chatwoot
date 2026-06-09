@@ -10,6 +10,7 @@ class Enterprise::Billing::SwitchCurrencyService
 
   def perform
     validate!
+    reject_past_due_paid_subscription!
 
     subscriptions = live_subscriptions
     paid_subscription = subscriptions.find { |subscription| !default_price?(subscription) }
@@ -130,10 +131,19 @@ class Enterprise::Billing::SwitchCurrencyService
     )
   end
 
-  # Includes trialing (a prior switch leaves the new sub trialing); excludes past_due so a delinquent account can't switch to restore access unpaid.
+  # Block the switch while a paid sub is past_due, else the account currency/location changes but the unpaid sub stays in the old currency.
+  def reject_past_due_paid_subscription!
+    past_due = all_subscriptions.any? { |subscription| subscription.status == 'past_due' && !default_price?(subscription) }
+    raise Error, I18n.t('errors.billing.past_due_subscription') if past_due
+  end
+
+  def all_subscriptions
+    @all_subscriptions ||= Stripe::Subscription.list(customer: stripe_customer_id, status: 'all', limit: 100).data
+  end
+
+  # Includes trialing (a prior switch leaves the new sub trialing); excludes past_due, which is handled by reject_past_due_paid_subscription!.
   def live_subscriptions
-    Stripe::Subscription.list(customer: stripe_customer_id, status: 'all', limit: 100).data
-                        .select { |subscription| %w[active trialing].include?(subscription.status) }
+    all_subscriptions.select { |subscription| %w[active trialing].include?(subscription.status) }
   end
 
   def validate_payment_method!
