@@ -3,6 +3,7 @@ class Api::V1::Widget::BaseController < ApplicationController
   include WebsiteTokenHelper
 
   before_action :set_web_widget
+  before_action :ensure_inbox_active
   before_action :set_contact
 
   private
@@ -85,5 +86,9 @@ class Api::V1::Widget::BaseController < ApplicationController
       echo_id: permitted_params[:message][:echo_id],
       message_type: :incoming
     }
+  end
+
+  def ensure_inbox_active
+    render_inbox_disabled_error unless @web_widget.inbox.active?
   end
 end

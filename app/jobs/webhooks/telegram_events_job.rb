@@ -19,6 +19,7 @@ class Webhooks::TelegramEventsJob < ApplicationJob
   def channel_is_inactive?(channel)
     return true if channel.blank?
     return true unless channel.account.active?
+    return true unless channel.inbox.active?
 
     false
   end

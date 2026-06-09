@@ -8,6 +8,7 @@ class Webhooks::SmsEventsJob < ApplicationJob
 
     channel = Channel::Sms.find_by(phone_number: params[:to])
     return unless channel
+    return unless channel.inbox.active?
 
     process_event_params(channel, params)
   end

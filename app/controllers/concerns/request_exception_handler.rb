@@ -3,6 +3,7 @@ module RequestExceptionHandler
 
   included do
     rescue_from ActiveRecord::RecordInvalid, with: :render_record_invalid
+    rescue_from CustomExceptions::Inbox::Disabled, with: :render_inbox_disabled_error
   end
 
   private
@@ -33,6 +34,13 @@ module RequestExceptionHandler
 
   def render_could_not_create_error(message)
     render json: { error: message }, status: :unprocessable_entity
+  end
+
+  def render_inbox_disabled_error(_exception = nil)
+    render json: {
+      error: 'inbox_disabled',
+      message: 'This inbox is currently disabled'
+    }, status: :forbidden
   end
 
   def render_payment_required(message)

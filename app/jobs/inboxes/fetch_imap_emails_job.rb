@@ -25,7 +25,7 @@ class Inboxes::FetchImapEmailsJob < MutexApplicationJob
   private
 
   def should_fetch_email?(channel)
-    channel.imap_enabled? && !channel.reauthorization_required?
+    channel.inbox.active? && channel.imap_enabled? && !channel.reauthorization_required?
   end
 
   def process_email_for_channel(channel, interval)

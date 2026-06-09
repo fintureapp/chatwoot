@@ -56,6 +56,7 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
       channel = find_channel(instagram_id)
 
       next if channel.blank?
+      next unless channel.inbox.active?
 
       if (event_name = event_name(messaging))
         send(event_name, messaging, channel)

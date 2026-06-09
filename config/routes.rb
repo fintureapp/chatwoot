@@ -556,6 +556,12 @@ Rails.application.routes.draw do
             end
           end
           resources :email_channel_migrations, only: [:create]
+          resources :inboxes, only: [] do
+            member do
+              post :disable
+              post :enable
+            end
+          end
         end
       end
     end
