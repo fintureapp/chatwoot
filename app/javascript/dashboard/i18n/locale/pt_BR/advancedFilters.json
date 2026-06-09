@@ -20,7 +20,7 @@
     },
     "INPUT_PLACEHOLDER": "Inserir valor",
     "CONTACT_SEARCH_PLACEHOLDER": "Pesquisar contatos",
-    "CONTACT_FALLBACK": "Contact #{id}",
+    "CONTACT_FALLBACK": "Contato #{id}",
     "OPERATOR_LABELS": {
       "equal_to": "Igual a",
       "not_equal_to": "Diferente",
