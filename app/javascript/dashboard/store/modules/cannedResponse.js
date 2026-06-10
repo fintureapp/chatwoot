@@ -1,5 +1,4 @@
 import { throwErrorMessage } from 'dashboard/store/utils/api';
-import { createCacheRevalidateAction } from 'dashboard/store/utils/cacheRevalidate';
 import * as MutationHelpers from 'shared/helpers/vuex/mutationHelpers';
 import * as types from '../mutation-types';
 import CannedResponseAPI from '../../api/cannedResponse';
@@ -47,11 +46,6 @@ const actions = {
       commit(types.default.SET_CANNED_UI_FLAG, { fetchingList: false });
     }
   },
-
-  revalidateCannedResponses: createCacheRevalidateAction({
-    api: CannedResponseAPI,
-    mutation: types.default.SET_CANNED,
-  }),
 
   createCannedResponse: async function createCannedResponse(
     { commit },

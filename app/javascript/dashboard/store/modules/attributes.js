@@ -2,7 +2,6 @@ import * as MutationHelpers from 'shared/helpers/vuex/mutationHelpers';
 import types from '../mutation-types';
 import AttributeAPI from '../../api/attributes';
 import camelcaseKeys from 'camelcase-keys';
-import { createCacheRevalidateAction } from '../utils/cacheRevalidate';
 
 export const state = {
   records: [],
@@ -55,10 +54,6 @@ export const actions = {
       commit(types.SET_CUSTOM_ATTRIBUTE_UI_FLAG, { isFetching: false });
     }
   },
-  revalidate: createCacheRevalidateAction({
-    api: AttributeAPI,
-    mutation: types.SET_CUSTOM_ATTRIBUTE,
-  }),
   create: async function createAttribute({ commit }, attributeObj) {
     commit(types.SET_CUSTOM_ATTRIBUTE_UI_FLAG, { isCreating: true });
     try {
