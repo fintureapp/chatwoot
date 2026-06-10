@@ -7,11 +7,13 @@ export const SDK_CSS = `
 .woot-widget-holder {
   box-shadow: 0 5px 40px rgba(0, 0, 0, .16);
   opacity: 1;
-  will-change: transform, opacity;
+  will-change: transform, opacity, width, height;
   transform: translateY(0);
   overflow: hidden !important;
   position: fixed !important;
-  transition: opacity 0.2s linear, transform 0.25s linear;
+  transition: opacity 0.2s linear, transform 0.25s linear,
+    width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 2147483000 !important;
 }
 
@@ -287,6 +289,12 @@ export const SDK_CSS = `
     min-height: 250px !important;
     width: 400px !important;
  }
+
+  .woot-widget-holder.has-article-view {
+    width: min(640px, max(0px, -20px + 100dvw)) !important;
+    height: calc(100% - 125px) !important;
+    max-height: none !important;
+  }
 }
 
 .woot-hidden {

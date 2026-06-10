@@ -19,6 +19,8 @@ import {
   setBubbleText,
   addUnreadClass,
   removeUnreadClass,
+  addArticleViewClass,
+  removeArticleViewClass,
 } from './bubbleHelpers';
 import { isWidgetColorLighter } from 'shared/helpers/colorHelper';
 import { dispatchWindowEvent } from 'shared/helpers/CustomEventHelper';
@@ -268,6 +270,10 @@ export const IFrameHelper = {
     },
 
     resetUnreadMode: () => removeUnreadClass(),
+
+    expandWidget: () => addArticleViewClass(),
+    collapseWidget: () => removeArticleViewClass(),
+
     handleNotificationDot: event => {
       if (window.$chatwoot.hideMessageBubble) {
         return;

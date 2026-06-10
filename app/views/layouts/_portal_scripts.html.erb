@@ -88,6 +88,19 @@ html.light {
     tocHeader: '<%= I18n.t('public_portal.toc_header') %>'
   };
 </script>
+<% if @is_plain_layout_enabled %>
+<script>
+  // When rendered inside the chat widget, tell it whether this is an article
+  // page so the widget widens only for articles and collapses on every other page.
+  window.parent.postMessage(
+    'chatwoot-widget:' + JSON.stringify({
+      event: 'portalPageLoaded',
+      isArticle: <%= @article.present? %>,
+    }),
+    '*'
+  );
+</script>
+<% end %>
 <% if @portal.channel_web_widget.present? && !@is_plain_layout_enabled %>
 <script>
   window.chatwootSettings = window.chatwootSettings || {};

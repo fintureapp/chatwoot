@@ -81,6 +81,15 @@ export default {
         document.documentElement.dir = value ? 'rtl' : 'ltr';
       },
     },
+    '$route.name'(routeName, previousRouteName) {
+      // Expansion is driven by the rendered portal page (see the
+      // 'portalPageLoaded' handler) so the widget only widens for article pages.
+      // Here we just collapse when leaving the article view, since the iframe is
+      // torn down then and can no longer signal.
+      if (this.isIFrame && previousRouteName === 'article-viewer') {
+        IFrameHelper.sendMessage({ event: 'collapseWidget' });
+      }
+    },
   },
   mounted() {
     const { websiteToken, locale, widgetColor } = window.chatwootWebChannel;
@@ -342,6 +351,10 @@ export default {
           this.setColorScheme(message.darkMode);
         } else if (message.event === 'open-article') {
           this.openArticle(message.slug);
+        } else if (message.event === 'portalPageLoaded') {
+          IFrameHelper.sendMessage({
+            event: message.isArticle ? 'expandWidget' : 'collapseWidget',
+          });
         } else if (message.event === 'toggle-open') {
           this.$store.dispatch('appConfig/toggleWidgetOpen', message.isOpen);
 

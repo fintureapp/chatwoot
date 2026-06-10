@@ -110,3 +110,13 @@ export const removeUnreadClass = () => {
   const holderEl = document.querySelector('.woot-widget-holder');
   removeClasses(holderEl, 'has-unread-view');
 };
+
+export const addArticleViewClass = () => {
+  const holderEl = document.querySelector('.woot-widget-holder');
+  addClasses(holderEl, 'has-article-view');
+};
+
+export const removeArticleViewClass = () => {
+  const holderEl = document.querySelector('.woot-widget-holder');
+  removeClasses(holderEl, 'has-article-view');
+};
