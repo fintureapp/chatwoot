@@ -34,7 +34,7 @@ onBeforeUnmount(() => emitter.off(ON_ARTICLE_VIEW_RESIZING, setResizing));
     <div
       class="absolute inset-0 bg-white dark:bg-slate-900 pointer-events-none"
       :class="
-        isResizing ? 'opacity-100' : 'opacity-0 transition-opacity duration-200'
+        isResizing ? 'opacity-100' : 'opacity-0 transition-opacity duration-100'
       "
     />
   </div>

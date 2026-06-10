@@ -12,9 +12,9 @@ export const SDK_CSS = `
   overflow: hidden !important;
   position: fixed !important;
   transition: opacity 0.2s linear, transform 0.25s linear,
-    width 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    height 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    max-height 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    width 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+    height 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+    max-height 0.18s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 2147483000 !important;
 }
 

@@ -21,7 +21,7 @@ import {
 
 // Keep in sync with the widget holder width/height transition in sdk.js. The
 // article view is masked for this long so the iframe can reflow off-screen.
-const ARTICLE_VIEW_RESIZE_DURATION = 200;
+const ARTICLE_VIEW_RESIZE_DURATION = 180;
 import { useDarkMode } from 'widget/composables/useDarkMode';
 import { useRouter } from 'vue-router';
 import { useAvailability } from 'widget/composables/useAvailability';
