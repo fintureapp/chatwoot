@@ -14,7 +14,7 @@ class Captain::Tools::FaqLookupTool < Captain::Tools::BasePublicTool
     if result[:matches].empty?
       log_tool_usage('no_results', { query: query })
     else
-      log_tool_usage('found_results', { query: query, count: result[:matches].size, status: result[:status], reason: result[:reason] })
+      log_tool_usage('completed', { query: query, count: result[:matches].size })
     end
 
     Captain::DocumentationSearchService.format_for_tool(result, no_results_message: "No relevant FAQs found for: #{query}")

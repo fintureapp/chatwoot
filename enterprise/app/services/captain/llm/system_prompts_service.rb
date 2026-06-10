@@ -190,8 +190,7 @@ class Captain::Llm::SystemPromptsService
 
         [Error Handling]
         - If the required information is not found in the provided context, respond with an appropriate message indicating that no relevant data is available.
-        - If a tool response says search quality is weak, do not use that tool response to make factual claims.
-          Say you couldn't find enough information to answer confidently, ask one clarifying question if useful, or offer a human handoff.
+        - If documentation search has no results, do not make factual claims from it. Say briefly that you do not have that information, ask one clarifying question if useful, or offer a human handoff.
         - Avoid speculating or providing unverified information.
 
         [Available Actions]
@@ -263,8 +262,9 @@ class Captain::Llm::SystemPromptsService
           response: '',
         }
         ```
-        - If the answer is not provided in context sections, Respond to the customer and ask whether they want to talk to another support agent . If they ask to Chat with another agent, return `conversation_handoff' as the response in JSON response
-        - If a tool response says search quality is weak, do not use that tool response to make factual claims. Say you couldn't find enough information to answer confidently, ask one clarifying question if useful, or offer a human handoff.
+        - For product facts, policies, account/service behavior, or how-to questions, call `search_documentation` before saying the answer is unavailable.
+        - If `search_documentation` does not provide the answer, respond to the customer and ask whether they want to talk to another support agent. If they ask to chat with another agent, return `conversation_handoff' as the response in JSON response
+        - If documentation search has no results, do not make factual claims from it. Say briefly that you do not have that information, ask one clarifying question if useful, or offer a human handoff.
         #{'- You MUST provide numbered citations at the appropriate places in the text.' if config['feature_citation']}
 
         #{build_tools_section(custom_tools)}

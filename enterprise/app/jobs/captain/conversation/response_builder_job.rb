@@ -38,10 +38,12 @@ class Captain::Conversation::ResponseBuilderJob < ApplicationJob
     chat_service = Captain::Llm::AssistantChatService.new(assistant: @assistant, conversation: @conversation)
     @response = chat_service.generate_response(
       message_history: message_history
-    )
-    @response['documentation_searches'] = chat_service.documentation_searches
-    check_documentation_support(message_history) if conversation_pending?
-    classify_v1_response_action(message_history) if conversation_pending?
+    ) do |response|
+      response['documentation_searches'] = chat_service.documentation_searches
+      @response = response
+      check_documentation_support(message_history, chat_service: chat_service) if conversation_pending?
+      classify_v1_response_action(message_history) if conversation_pending?
+    end
     process_response
   end
 

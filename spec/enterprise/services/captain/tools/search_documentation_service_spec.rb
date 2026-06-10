@@ -27,6 +27,7 @@ RSpec.describe Captain::Tools::SearchDocumentationService do
 
   describe '#execute' do
     let(:documentation_search_service) { instance_double(Captain::DocumentationSearchService) }
+    let(:documentation_sufficiency_service) { instance_double(Captain::Llm::DocumentationSufficiencyService) }
     let(:translate_query_service) { instance_double(Captain::Llm::TranslateQueryService) }
     let!(:response) do
       create(
@@ -49,13 +50,11 @@ RSpec.describe Captain::Tools::SearchDocumentationService do
       )
     end
 
-    def search_result(matches:, status:, reason:)
+    def search_result(matches:)
       {
         query: question,
         queries: [question],
-        matches: matches,
-        status: status,
-        reason: reason
+        matches: matches
       }
     end
 
@@ -71,7 +70,7 @@ RSpec.describe Captain::Tools::SearchDocumentationService do
       it 'returns formatted responses for the search query' do
         response.update(documentable: documentable)
         allow(documentation_search_service).to receive(:search).with(question).and_return(
-          search_result(matches: [match], status: 'found', reason: 'semantic_match')
+          search_result(matches: [match])
         )
 
         result = service.execute(query: question)
@@ -79,20 +78,62 @@ RSpec.describe Captain::Tools::SearchDocumentationService do
         expect(result).to include(question)
         expect(result).to include(answer)
         expect(result).to include(external_link)
-        expect(recorded_searches.first[:status]).to eq('found')
+        expect(recorded_searches.first[:matches].first[:question]).to eq(question)
       end
     end
 
     context 'when no matching responses exist' do
       it 'returns a bounded no-results instruction' do
         allow(documentation_search_service).to receive(:search).with(question).and_return(
-          search_result(matches: [], status: 'weak', reason: 'no_results')
+          search_result(matches: [])
         )
 
         result = service.execute(query: question)
 
-        expect(result).to include('No FAQs found for the given query')
-        expect(result).to include('Do not use it to make factual claims')
+        expect(result).to include('No documentation found for the given query')
+        expect(result).to include('No documentation matched this query')
+      end
+    end
+
+    context 'when documentation sufficiency gate is enabled' do
+      let(:conversation) { create(:conversation, account: assistant.account) }
+      let(:message_history) { [{ role: 'user', content: 'Who is your mascot?' }] }
+      let(:service) do
+        described_class.new(
+          assistant,
+          on_search: ->(search) { recorded_searches << search },
+          message_history: -> { message_history },
+          conversation: conversation
+        )
+      end
+
+      before do
+        assistant.update!(config: assistant.config.merge('documentation_sufficiency_gate_enabled' => true))
+        allow(Captain::Llm::DocumentationSufficiencyService).to receive(:new).with(
+          assistant: assistant,
+          conversation: conversation
+        ).and_return(documentation_sufficiency_service)
+      end
+
+      it 'returns insufficient documentation support to the final assistant generation' do
+        allow(documentation_search_service).to receive(:search).with(question).and_return(
+          search_result(matches: [match])
+        )
+        allow(documentation_sufficiency_service).to receive(:evaluate).with(
+          message_history: message_history,
+          documentation_searches: [
+            hash_including(
+              query: question,
+              matches: [hash_including(question: question, answer: answer)]
+            )
+          ]
+        ).and_return({ 'decision' => 'insufficient', 'model' => 'gpt-5.4-mini' })
+
+        result = service.execute(query: question)
+
+        expect(result).to include('Documentation support: insufficient')
+        expect(result).to include('Do not answer the factual question from these results')
+        expect(recorded_searches.first[:documentation_sufficiency]).to include('decision' => 'insufficient')
       end
     end
   end

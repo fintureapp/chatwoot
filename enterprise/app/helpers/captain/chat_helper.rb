@@ -13,7 +13,10 @@ module Captain::ChatHelper
       text, attachments = Captain::OpenAiMessageBuilderService.extract_text_and_attachments(last_content)
 
       response = attachments.any? ? chat.ask(text, with: attachments) : chat.ask(text)
-      build_response(response)
+      built_response = build_response(response)
+      after_chat_response(built_response)
+      flush_deferred_llm_generations
+      built_response
     end
   rescue StandardError => e
     Rails.logger.error "#{self.class.name} Assistant: #{@assistant.id}, Error in chat completion: #{e}"
@@ -57,13 +60,17 @@ module Captain::ChatHelper
 
   def handle_tool_call(tool_call)
     persist_thinking_message(tool_call)
-    start_tool_span(tool_call)
+    start_tool_span(tool_call) unless internally_instrumented_tool?(tool_call)
     (@pending_tool_calls ||= []).push(tool_call)
   end
 
   def handle_tool_result(result)
-    end_tool_span(result)
+    end_tool_span(result) unless internally_instrumented_tool?(@pending_tool_calls&.last)
     persist_tool_completion
+  end
+
+  def internally_instrumented_tool?(tool_call)
+    tool_call&.name.to_s == 'search_documentation'
   end
 
   def add_messages_to_chat(chat)
@@ -91,21 +98,13 @@ module Captain::ChatHelper
     }
   end
 
-  def conversation_messages
-    @messages.reject { |m| m[:role] == 'system' || m[:role] == :system }
-  end
+  def conversation_messages = @messages.reject { |m| m[:role] == 'system' || m[:role] == :system }
 
-  def temperature
-    @assistant&.config&.[]('temperature').to_f || 1
-  end
+  def temperature = @assistant&.config&.[]('temperature').to_f || 1
 
-  def resolved_account_id
-    @account&.id || @assistant&.account_id
-  end
+  def resolved_account_id = @account&.id || @assistant&.account_id
 
-  def resolved_channel_type
-    @conversation&.inbox&.channel_type
-  end
+  def resolved_channel_type = @conversation&.inbox&.channel_type
 
   # Ensures all LLM calls and tool executions within an agentic loop
   # are grouped under a single trace/session in Langfuse.
@@ -122,6 +121,8 @@ module Captain::ChatHelper
   ensure
     @agent_session_active = false unless already_active
   end
+
+  def after_chat_response(_response) = nil
 
   # Must be implemented by including class to identify the feature for instrumentation.
   # Used for Langfuse tagging and span naming.

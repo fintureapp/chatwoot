@@ -18,7 +18,14 @@ RSpec.describe Captain::Conversation::ResponseBuilderJob, type: :job do
 
       allow(inbox).to receive(:captain_active?).and_return(true)
       allow(Captain::Llm::AssistantChatService).to receive(:new).and_return(mock_llm_chat_service)
-      allow(mock_llm_chat_service).to receive(:generate_response).and_return({ 'response' => 'Hey, welcome to Captain Specs' })
+      allow(mock_llm_chat_service).to receive(:generate_response) do |**_args, &block|
+        response = { 'response' => 'Hey, welcome to Captain Specs' }
+        block&.call(response)
+        response
+      end
+      allow(mock_llm_chat_service).to receive(:generate_documentation_gap_response).and_return(
+        { 'response' => 'I do not have enough information in the documentation. Would you like me to connect you with support?' }
+      )
       allow(mock_llm_chat_service).to receive(:documentation_searches).and_return([])
       allow(Captain::Assistant::AgentRunnerService).to receive(:new).and_return(mock_agent_runner_service)
       allow(mock_agent_runner_service).to receive(:generate_response).and_return({ 'response' => 'Hey, welcome to Captain V2' })
@@ -155,13 +162,11 @@ RSpec.describe Captain::Conversation::ResponseBuilderJob, type: :job do
       end
 
       context 'when documentation sufficiency gate is enabled' do
-        let(:weak_search_result) do
+        let(:empty_search_result) do
           {
             query: 'current plan limits',
             queries: ['current plan limits'],
-            matches: [],
-            status: 'weak',
-            reason: 'no_results'
+            matches: []
           }
         end
 
@@ -173,16 +178,21 @@ RSpec.describe Captain::Conversation::ResponseBuilderJob, type: :job do
           ).and_return(mock_documentation_sufficiency_service)
         end
 
-        it 'replaces an unsupported answer with the bounded fallback from the gate' do
-          allow(mock_llm_chat_service).to receive(:documentation_searches).and_return([weak_search_result])
-          allow(mock_llm_chat_service).to receive(:generate_response).and_return(
-            { 'response' => 'Your current plan has unlimited usage.' }
+        it 'regenerates an unsupported answer with a documentation-gap instruction' do
+          allow(mock_llm_chat_service).to receive(:documentation_searches).and_return([empty_search_result])
+          allow(mock_llm_chat_service).to receive(:generate_response) do |**_args, &block|
+            response = { 'response' => 'Your current plan has unlimited usage.' }
+            block&.call(response)
+            response
+          end
+          expect(mock_llm_chat_service).to receive(:generate_documentation_gap_response).with(
+            message_history: [{ content: 'Hello', role: 'user' }]
+          ).and_return(
+            { 'response' => 'I do not have enough information in the documentation. Would you like me to connect you with support?' }
           )
           allow(mock_documentation_sufficiency_service).to receive(:evaluate).and_return(
             {
               'decision' => 'insufficient',
-              'reason' => 'missing_constraint',
-              'fallback_response' => "I couldn't find enough information to answer that confidently. Would you like support?",
               'model' => 'gpt-4.1'
             }
           )
@@ -190,46 +200,65 @@ RSpec.describe Captain::Conversation::ResponseBuilderJob, type: :job do
           described_class.perform_now(conversation, assistant)
 
           expect(conversation.messages.outgoing.last.content).to eq(
-            "I couldn't find enough information to answer that confidently. Would you like support?"
+            'I do not have enough information in the documentation. Would you like me to connect you with support?'
           )
           expect(account.reload.usage_limits[:captain][:responses][:consumed]).to eq(1)
         end
 
         it 'keeps the assistant response when the gate finds enough support' do
-          allow(mock_llm_chat_service).to receive(:documentation_searches).and_return([weak_search_result])
-          allow(mock_llm_chat_service).to receive(:generate_response).and_return(
-            { 'response' => 'Billing settings show current plan usage.' }
-          )
+          allow(mock_llm_chat_service).to receive(:documentation_searches).and_return([empty_search_result])
+          allow(mock_llm_chat_service).to receive(:generate_response) do |**_args, &block|
+            response = { 'response' => 'Billing settings show current plan usage.' }
+            block&.call(response)
+            response
+          end
           allow(mock_documentation_sufficiency_service).to receive(:evaluate).and_return(
-            { 'decision' => 'sufficient', 'reason' => 'answers_exact_question', 'fallback_response' => '', 'model' => 'gpt-4.1' }
+            { 'decision' => 'sufficient', 'model' => 'gpt-4.1' }
           )
+          expect(mock_llm_chat_service).not_to receive(:generate_documentation_gap_response)
 
           described_class.perform_now(conversation, assistant)
 
           expect(conversation.messages.outgoing.last.content).to eq('Billing settings show current plan usage.')
         end
 
-        it 'checks answers even when no documentation search was recorded' do
-          allow(mock_llm_chat_service).to receive(:generate_response).and_return(
-            { 'response' => 'Your current plan costs $99 per agent per month.' }
+        it 'does not run a second repair when documentation support was already checked inside the tool' do
+          allow(mock_llm_chat_service).to receive(:documentation_searches).and_return(
+            [empty_search_result.merge(documentation_sufficiency: { 'decision' => 'insufficient', 'model' => 'gpt-5.4-mini' })]
           )
+          allow(mock_llm_chat_service).to receive(:generate_response) do |**_args, &block|
+            response = { 'response' => 'I do not have that information in the documentation. Would you like a handoff?' }
+            block&.call(response)
+            response
+          end
+          expect(mock_documentation_sufficiency_service).not_to receive(:evaluate)
+          expect(mock_llm_chat_service).not_to receive(:generate_documentation_gap_response)
+
+          described_class.perform_now(conversation, assistant)
+
+          expect(conversation.messages.outgoing.last.content).to eq(
+            'I do not have that information in the documentation. Would you like a handoff?'
+          )
+        end
+
+        it 'checks answers even when no documentation search was recorded' do
+          allow(mock_llm_chat_service).to receive(:generate_response) do |**_args, &block|
+            response = { 'response' => 'Your current plan costs $99 per agent per month.' }
+            block&.call(response)
+            response
+          end
           expect(mock_documentation_sufficiency_service).to receive(:evaluate).with(
             message_history: [{ content: 'Hello', role: 'user' }],
-            assistant_response: 'Your current plan costs $99 per agent per month.',
             documentation_searches: [
               {
                 query: 'Hello',
                 queries: ['Hello'],
-                status: 'weak',
-                reason: 'no_documentation_search',
                 matches: []
               }
             ]
           ).and_return(
             {
               'decision' => 'insufficient',
-              'reason' => 'unsupported_specific_claim',
-              'fallback_response' => "I couldn't find enough information to answer that confidently. Would you like support?",
               'model' => 'gpt-4.1'
             }
           )
@@ -237,7 +266,7 @@ RSpec.describe Captain::Conversation::ResponseBuilderJob, type: :job do
           described_class.perform_now(conversation, assistant)
 
           expect(conversation.messages.outgoing.last.content).to eq(
-            "I couldn't find enough information to answer that confidently. Would you like support?"
+            'I do not have enough information in the documentation. Would you like me to connect you with support?'
           )
         end
       end

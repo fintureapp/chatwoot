@@ -7,6 +7,27 @@ module Captain::ChatGenerationRecorder
   def record_llm_generation(chat, message)
     return unless valid_llm_message?(message)
 
+    if defer_llm_generation?(message)
+      deferred_llm_generations << [chat, message]
+      return
+    end
+
+    record_llm_generation_span(chat, message)
+  end
+
+  def flush_deferred_llm_generations
+    deferred_llm_generations.each do |chat, message|
+      record_llm_generation_span(chat, message)
+    end
+  ensure
+    deferred_llm_generations.clear
+  end
+
+  def discard_deferred_llm_generations
+    deferred_llm_generations.clear
+  end
+
+  def record_llm_generation_span(chat, message)
     # Create a generation span with model and token info for Langfuse cost calculation.
     # Note: span duration will be near-zero since we create and end it immediately, but token counts are what Langfuse uses for cost calculation.
     tracer.in_span("llm.captain.#{feature_name}.generation") do |span|
@@ -15,6 +36,14 @@ module Captain::ChatGenerationRecorder
     end
   rescue StandardError => e
     Rails.logger.warn "Failed to record LLM generation: #{e.message}"
+  end
+
+  def defer_llm_generation?(message)
+    !message_has_tool_calls?(message)
+  end
+
+  def deferred_llm_generations
+    @deferred_llm_generations ||= []
   end
 
   # Skip non-LLM messages (e.g., tool results that RubyLLM processes internally).

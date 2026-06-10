@@ -23,10 +23,30 @@ class Captain::Llm::AssistantChatService < Llm::BaseAiService
   #
   # NOTE: Parameters are provided as keyword arguments to improve clarity and avoid relying on
   # positional ordering.
-  def generate_response(additional_message: nil, message_history: [], role: 'user')
+  def generate_response(additional_message: nil, message_history: [], role: 'user', &after_response)
     @messages += message_history
     @messages << { role: role, content: additional_message } if additional_message.present?
+    @after_response = after_response
     request_chat_completion
+  ensure
+    @after_response = nil
+  end
+
+  def generate_documentation_gap_response(message_history:)
+    previous_messages = @messages
+    previous_tools = @tools
+    previous_after_response = @after_response
+
+    discard_deferred_llm_generations
+    @messages = [system_message, documentation_gap_instruction] + message_history
+    @tools = []
+    @after_response = nil
+
+    request_chat_completion
+  ensure
+    @messages = previous_messages
+    @tools = previous_tools
+    @after_response = previous_after_response
   end
 
   private
@@ -36,7 +56,9 @@ class Captain::Llm::AssistantChatService < Llm::BaseAiService
       Captain::Tools::SearchDocumentationService.new(
         @assistant,
         user: nil,
-        on_search: ->(search) { @documentation_searches << search }
+        on_search: ->(search) { @documentation_searches << search },
+        message_history: -> { conversation_messages },
+        conversation: @conversation
       )
     ]
     return tools unless custom_tools_enabled?
@@ -54,6 +76,20 @@ class Captain::Llm::AssistantChatService < Llm::BaseAiService
         contact: contact_attributes,
         custom_tools: custom_tools_metadata
       )
+    }
+  end
+
+  def documentation_gap_instruction
+    {
+      role: 'system',
+      content: <<~PROMPT
+        [Documentation Support]
+        The retrieved documentation was not sufficient to answer the user's latest question.
+        Do not answer the factual question or cite the retrieved documentation.
+        Respond briefly in the user's language.
+        Ask one clarifying question if that would help, or offer a handoff.
+        Return the normal JSON response.
+      PROMPT
     }
   end
 
@@ -88,5 +124,9 @@ class Captain::Llm::AssistantChatService < Llm::BaseAiService
 
   def feature_name
     'assistant'
+  end
+
+  def after_chat_response(response)
+    @after_response&.call(response)
   end
 end

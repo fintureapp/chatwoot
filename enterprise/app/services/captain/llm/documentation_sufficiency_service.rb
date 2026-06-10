@@ -1,6 +1,7 @@
 class Captain::Llm::DocumentationSufficiencyService < Llm::BaseAiService
   include Integrations::LlmInstrumentation
 
+  MODEL = 'gpt-5.4-mini'.freeze
   MAX_CONTEXT_MESSAGES = 6
   MAX_SEARCHES = 3
   MAX_MATCHES_PER_SEARCH = 5
@@ -10,13 +11,13 @@ class Captain::Llm::DocumentationSufficiencyService < Llm::BaseAiService
     super()
     @assistant = assistant
     @conversation = conversation
+    @model = MODEL
     @temperature = 0.0
   end
 
-  def evaluate(message_history:, assistant_response:, documentation_searches:)
+  def evaluate(message_history:, documentation_searches:)
     user_prompt = inspection_user_prompt(
       message_history: message_history,
-      assistant_response: assistant_response,
       documentation_searches: documentation_searches
     )
 
@@ -34,42 +35,34 @@ class Captain::Llm::DocumentationSufficiencyService < Llm::BaseAiService
     Rails.logger.warn(
       "[CAPTAIN][DocumentationSufficiency] Failed for conversation #{@conversation.display_id}: #{e.class.name}: #{e.message}"
     )
-    { 'decision' => nil, 'reason' => nil, 'error' => e.message, 'model' => @model }
+    { 'decision' => nil, 'error' => e.message, 'model' => @model }
   end
 
   private
 
   def system_prompt
     <<~PROMPT
-      You are checking whether a customer-facing assistant response is supported by retrieved documentation.
+      You are checking whether retrieved documentation can answer the user's latest question.
 
-      Use only the conversation context, assistant response, and retrieved documentation search results provided.
+      Use only the conversation context and retrieved documentation search results provided.
       Do not use outside knowledge.
 
-      Return "insufficient" when the assistant makes factual claims that are not supported by the retrieved documentation.
+      Return "sufficient" only when the retrieved documentation directly answers the user's latest question.
+      Return "insufficient" when the retrieved documentation is missing, unrelated, only loosely related, or does not cover the
+      specific entity, product, platform, integration, account object, user intent, or constraint in the latest question.
       Treat prior assistant messages as claims, not evidence. They do not support the new answer by themselves.
-      Conversation context can support the answer only when the user explicitly provided the relevant fact, constraint, or artifact.
+      Conversation context can clarify the latest question, but it cannot supply missing documentation evidence.
       Check generic support dimensions:
       - same entity, product, platform, integration, or account object
       - same user intent, not just a nearby topic
       - requested constraints from the user
-      - specific claims in the response
       - evidence specificity; broad docs are not enough for specific claims
 
-      Return "sufficient" only when the documentation directly supports the response, or when the response only asks a clarifying
-      question, gives a safe bounded no-answer, offers handoff, or restates user-provided context without adding external claims.
-      A response is not a safe bounded no-answer if it includes unsupported facts, steps, recommendations, examples, or links.
-      A response does not answer the exact question unless the retrieved documentation supports the specific claims it makes.
-      If documentation is missing or weak and the response gives factual claims, advice, instructions, examples, links,
-      product behavior, platform behavior, or account-specific statements, return "insufficient".
-
-      If decision is "insufficient", write fallback_response in the user's language. It should be brief, say you could not find
-      enough information to answer confidently, and ask whether the user wants to talk to a support person when appropriate.
-      If decision is not "insufficient", fallback_response must be empty.
+      Return only the decision. Do not write a reason or customer-facing fallback copy.
     PROMPT
   end
 
-  def inspection_user_prompt(message_history:, assistant_response:, documentation_searches:)
+  def inspection_user_prompt(message_history:, documentation_searches:)
     <<~PROMPT
       <conversation_context>
       #{format_conversation_context(message_history)}
@@ -78,23 +71,16 @@ class Captain::Llm::DocumentationSufficiencyService < Llm::BaseAiService
       <retrieved_documentation>
       #{format_documentation_searches(documentation_searches)}
       </retrieved_documentation>
-
-      <assistant_response>
-      #{assistant_response}
-      </assistant_response>
     PROMPT
   end
 
   def format_documentation_searches(searches)
     searches.to_a.last(MAX_SEARCHES).map.with_index(1) do |search, index|
-      matches = search[:matches] || search['matches'] || []
       <<~SEARCH
         Search #{index}
-        query: #{search[:query] || search['query']}
-        status: #{search[:status] || search['status']}
-        reason: #{search[:reason] || search['reason']}
+        query: #{value(search, :query)}
         matches:
-        #{format_documentation_matches(matches)}
+        #{format_documentation_matches(value(search, :matches).to_a)}
       SEARCH
     end.join("\n")
   end
@@ -102,22 +88,21 @@ class Captain::Llm::DocumentationSufficiencyService < Llm::BaseAiService
   def format_documentation_matches(matches)
     matches.to_a.first(MAX_MATCHES_PER_SEARCH).map.with_index(1) do |match, index|
       <<~MATCH
-        #{index}. question: #{match_value(match, :question)}
-           answer: #{truncate_text(match_value(match, :answer))}
-           source: #{match_value(match, :source)}
-           semantic_distance: #{match_value(match, :semantic_distance)}
+        #{index}. question: #{value(match, :question)}
+           answer: #{truncate_text(value(match, :answer))}
+           source: #{value(match, :source)}
       MATCH
     end.join("\n")
   end
 
-  def match_value(match, key) = match[key] || match[key.to_s]
+  def value(hash, key) = hash && (hash[key] || hash[key.to_s])
 
   def normalize_messages(message_history)
     message_history.filter_map do |message|
-      role = message[:role] || message['role']
+      role = value(message, :role)
       next if role.blank?
 
-      { role: role.to_s, content: normalize_content(message[:content] || message['content']) }
+      { role: role.to_s, content: normalize_content(value(message, :content)) }
     end
   end
 
@@ -155,13 +140,10 @@ class Captain::Llm::DocumentationSufficiencyService < Llm::BaseAiService
 
   def normalize_response(parsed, raw_content)
     decision = parsed['decision'].to_s
-    reason = parsed['reason'].to_s
     return invalid_response(raw_content) unless Captain::DocumentationSufficiencySchema::DECISIONS.include?(decision)
 
     {
       'decision' => decision,
-      'reason' => reason.presence,
-      'fallback_response' => parsed['fallback_response'].to_s,
       'raw_response' => raw_content,
       'model' => @model
     }
@@ -170,8 +152,6 @@ class Captain::Llm::DocumentationSufficiencyService < Llm::BaseAiService
   def invalid_response(raw_content)
     {
       'decision' => nil,
-      'reason' => nil,
-      'fallback_response' => nil,
       'raw_response' => raw_content,
       'error' => 'invalid_documentation_sufficiency_response',
       'model' => @model
@@ -202,8 +182,7 @@ class Captain::Llm::DocumentationSufficiencyService < Llm::BaseAiService
     searches = documentation_searches.to_a
     {
       search_count: searches.length,
-      search_statuses: searches.filter_map { |search| search[:status] || search['status'] }.join(','),
-      search_reasons: searches.filter_map { |search| search[:reason] || search['reason'] }.join(',')
+      match_count: searches.sum { |search| value(search, :matches).to_a.length }
     }
   end
 

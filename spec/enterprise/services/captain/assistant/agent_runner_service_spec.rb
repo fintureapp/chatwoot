@@ -171,7 +171,7 @@ RSpec.describe Captain::Assistant::AgentRunnerService do
     end
 
     it 'includes documentation searches from runner state' do
-      searches = [{ query: 'billing', matches: [], status: 'weak', reason: 'no_results' }]
+      searches = [{ query: 'billing', matches: [] }]
       runner_context = { state: { documentation_searches: searches } }
       allow(mock_result).to receive(:context).and_return(runner_context)
 

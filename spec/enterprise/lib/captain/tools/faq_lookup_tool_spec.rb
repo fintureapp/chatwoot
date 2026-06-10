@@ -34,13 +34,11 @@ RSpec.describe Captain::Tools::FaqLookupTool, type: :model do
       Captain::AssistantResponse::SearchMatch.new(response: response, semantic_distance: 0.2)
     end
 
-    def search_result(query:, matches:, status:, reason:)
+    def search_result(query:, matches:)
       {
         query: query,
         queries: [query],
-        matches: matches,
-        status: status,
-        reason: reason
+        matches: matches
       }
     end
 
@@ -67,7 +65,7 @@ RSpec.describe Captain::Tools::FaqLookupTool, type: :model do
       before do
         matches = [response1, response2].map { |response| search_match(response) }
         allow(documentation_search_service).to receive(:search).and_return(
-          search_result(query: 'password reset', matches: matches, status: 'found', reason: 'semantic_match')
+          search_result(query: 'password reset', matches: matches)
         )
       end
 
@@ -78,7 +76,7 @@ RSpec.describe Captain::Tools::FaqLookupTool, type: :model do
         expect(result).to include('Answer: Click on forgot password link')
         expect(result).to include('Question: How to change email?')
         expect(result).to include('Answer: Go to settings and update email')
-        expect(documentation_searches.first[:status]).to eq('found')
+        expect(documentation_searches.first[:matches].first[:question]).to eq('How to reset password?')
       end
 
       it 'includes source link when document has external_link' do
@@ -92,8 +90,8 @@ RSpec.describe Captain::Tools::FaqLookupTool, type: :model do
       it 'logs tool usage for search' do
         expect(tool).to receive(:log_tool_usage).with('searching', { query: 'password reset' })
         expect(tool).to receive(:log_tool_usage).with(
-          'found_results',
-          { query: 'password reset', count: 2, status: 'found', reason: 'semantic_match' }
+          'completed',
+          { query: 'password reset', count: 2 }
         )
 
         tool.perform(tool_context, query: 'password reset')
@@ -103,14 +101,14 @@ RSpec.describe Captain::Tools::FaqLookupTool, type: :model do
     context 'when no FAQs found' do
       before do
         allow(documentation_search_service).to receive(:search).and_return(
-          search_result(query: 'nonexistent topic', matches: [], status: 'weak', reason: 'no_results')
+          search_result(query: 'nonexistent topic', matches: [])
         )
       end
 
       it 'returns no results message' do
         result = tool.perform(tool_context, query: 'nonexistent topic')
         expect(result).to include('No relevant FAQs found for: nonexistent topic')
-        expect(result).to include('Do not use it to make factual claims')
+        expect(result).to include('No documentation matched this query')
       end
 
       it 'logs tool usage for no results' do
@@ -124,7 +122,7 @@ RSpec.describe Captain::Tools::FaqLookupTool, type: :model do
     context 'with blank query' do
       it 'handles empty query' do
         allow(documentation_search_service).to receive(:search).and_return(
-          search_result(query: '', matches: [], status: 'weak', reason: 'no_results')
+          search_result(query: '', matches: [])
         )
 
         result = tool.perform(tool_context, query: '')

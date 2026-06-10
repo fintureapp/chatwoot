@@ -63,6 +63,43 @@ RSpec.describe Captain::Llm::AssistantChatService do
 
       expect(attributes['langfuse.observation.metadata.generation_stage']).to eq('tool_call')
     end
+
+    it 'runs the response hook before the agent session span closes' do
+      service = described_class.new(assistant: assistant, conversation: conversation)
+      hook_calls = []
+
+      expect(service).to receive(:instrument_agent_session).and_wrap_original do |original, params, &block|
+        original.call(params) do
+          result = block.call
+          hook_calls << :after_hook
+          result
+        end
+      end
+
+      allow(mock_chat).to receive(:ask).and_return(mock_response)
+      service.generate_response(message_history: [{ role: 'user', content: 'Hello' }]) do |response|
+        hook_calls << :hook
+        response
+      end
+
+      expect(hook_calls).to eq(%i[hook after_hook])
+    end
+  end
+
+  describe '#generate_documentation_gap_response' do
+    it 'generates a constrained response without calling tools' do
+      service = described_class.new(assistant: assistant, conversation: conversation)
+
+      expect(mock_chat).not_to receive(:with_tool)
+      expect(mock_chat).to receive(:with_instructions).with(a_string_including('[Documentation Support]')).and_return(mock_chat)
+      expect(mock_chat).to receive(:ask).with('Do your documents auto refresh?').and_return(mock_response)
+
+      response = service.generate_documentation_gap_response(
+        message_history: [{ role: 'user', content: 'Do your documents auto refresh?' }]
+      )
+
+      expect(response['response']).to eq('I can see the image shows a pricing table')
+    end
   end
 
   describe 'image analysis' do
