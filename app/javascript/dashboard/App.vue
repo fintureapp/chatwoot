@@ -19,6 +19,7 @@ import {
   verifyServiceWorkerExistence,
 } from './helper/pushHelper';
 import ReconnectService from 'dashboard/helper/ReconnectService';
+import paintStoresFromCache from 'dashboard/helper/CacheHelper/paintStoresFromCache';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 
 export default {
@@ -108,14 +109,21 @@ export default {
       this.$store.dispatch('setActiveAccount', {
         accountId: this.currentAccountId,
       });
+      const { pubsub_token: pubsubToken } = this.currentUser || {};
+      vueActionCable.init(this.store, pubsubToken);
+
+      // Paint cached config from IndexedDB instantly while the cable
+      // connects. Freshness needs no orchestration here: RoomChannel pushes
+      // the cache-key map on every (re)subscribe and on every server-side
+      // change, all through the same account.cache_invalidated event.
+      await paintStoresFromCache(this.$store, this.currentAccountId);
+
       const account = this.getAccount(this.currentAccountId);
       const { locale, latest_chatwoot_version: latestChatwootVersion } =
         account;
-      const { pubsub_token: pubsubToken } = this.currentUser || {};
       // If user locale is set, use it; otherwise use account locale
       this.setLocale(this.uiSettings?.locale || locale);
       this.latestChatwootVersion = latestChatwootVersion;
-      vueActionCable.init(this.store, pubsubToken);
       this.reconnectService = new ReconnectService(this.store, this.router);
       window.reconnectService = this.reconnectService;
 
