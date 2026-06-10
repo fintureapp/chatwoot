@@ -6,9 +6,8 @@
 //
 // `dispatchPath` is the full Vuex dispatch path for the revalidate action.
 // `setMutation` is the full commit path used by paintStoresFromCache to seed
-// Vuex from IDB. `clearMutation` (optional) is committed BEFORE `setMutation`
-// for modules whose SET_* mutation merges-by-id instead of replacing — without
-// it, rows deleted server-side between sessions would survive as phantoms.
+// Vuex from IDB. Every SET_* mutation must REPLACE its records (not merge) so
+// rows deleted server-side never survive as phantoms.
 export const cacheableModels = [
   {
     name: 'inbox',
@@ -24,7 +23,6 @@ export const cacheableModels = [
     name: 'team',
     dispatchPath: 'teams/revalidate',
     setMutation: 'teams/SET_TEAMS',
-    clearMutation: 'teams/CLEAR_TEAMS',
   },
   {
     name: 'canned_response',

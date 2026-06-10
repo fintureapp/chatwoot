@@ -64,7 +64,7 @@ describe('paintStoresFromCache', () => {
     expect(storeMock.dispatch).not.toHaveBeenCalled();
   });
 
-  it('commits CLEAR_TEAMS before SET_TEAMS to drop phantom rows', async () => {
+  it('seeds teams via SET_TEAMS', async () => {
     await dm.push({
       modelName: 'team',
       data: [{ id: 1, name: 'Sales' }],
@@ -72,10 +72,8 @@ describe('paintStoresFromCache', () => {
 
     await paintStoresFromCache(storeMock, accountId);
 
-    const teamCommits = storeMock.commit.mock.calls.filter(call =>
-      call[0].startsWith('teams/')
-    );
-    expect(teamCommits[0][0]).toBe('teams/CLEAR_TEAMS');
-    expect(teamCommits[1][0]).toBe('teams/SET_TEAMS');
+    expect(storeMock.commit).toHaveBeenCalledWith('teams/SET_TEAMS', [
+      { id: 1, name: 'Sales' },
+    ]);
   });
 });

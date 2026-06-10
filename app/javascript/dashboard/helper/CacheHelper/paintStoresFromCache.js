@@ -25,7 +25,6 @@ export default async function paintStoresFromCache(store, accountId) {
     cacheableModels.map(async model => {
       const localData = await dm.get({ modelName: model.name });
       if (localData.length === 0) return;
-      if (model.clearMutation) store.commit(model.clearMutation);
       store.commit(model.setMutation, localData);
     })
   );

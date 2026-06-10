@@ -2,7 +2,6 @@ import axios from 'axios';
 import { actions } from '../../teams/actions';
 import {
   SET_TEAM_UI_FLAG,
-  CLEAR_TEAMS,
   SET_TEAMS,
   SET_TEAM_ITEM,
   EDIT_TEAM,
@@ -41,7 +40,6 @@ describe('#actions', () => {
       await actions.get({ commit });
       expect(commit.mock.calls).toEqual([
         [SET_TEAM_UI_FLAG, { isFetching: true }],
-        [CLEAR_TEAMS],
         [SET_TEAMS, teamsList[1]],
         [SET_TEAM_UI_FLAG, { isFetching: false }],
       ]);
