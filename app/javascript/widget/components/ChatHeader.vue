@@ -1,10 +1,12 @@
 <script setup>
 import { toRef } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import FluentIcon from 'shared/components/FluentIcon/Index.vue';
 import HeaderActions from './HeaderActions.vue';
 import AvailabilityContainer from 'widget/components/Availability/AvailabilityContainer.vue';
 import { useAvailability } from 'widget/composables/useAvailability';
+import { useArticleView } from 'widget/composables/useArticleView';
 
 const props = defineProps({
   avatarUrl: { type: String, default: '' },
@@ -17,7 +19,10 @@ const props = defineProps({
 const availableAgents = toRef(props, 'availableAgents');
 
 const router = useRouter();
+const { t } = useI18n();
 const { isOnline } = useAvailability(availableAgents);
+const { isArticleView, isWidgetExpanded, toggleWidgetExpanded } =
+  useArticleView();
 
 const onBackButtonClick = () => {
   router.replace({ name: 'home' });
@@ -58,6 +63,25 @@ const onBackButtonClick = () => {
         />
       </div>
     </div>
-    <HeaderActions :show-popout-button="showPopoutButton" />
+    <div class="flex items-center gap-3">
+      <button
+        v-if="isArticleView"
+        class="button transparent compact"
+        :title="
+          isWidgetExpanded
+            ? t('PORTAL.COLLAPSE_ARTICLE')
+            : t('PORTAL.EXPAND_ARTICLE')
+        "
+        @click="toggleWidgetExpanded"
+      >
+        <span
+          class="size-4 text-n-slate-12"
+          :class="
+            isWidgetExpanded ? 'i-lucide-minimize-2' : 'i-lucide-maximize-2'
+          "
+        />
+      </button>
+      <HeaderActions :show-popout-button="showPopoutButton" />
+    </div>
   </header>
 </template>

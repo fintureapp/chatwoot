@@ -25,6 +25,7 @@ const ARTICLE_VIEW_RESIZE_DURATION = 180;
 import { useDarkMode } from 'widget/composables/useDarkMode';
 import { useRouter } from 'vue-router';
 import { useAvailability } from 'widget/composables/useAvailability';
+import { useArticleView } from 'widget/composables/useArticleView';
 import { SDK_SET_BUBBLE_VISIBILITY } from '../shared/constants/sharedFrameEvents';
 import { emitter } from 'shared/helpers/mitt';
 import {
@@ -42,14 +43,22 @@ export default {
     const { prefersDarkMode } = useDarkMode();
     const router = useRouter();
     const { isInWorkingHours } = useAvailability();
+    const { isArticleView, isWidgetExpanded, setArticleView } =
+      useArticleView();
 
-    return { prefersDarkMode, router, isInWorkingHours };
+    return {
+      prefersDarkMode,
+      router,
+      isInWorkingHours,
+      isArticleView,
+      isWidgetExpanded,
+      setArticleView,
+    };
   },
   data() {
     return {
       isMobile: false,
       campaignsSnoozedTill: undefined,
-      isArticleView: false,
     };
   },
   computed: {
@@ -76,6 +85,11 @@ export default {
         ? getLanguageDirection(this.$root.$i18n.locale)
         : false;
     },
+    shouldExpandArticleView() {
+      // The widget only widens on article pages, and only when the user has
+      // opted in via the header toggle (persisted, collapsed by default).
+      return this.isArticleView && this.isWidgetExpanded;
+    },
   },
   watch: {
     activeCampaign() {
@@ -88,14 +102,24 @@ export default {
       },
     },
     '$route.name'(routeName, previousRouteName) {
-      // Expansion is driven by the rendered portal page (see the
-      // 'portalPageLoaded' handler) so the widget only widens for article pages.
-      // Here we just collapse when leaving the article view, since the iframe is
-      // torn down then and can no longer signal.
-      if (this.isIFrame && previousRouteName === 'article-viewer') {
+      // Leaving the article view tears down the iframe, so reset the flag; the
+      // watcher below collapses the widget if it was expanded.
+      if (previousRouteName === 'article-viewer') {
         this.isArticleView = false;
-        IFrameHelper.sendMessage({ event: 'collapseWidget' });
       }
+    },
+    shouldExpandArticleView(shouldExpand) {
+      if (!this.isIFrame) return;
+      // Resize the host widget and mask the iframe while it reflows off-screen,
+      // revealing it once the size transition settles.
+      IFrameHelper.sendMessage({
+        event: shouldExpand ? 'expandWidget' : 'collapseWidget',
+      });
+      emitter.emit(ON_ARTICLE_VIEW_RESIZING, true);
+      setTimeout(
+        () => emitter.emit(ON_ARTICLE_VIEW_RESIZING, false),
+        ARTICLE_VIEW_RESIZE_DURATION
+      );
     },
   },
   mounted() {
@@ -199,29 +223,6 @@ export default {
         name: 'article-viewer',
         query: { link, v: Date.now() },
       });
-    },
-    setArticleView(isArticle) {
-      // portalPageLoaded is delivered asynchronously and can arrive after we've
-      // already left the article view; ignore it unless we're still on that
-      // route so the expanded width can't leak onto the listing or other views.
-      if (!this.isIFrame || this.$route.name !== 'article-viewer') return;
-
-      // Re-assert the width on every page load (the SDK toggles are idempotent)
-      // so the holder always reflects the current page, then only mask the
-      // reflow when the width actually changes to avoid a needless flash.
-      const didChange = isArticle !== this.isArticleView;
-      this.isArticleView = isArticle;
-      IFrameHelper.sendMessage({
-        event: isArticle ? 'expandWidget' : 'collapseWidget',
-      });
-
-      if (didChange) {
-        emitter.emit(ON_ARTICLE_VIEW_RESIZING, true);
-        setTimeout(
-          () => emitter.emit(ON_ARTICLE_VIEW_RESIZING, false),
-          ARTICLE_VIEW_RESIZE_DURATION
-        );
-      }
     },
     registerUnreadEvents() {
       emitter.on(ON_AGENT_MESSAGE_RECEIVED, () => {
@@ -382,7 +383,12 @@ export default {
         } else if (message.event === 'open-article') {
           this.openArticle(message.slug);
         } else if (message.event === 'portalPageLoaded') {
-          this.setArticleView(message.isArticle);
+          // portalPageLoaded is delivered asynchronously and can arrive after
+          // we've left the article view; ignore it unless we're still there so
+          // the expanded width can't leak onto the listing or other views.
+          if (this.$route.name === 'article-viewer') {
+            this.setArticleView(message.isArticle);
+          }
         } else if (message.event === 'toggle-open') {
           this.$store.dispatch('appConfig/toggleWidgetOpen', message.isOpen);
 
