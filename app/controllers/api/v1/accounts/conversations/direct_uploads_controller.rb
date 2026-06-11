@@ -3,6 +3,7 @@ class Api::V1::Accounts::Conversations::DirectUploadsController < ActiveStorage:
   include AccessTokenAuthHelper
   include RequestExceptionHandler
   before_action :authenticate_access_token!
+  before_action :validate_bot_access_token!
   before_action :prevent_read_only_access_token!
   before_action :current_account
   before_action :conversation
