@@ -27,7 +27,8 @@ import ButtonV4 from 'next/button/Button.vue';
 
 const router = useRouter();
 const { t } = useI18n();
-const { currentAccount, isOnChatwootCloud } = useAccount();
+const { currentAccount, isOnChatwootCloud, isCloudFeatureEnabled } =
+  useAccount();
 const {
   captainEnabled,
   captainLimits,
@@ -137,9 +138,9 @@ const handleBillingPageLogic = async () => {
 
 const isSwitchingCurrency = computed(() => uiFlags.value.isSwitchingCurrency);
 
-// Currency switching is rolled out to Brazil (pt_BR) accounts only for now.
-const showCurrencyToggle = computed(
-  () => currentAccount.value?.locale === 'pt_BR'
+// Currency switching is rolled out per-account via the billing_currency_switch feature flag.
+const showCurrencyToggle = computed(() =>
+  isCloudFeatureEnabled('billing_currency_switch')
 );
 
 const currentBillingCurrency = computed(() =>
