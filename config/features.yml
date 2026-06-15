@@ -216,11 +216,10 @@
   display_name: Reply Mailer Migration
   enabled: false
   chatwoot_internal: true
-- name: billing_currency_switch
-  display_name: Billing Currency Switch
+- name: quoted_email_reply
+  display_name: Quoted Email Reply
   enabled: false
-  premium: true
-  chatwoot_internal: true
+  deprecated: true
 - name: companies
   display_name: Companies
   enabled: false

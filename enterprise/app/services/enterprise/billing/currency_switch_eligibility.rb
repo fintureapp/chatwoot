@@ -20,7 +20,7 @@ class Enterprise::Billing::CurrencySwitchEligibility
   private
 
   def validate!
-    raise Error, I18n.t('errors.billing.currency_switch_unavailable') unless account.feature_enabled?('billing_currency_switch')
+    raise Error, I18n.t('errors.billing.currency_switch_unavailable') unless Enterprise::Billing::Currencies.multi_currency_supported?
     raise Error, I18n.t('errors.billing.unsupported_currency') unless Enterprise::Billing::Currencies.supported?(currency)
     raise Error, I18n.t('errors.billing.same_currency') if target_currency == account.billing_currency
     raise Error, I18n.t('errors.billing.stripe_customer_not_configured') if stripe_customer_id.blank?

@@ -11,6 +11,34 @@ RSpec.describe Account, type: :model do
     it { is_expected.to have_many(:custom_roles).dependent(:destroy_async) }
   end
 
+  describe '#billing_currency' do
+    let(:account) { create(:account, locale: 'pt_BR') }
+
+    it 'returns the stored currency when set' do
+      account.update!(custom_attributes: { 'billing_currency' => 'brl' })
+      expect(account.billing_currency).to eq('brl')
+    end
+
+    it 'keeps existing stripe customers on usd' do
+      account.update!(custom_attributes: { 'stripe_customer_id' => 'cus_123' })
+      expect(account.billing_currency).to eq('usd')
+    end
+
+    context 'when multi-currency billing is enabled' do
+      before { create(:installation_config, name: 'MULTIPLE_CURRENCY_SUPPORTED', value: true) }
+
+      it 'onboards a new pt_BR account in brl' do
+        expect(account.billing_currency).to eq('brl')
+      end
+    end
+
+    context 'when multi-currency billing is disabled' do
+      it 'onboards a new pt_BR account in usd' do
+        expect(account.billing_currency).to eq('usd')
+      end
+    end
+  end
+
   describe 'sla_policies' do
     let!(:account) { create(:account) }
     let!(:sla_policy) { create(:sla_policy, account: account) }

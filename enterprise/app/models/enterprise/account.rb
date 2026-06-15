@@ -75,6 +75,9 @@ module Enterprise::Account
     # Existing Stripe customers stay on USD (webhook backfills); only new accounts infer from locale.
     return Enterprise::Billing::Currencies::DEFAULT if custom_attributes&.dig('stripe_customer_id').present?
 
+    # New accounts onboard in their locale's currency only while multi-currency billing is enabled.
+    return Enterprise::Billing::Currencies::DEFAULT unless Enterprise::Billing::Currencies.multi_currency_supported?
+
     Enterprise::Billing::Currencies.for_locale(locale)
   end
 

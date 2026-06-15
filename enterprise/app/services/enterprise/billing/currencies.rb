@@ -45,6 +45,12 @@ module Enterprise::Billing::Currencies
     LOCALE_DEFAULTS.fetch(locale.to_s, DEFAULT)
   end
 
+  # Master switch for multi-currency billing (currency switch UI + non-default onboarding currency).
+  # Read raw from InstallationConfig so a super-admin toggle takes effect without cache staleness.
+  def multi_currency_supported?
+    ActiveModel::Type::Boolean.new.cast(InstallationConfig.find_by(name: 'MULTIPLE_CURRENCY_SUPPORTED')&.value)
+  end
+
   def country_for(code)
     COUNTRY_BY_CURRENCY[to_supported(code)]
   end

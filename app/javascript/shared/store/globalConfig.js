@@ -25,6 +25,7 @@ const {
   DISABLE_USER_PROFILE_UPDATE: disableUserProfileUpdate,
   DEPLOYMENT_ENV: deploymentEnv,
   ACTIVE_PLATFORM_BANNERS: activePlatformBanners,
+  MULTIPLE_CURRENCY_SUPPORTED: multipleCurrencySupported,
 } = window.globalConfig || {};
 
 const state = {
@@ -51,6 +52,7 @@ const state = {
   widgetBrandURL,
   isEnterprise: parseBoolean(isEnterprise),
   activePlatformBanners: activePlatformBanners || [],
+  multipleCurrencySupported: parseBoolean(multipleCurrencySupported),
 };
 
 export const getters = {

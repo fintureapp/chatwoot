@@ -262,6 +262,12 @@
   display_title: 'Planwise Features List'
   value:
   description: 'Config to features and their associated plans'
+- name: MULTIPLE_CURRENCY_SUPPORTED
+  display_title: 'Multiple Currency Support'
+  value: false
+  description: 'Enable multi-currency billing: show the billing currency switch and onboard new pt_BR accounts in BRL'
+  locked: false
+  type: boolean
 - name: DEPLOYMENT_ENV
   value: self-hosted
   description: 'The deployment environment of the installation, to differentiate between Chatwoot cloud and self-hosted'

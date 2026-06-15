@@ -33,7 +33,7 @@ describe Enterprise::Billing::SwitchCurrencyService do
                'price_ids' => { 'usd' => ['price_business_usd'], 'brl' => ['price_business_brl'] } }
            ])
 
-    account.enable_features!(:billing_currency_switch)
+    create(:installation_config, name: 'MULTIPLE_CURRENCY_SUPPORTED', value: true)
     account.update!(custom_attributes: { plan_name: 'Business', stripe_customer_id: stripe_customer_id, billing_currency: 'usd' })
 
     allow(Stripe::Subscription).to receive(:list).and_return(Struct.new(:data).new([active_subscription]))
@@ -84,8 +84,8 @@ describe Enterprise::Billing::SwitchCurrencyService do
       )
     end
 
-    it 'raises when the feature is not enabled' do
-      account.disable_features!(:billing_currency_switch)
+    it 'raises when multi-currency billing is not enabled' do
+      InstallationConfig.find_by(name: 'MULTIPLE_CURRENCY_SUPPORTED').update!(value: false)
 
       expect { service.perform }.to raise_error do |error|
         expect(error.class.name).to eq('Enterprise::Billing::SwitchCurrencyService::Error')
