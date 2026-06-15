@@ -1,0 +1,150 @@
+require 'rails_helper'
+
+describe Enterprise::Billing::SwitchCurrencyService do
+  subject(:service) { described_class.new(account: account, currency: target_currency) }
+
+  let(:account) { create(:account) }
+  let(:target_currency) { 'brl' }
+  let(:stripe_customer_id) { 'cus_test123' }
+  let(:period_end) { 1.month.from_now.to_i }
+
+  let(:active_subscription) do
+    Stripe::Subscription.construct_from(
+      id: 'sub_usd', status: 'active', quantity: 2, current_period_end: period_end,
+      plan: { id: 'price_business_usd', product: 'prod_business' }, metadata: {}
+    )
+  end
+
+  let(:new_subscription) do
+    Stripe::Subscription.construct_from(
+      id: 'sub_brl', status: 'trialing', quantity: 2, current_period_end: period_end,
+      plan: { id: 'price_business_brl', product: 'prod_business' }, metadata: {}
+    )
+  end
+
+  let(:invoice_settings) { Struct.new(:default_payment_method).new('pm_test') }
+  let(:stripe_customer) { Struct.new(:invoice_settings, :default_source).new(invoice_settings, nil) }
+
+  before do
+    create(:installation_config, name: 'CHATWOOT_CLOUD_PLANS', value: [
+             { 'name' => 'Hacker', 'product_id' => ['prod_hacker'], 'price_ids' => { 'usd' => ['price_hacker_usd'], 'brl' => ['price_hacker_brl'] } },
+             { 'name' => 'Business', 'product_id' => ['prod_business'],
+               'price_ids' => { 'usd' => ['price_business_usd'], 'brl' => ['price_business_brl'] } }
+           ])
+
+    account.enable_features!(:billing_currency_switch)
+    account.update!(custom_attributes: { plan_name: 'Business', stripe_customer_id: stripe_customer_id, billing_currency: 'usd' })
+
+    allow(Stripe::Subscription).to receive(:list).and_return(Struct.new(:data).new([active_subscription]))
+    allow(Stripe::Subscription).to receive(:create).and_return(new_subscription)
+    allow(Stripe::Subscription).to receive(:update)
+    allow(Stripe::Subscription).to receive(:cancel)
+    allow(Stripe::Customer).to receive(:retrieve).and_return(stripe_customer)
+    allow(Stripe::Customer).to receive(:update)
+
+    reconcile = instance_double(Enterprise::Billing::ReconcilePlanFeaturesService, perform: true)
+    allow(Enterprise::Billing::ReconcilePlanFeaturesService).to receive(:new).and_return(reconcile)
+  end
+
+  describe '#perform' do
+    it 'creates the new-currency subscription before cancelling the old one' do
+      service.perform
+
+      expect(Stripe::Subscription).to have_received(:create).with(
+        hash_including(customer: stripe_customer_id, items: [{ price: 'price_business_brl', quantity: 2 }]),
+        hash_including(:idempotency_key)
+      ).ordered
+      expect(Stripe::Subscription).to have_received(:cancel).with('sub_usd', { prorate: false }).ordered
+    end
+
+    it 'persists the new currency and clears the pending marker' do
+      service.perform
+
+      attributes = account.reload.custom_attributes
+      expect(attributes['billing_currency']).to eq('brl')
+      expect(attributes['stripe_price_id']).to eq('price_business_brl')
+      expect(attributes).not_to have_key('billing_currency_switch_pending')
+    end
+
+    it 'tags the cancelled subscription so the webhook skips re-subscribing the default plan' do
+      service.perform
+
+      expect(Stripe::Subscription).to have_received(:update).with(
+        'sub_usd', metadata: { described_class::SWITCH_METADATA_KEY => 'true' }
+      )
+    end
+
+    it 'raises when the feature is not enabled' do
+      account.disable_features!(:billing_currency_switch)
+
+      expect { service.perform }.to raise_error do |error|
+        expect(error.class.name).to eq('Enterprise::Billing::SwitchCurrencyService::Error')
+        expect(error.message).to eq(I18n.t('errors.billing.currency_switch_unavailable'))
+      end
+    end
+
+    it 'raises for an unsupported currency' do
+      service = described_class.new(account: account, currency: 'eur')
+
+      expect { service.perform }.to raise_error(described_class::Error, I18n.t('errors.billing.unsupported_currency'))
+    end
+
+    it 'raises when switching to the currency already in use' do
+      service = described_class.new(account: account, currency: 'usd')
+
+      expect { service.perform }.to raise_error(described_class::Error, I18n.t('errors.billing.same_currency'))
+    end
+
+    it 'raises when no stripe customer is configured' do
+      account.update!(custom_attributes: { plan_name: 'Business', billing_currency: 'usd' })
+
+      expect { service.perform }.to raise_error(described_class::Error, I18n.t('errors.billing.stripe_customer_not_configured'))
+    end
+
+    it 'raises when more than one live subscription exists' do
+      allow(Stripe::Subscription).to receive(:list).and_return(Struct.new(:data).new([active_subscription, new_subscription]))
+
+      expect { service.perform }.to raise_error(described_class::Error, I18n.t('errors.billing.switch_requires_active_subscription'))
+    end
+
+    it 'raises when the target currency is not configured for the plan' do
+      InstallationConfig.find_by(name: 'CHATWOOT_CLOUD_PLANS').update!(value: [
+                                                                         { 'name' => 'Business', 'product_id' => ['prod_business'],
+                                                                           'price_ids' => { 'usd' => ['price_business_usd'] } }
+                                                                       ])
+
+      expect { service.perform }.to raise_error(described_class::Error, I18n.t('errors.billing.currency_not_available_for_plan'))
+    end
+
+    it 'raises when the customer has no payment method' do
+      allow(Stripe::Customer).to receive(:retrieve).and_return(Struct.new(:invoice_settings, :default_source).new(
+                                                                 Struct.new(:default_payment_method).new(nil), nil
+                                                               ))
+      allow(Stripe::PaymentMethod).to receive(:list).and_return(Struct.new(:data).new([]))
+
+      expect { service.perform }.to raise_error(described_class::Error, I18n.t('errors.billing.no_payment_method'))
+    end
+
+    context 'when creating the new subscription fails' do
+      before do
+        allow(Stripe::Subscription).to receive(:create).and_raise(Stripe::StripeError.new('card declined'))
+      end
+
+      it 'leaves the old subscription untouched after the failed switch' do
+        expect { service.perform }.to raise_error(described_class::Error)
+
+        expect(Stripe::Subscription).not_to have_received(:cancel)
+        # The target (brl) location override was pushed before the create attempt failed.
+        expect(Stripe::Customer).to have_received(:update).with(stripe_customer_id, hash_including(address: { country: 'BR' }))
+      end
+
+      it 'keeps the account on the original currency and clears the pending marker' do
+        expect { service.perform }.to raise_error(described_class::Error)
+
+        attributes = account.reload.custom_attributes
+        expect(attributes['billing_currency']).to eq('usd')
+        expect(attributes).not_to have_key('billing_currency_switch_pending')
+      end
+    end
+  end
+end
