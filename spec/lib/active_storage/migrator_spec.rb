@@ -4,9 +4,19 @@ require 'stringio'
 require 'tmpdir'
 
 RSpec.describe ActiveStorage::Migrator do
+  around do |example|
+    original_services = ActiveStorage::Blob.services
+    original_service = ActiveStorage::Blob.service
+
+    example.run
+  ensure
+    ActiveStorage::Blob.services = original_services
+    ActiveStorage::Blob.service = original_service
+  end
+
   describe '.migrate' do
-    let(:from_service_stub) { instance_double(ActiveStorage::Service) }
-    let(:to_service_stub) { instance_double(ActiveStorage::Service) }
+    let(:from_service_stub) { instance_double(ActiveStorage::Service, name: 'local') }
+    let(:to_service_stub) { instance_double(ActiveStorage::Service, name: 'amazon') }
 
     before do
       allow(ActiveStorage::Service).to receive(:configure).with('local', any_args).and_return(from_service_stub)
