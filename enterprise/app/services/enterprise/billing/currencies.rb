@@ -4,6 +4,8 @@ module Enterprise::Billing::Currencies
 
   SUPPORTED = %w[usd brl].freeze
 
+  FEATURE_CONFIG = 'ENABLE_MULTI_CURRENCY_BILLING'.freeze
+
   # Account locale label (e.g. 'pt_BR') => default currency; unlisted falls back to DEFAULT.
   LOCALE_DEFAULTS = {
     'pt_BR' => 'brl'
@@ -20,6 +22,11 @@ module Enterprise::Billing::Currencies
   }.freeze
 
   module_function
+
+  # Master switch for the whole multi-currency feature; off => everyone is billed in USD.
+  def enabled?
+    GlobalConfigService.load(FEATURE_CONFIG, 'false').to_s != 'false'
+  end
 
   def normalize(code)
     code.to_s.strip.downcase.presence

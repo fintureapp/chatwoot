@@ -258,6 +258,12 @@
   value: {}
   description: 'Currency-keyed AI credit top-up packages, e.g. {"usd":[{"credits":1000,"amount":20.0}],"brl":[{"credits":1000,"amount":100.0}]}'
   type: code
+- name: ENABLE_MULTI_CURRENCY_BILLING
+  display_title: 'Enable Multi-currency Billing'
+  value: false
+  locked: false
+  description: 'Bill new accounts in their local currency (e.g. BRL) and show currency-aware credit top-ups; when off, everyone is billed in USD'
+  type: boolean
 - name: CHATWOOT_CLOUD_PLAN_FEATURES
   display_title: 'Planwise Features List'
   value:

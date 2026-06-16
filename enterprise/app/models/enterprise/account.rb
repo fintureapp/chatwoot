@@ -69,6 +69,9 @@ module Enterprise::Account
   end
 
   def billing_currency
+    # Feature off => everyone is billed in USD (legacy behaviour).
+    return Enterprise::Billing::Currencies::DEFAULT unless Enterprise::Billing::Currencies.enabled?
+
     stored = custom_attributes&.dig('billing_currency')
     return Enterprise::Billing::Currencies.normalize(stored) if Enterprise::Billing::Currencies.supported?(stored)
 
