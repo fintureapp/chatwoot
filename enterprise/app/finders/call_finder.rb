@@ -21,11 +21,17 @@ class CallFinder
 
   private
 
-  # Non-admins only see calls they handled; admins see the whole account.
+  # Admins and report managers see the whole account; everyone else only sees
+  # calls they handled.
   def filter_by_visibility
-    return if Current.account_user&.administrator?
+    return if account_wide_access?
 
     @calls = @calls.where(accepted_by_agent_id: @current_user.id)
+  end
+
+  def account_wide_access?
+    account_user = Current.account_user
+    account_user&.administrator? || account_user&.custom_role&.permissions&.include?('report_manage')
   end
 
   def filter_by_status
