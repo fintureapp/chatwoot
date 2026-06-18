@@ -29,11 +29,11 @@ class CallFinder
   end
 
   def filter_by_status
-    @calls = @calls.where(status: @params[:status]) if @params[:status].present?
+    @calls = @calls.where(status: Call.status_from_display(@params[:status])) if @params[:status].present?
   end
 
   def filter_by_direction
-    @calls = @calls.where(direction: @params[:direction]) if @params[:direction].present?
+    @calls = @calls.where(direction: Call.direction_from_label(@params[:direction])) if @params[:direction].present?
   end
 
   def filter_by_inbox
