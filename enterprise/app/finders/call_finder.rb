@@ -22,11 +22,17 @@ class CallFinder
   private
 
   # Admins and report managers see the whole account; everyone else only sees
-  # calls they handled.
+  # calls they handled within conversations they can still access.
   def filter_by_visibility
     return if account_wide_access?
 
-    @calls = @calls.where(accepted_by_agent_id: @current_user.id)
+    @calls = @calls.where(accepted_by_agent_id: @current_user.id, conversation_id: accessible_conversations)
+  end
+
+  def accessible_conversations
+    inbox_ids = @current_user.assigned_inboxes.select(:id)
+    team_ids = @current_user.teams.where(account_id: @current_account.id).select(:id)
+    @current_account.conversations.where(inbox_id: inbox_ids).or(@current_account.conversations.where(team_id: team_ids)).select(:id)
   end
 
   def account_wide_access?
