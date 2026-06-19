@@ -12,6 +12,8 @@ class Enterprise::Api::V1::AccountsController < Api::BaseController
   end
 
   def select_billing_currency
+    return render_could_not_create_error(I18n.t('errors.billing.currency_locked')) if stripe_customer_id.present?
+
     currency = Enterprise::Billing::Currencies.normalize(params[:currency])
     return render_could_not_create_error(I18n.t('errors.billing.invalid_currency')) unless Enterprise::Billing::Currencies.supported?(currency)
 
