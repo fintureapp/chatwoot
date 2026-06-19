@@ -14,6 +14,10 @@ class EnterpriseAccountAPI extends ApiClient {
     return axios.post(`${this.url}subscription`);
   }
 
+  selectBillingCurrency(currency) {
+    return axios.post(`${this.url}select_billing_currency`, { currency });
+  }
+
   getLimits() {
     return axios.get(`${this.url}limits`);
   }

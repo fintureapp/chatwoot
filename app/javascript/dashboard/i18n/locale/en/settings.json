@@ -454,6 +454,10 @@
       "CURRENCY": "Currency"
     },
     "CURRENCY": {
+      "SELECT": {
+        "TITLE": "Choose your billing currency",
+        "DESCRIPTION": "Select the currency you'd like to be billed in. This can't be changed once your subscription is created."
+      },
       "OPTIONS": {
         "USD": "US Dollar (USD)",
         "BRL": "Brazilian Real (BRL)"
