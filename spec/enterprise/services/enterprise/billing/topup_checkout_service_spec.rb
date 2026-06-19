@@ -15,7 +15,7 @@ describe Enterprise::Billing::TopupCheckoutService do
              { 'name' => 'Business', 'product_id' => ['prod_business'], 'price_ids' => ['price_business'] }
            ])
 
-    create(:installation_config, name: 'CHATWOOT_CLOUD_TOPUP_OPTIONS', value: {
+    create(:installation_config, name: 'CAPTAIN_TOPUP_OPTIONS', value: {
              'usd' => [
                { 'credits' => 1000, 'amount' => 20.0 },
                { 'credits' => 2500, 'amount' => 50.0 },
