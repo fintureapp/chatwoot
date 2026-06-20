@@ -9,6 +9,8 @@ class Captain::Llm::AssistantChatService < Llm::BaseAiService
     @conversation_id = conversation&.display_id
     @source = source
 
+    apply_model_override(@assistant&.account, 'assistant')
+
     @messages = [system_message]
     @response = ''
     @tools = build_tools
@@ -76,6 +78,10 @@ class Captain::Llm::AssistantChatService < Llm::BaseAiService
 
   def persist_message(message, message_type = 'assistant')
     # No need to implement
+  end
+
+  def model_feature
+    'assistant'
   end
 
   def feature_name

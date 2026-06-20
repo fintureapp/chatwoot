@@ -9,7 +9,8 @@ class Captain::Llm::HelpCenterCurationService < Captain::BaseTaskService
   pattr_initialize [:account!, :links!]
 
   def perform
-    response = make_api_call(model: CURATION_MODEL, messages: messages, schema: RESPONSE_SCHEMA)
+    response = make_api_call(model: resolved_model('help_center_curation', default: CURATION_MODEL, apply_global: false), messages: messages,
+                             schema: RESPONSE_SCHEMA)
     return response if response[:error]
 
     response.merge(message: extract_payload(response[:message]))

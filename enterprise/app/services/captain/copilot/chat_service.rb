@@ -8,6 +8,7 @@ class Captain::Copilot::ChatService < Llm::BaseAiService
 
     @assistant = assistant
     @account = assistant.account
+    apply_model_override(@account, 'copilot')
     @user = nil
     @copilot_thread = nil
     @previous_history = []
@@ -120,6 +121,10 @@ class Captain::Copilot::ChatService < Llm::BaseAiService
       message: message,
       message_type: message_type
     )
+  end
+
+  def model_feature
+    'copilot'
   end
 
   def feature_name

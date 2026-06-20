@@ -81,7 +81,7 @@ class Messages::AudioTranscriptionService< Llm::LegacyBaseOpenAiService
       # behaviour across OpenAI transcription models.
       response = @client.audio.transcribe(
         parameters: {
-          model: TRANSCRIPTION_MODEL,
+          model: transcription_model,
           file: file,
           temperature: 0.0
         }
@@ -95,10 +95,16 @@ class Messages::AudioTranscriptionService< Llm::LegacyBaseOpenAiService
     FileUtils.rm_f(temp_file_path) if temp_file_path.present?
   end
 
+  def transcription_model
+    @transcription_model ||= Captain::ModelResolver.resolve(
+      'audio_transcription', account: account, default: TRANSCRIPTION_MODEL, apply_global: false
+    )
+  end
+
   def instrumentation_params(file_path)
     {
       span_name: 'llm.messages.audio_transcription',
-      model: TRANSCRIPTION_MODEL,
+      model: transcription_model,
       account_id: account&.id,
       feature_name: 'audio_transcription',
       file_path: file_path

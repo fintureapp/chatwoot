@@ -16,6 +16,10 @@ class Captain::Llm::ContactAttributesService < Llm::BaseAiService
 
   private
 
+  def model_feature
+    'contact_attributes'
+  end
+
   attr_reader :content
 
   def generate_attributes

@@ -35,6 +35,26 @@ models:
     provider: openai
     display_name: 'GPT-5.2'
     credit_multiplier: 3
+  gpt-5.5:
+    provider: openai
+    display_name: 'GPT-5.5'
+    credit_multiplier: 3
+  gpt-5.4:
+    provider: openai
+    display_name: 'GPT-5.4'
+    credit_multiplier: 3
+  gpt-5.4-mini:
+    provider: openai
+    display_name: 'GPT-5.4 Mini'
+    credit_multiplier: 1
+  gpt-5.4-nano:
+    provider: openai
+    display_name: 'GPT-5.4 Nano'
+    credit_multiplier: 1
+  gpt-5:
+    provider: openai
+    display_name: 'GPT-5'
+    credit_multiplier: 3
   claude-haiku-4.5:
     provider: anthropic
     display_name: 'Claude Haiku 4.5'
@@ -59,6 +79,10 @@ models:
     provider: openai
     display_name: 'Whisper'
     credit_multiplier: 1
+  gpt-4o-mini-transcribe:
+    provider: openai
+    display_name: 'GPT-4o Mini Transcribe'
+    credit_multiplier: 1
   text-embedding-3-small:
     provider: openai
     display_name: 'Text Embedding 3 Small'
@@ -66,52 +90,107 @@ models:
 
 features:
   editor:
-    models:
+    models: &openai_chat
       [
+        gpt-5.5,
+        gpt-5.4,
+        gpt-5.4-mini,
+        gpt-5.4-nano,
+        gpt-5.2,
+        gpt-5.1,
+        gpt-5,
+        gpt-5-mini,
+        gpt-5-nano,
+        gpt-4.1,
         gpt-4.1-mini,
         gpt-4.1-nano,
-        gpt-5-mini,
-        gpt-4.1,
-        gpt-5.1,
-        gpt-5.2,
         claude-haiku-4.5,
+        claude-sonnet-4.5,
         gemini-3-flash,
         gemini-3-pro,
       ]
     default: gpt-4.1-mini
   assistant:
-    models:
-      [
-        gpt-5-mini,
-        gpt-4.1,
-        gpt-5.1,
-        gpt-5.2,
-        claude-haiku-4.5,
-        claude-sonnet-4.5,
-        gemini-3-flash,
-        gemini-3-pro,
-      ]
+    models: *openai_chat
     default: gpt-5.1
   copilot:
-    models:
-      [
-        gpt-5-mini,
-        gpt-4.1,
-        gpt-5.1,
-        gpt-5.2,
-        claude-haiku-4.5,
-        claude-sonnet-4.5,
-        gemini-3-flash,
-        gemini-3-pro,
-      ]
+    models: *openai_chat
     default: gpt-5.1
   label_suggestion:
-    models:
-      [gpt-4.1-nano, gpt-4.1-mini, gpt-5-mini, gemini-3-flash, claude-haiku-4.5]
+    models: *openai_chat
     default: gpt-4.1-nano
   audio_transcription:
-    models: [whisper-1]
-    default: whisper-1
+    models: [gpt-4o-mini-transcribe, whisper-1]
+    default: gpt-4o-mini-transcribe
   help_center_search:
     models: [text-embedding-3-small]
     default: text-embedding-3-small
+  # Internal Captain tasks. The default of each mirrors the value the call site
+  # used before per-feature overrides existed, so behaviour is unchanged unless a
+  # superadmin override is set. Most can run on any chat model.
+  summary:
+    models: &chat_models
+      [
+        gpt-4.1-nano,
+        gpt-4.1-mini,
+        gpt-4.1,
+        gpt-5-mini,
+        gpt-5.1,
+        gpt-5.2,
+        claude-haiku-4.5,
+        claude-sonnet-4.5,
+        gemini-3-flash,
+        gemini-3-pro,
+      ]
+    default: gpt-4.1-mini
+  reply_suggestion:
+    models: *chat_models
+    default: gpt-4.1-mini
+  rewrite:
+    models: *chat_models
+    default: gpt-4.1-mini
+  follow_up:
+    models: *chat_models
+    default: gpt-4.1-mini
+  csat_utility_analysis:
+    models: *chat_models
+    default: gpt-4.1-mini
+  widget_tagline:
+    models: *chat_models
+    default: gpt-4.1-mini
+  article_translation:
+    models: *chat_models
+    default: gpt-4.1-mini
+  help_center_curation:
+    models: *chat_models
+    default: gpt-4.1
+  article_writer:
+    models: *chat_models
+    default: gpt-5.2
+  translate_query:
+    models: *chat_models
+    default: gpt-4.1-nano
+  contact_notes:
+    models: *chat_models
+    default: gpt-4.1-mini
+  conversation_faq:
+    models: *chat_models
+    default: gpt-4.1-mini
+  assistant_action_classifier:
+    models: *chat_models
+    default: gpt-4.1-mini
+  contact_attributes:
+    models: *chat_models
+    default: gpt-4.1-mini
+  faq_generator:
+    models: *chat_models
+    default: gpt-4.1-mini
+  website_analyzer:
+    models: *chat_models
+    default: gpt-4.1-mini
+  paginated_faq_generation:
+    models: *chat_models
+    default: gpt-4.1-mini
+  conversation_completion:
+    models: *chat_models
+    default: gpt-4.1-mini

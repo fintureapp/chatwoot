@@ -15,7 +15,7 @@ class Captain::Llm::PaginatedFaqGeneratorService < Llm::LegacyBaseOpenAiService
     @max_pages = options[:max_pages] # Optional limit from UI
     @total_pages_processed = 0
     @iterations_completed = 0
-    @model = LlmConstants::PDF_PROCESSING_MODEL
+    @model = Captain::ModelResolver.resolve('paginated_faq_generation', default: LlmConstants::PDF_PROCESSING_MODEL, apply_global: false)
   end
 
   def generate

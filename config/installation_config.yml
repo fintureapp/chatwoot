@@ -191,6 +191,10 @@
   display_title: 'OpenAI Model'
   description: 'The OpenAI model configured for use in Captain AI. Default: gpt-4.1-mini'
   locked: false
+- name: CAPTAIN_FEATURE_MODELS
+  display_title: 'Per-feature Model Overrides'
+  description: 'Optional per-feature model overrides for individual Captain AI calls. Each feature falls back to the installation default when left unset.'
+  locked: false
 - name: CAPTAIN_OPEN_AI_ENDPOINT
   display_title: 'OpenAI API Endpoint (optional)'
   description: 'The OpenAI endpoint configured for use in Captain AI. Default: https://api.openai.com/'

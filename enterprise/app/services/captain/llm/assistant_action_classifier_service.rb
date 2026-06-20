@@ -35,6 +35,10 @@ class Captain::Llm::AssistantActionClassifierService < Llm::BaseAiService
 
   private
 
+  def model_feature
+    'assistant_action_classifier'
+  end
+
   def classification_user_prompt(message_history:, assistant_response:)
     <<~PROMPT
       <account_custom_instructions>

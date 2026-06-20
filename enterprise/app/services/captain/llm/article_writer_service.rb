@@ -6,7 +6,8 @@ class Captain::Llm::ArticleWriterService < Captain::BaseTaskService
   pattr_initialize [:account!, :source_pages!, { hint_title: nil }]
 
   def perform
-    response = make_api_call(model: writer_model, messages: messages, schema: RESPONSE_SCHEMA)
+    response = make_api_call(model: resolved_model('article_writer', default: writer_model, apply_global: false), messages: messages,
+                             schema: RESPONSE_SCHEMA)
     return response if response[:error]
 
     response.merge(message: extract_payload(response[:message]))

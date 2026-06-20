@@ -6,11 +6,18 @@ class Captain::Llm::EmbeddingService
   def initialize(account_id: nil)
     Llm::Config.initialize!
     @account_id = account_id
-    @embedding_model = InstallationConfig.find_by(name: 'CAPTAIN_EMBEDDING_MODEL')&.value.presence || LlmConstants::DEFAULT_EMBEDDING_MODEL
+    @embedding_model = self.class.embedding_model
   end
 
+  # Account override is intentionally not applied: changing the embedding model
+  # invalidates already-stored vectors until documents are re-indexed, so only a
+  # superadmin (per-feature) or the installation default may set it.
   def self.embedding_model
-    InstallationConfig.find_by(name: 'CAPTAIN_EMBEDDING_MODEL')&.value.presence || LlmConstants::DEFAULT_EMBEDDING_MODEL
+    Captain::ModelResolver.resolve(
+      'help_center_search',
+      default: InstallationConfig.find_by(name: 'CAPTAIN_EMBEDDING_MODEL')&.value.presence || LlmConstants::DEFAULT_EMBEDDING_MODEL,
+      apply_global: false
+    )
   end
 
   def get_embedding(content, model: @embedding_model)

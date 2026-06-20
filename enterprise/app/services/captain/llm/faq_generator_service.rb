@@ -25,6 +25,10 @@ class Captain::Llm::FaqGeneratorService < Llm::BaseAiService
 
   private
 
+  def model_feature
+    'faq_generator'
+  end
+
   attr_reader :content, :language
 
   def system_prompt

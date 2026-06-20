@@ -17,6 +17,10 @@ class Captain::Llm::ContactNotesService < Llm::BaseAiService
 
   private
 
+  def model_feature
+    'contact_notes'
+  end
+
   attr_reader :content
 
   def generate_notes

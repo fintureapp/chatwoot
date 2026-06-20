@@ -29,8 +29,21 @@ class Llm::BaseAiService
   end
 
   def setup_model
-    config_value = InstallationConfig.find_by(name: 'CAPTAIN_OPEN_AI_MODEL')&.value
-    @model = (config_value.presence || DEFAULT_MODEL)
+    @model = Captain::ModelResolver.resolve(model_feature, default: DEFAULT_MODEL)
+  end
+
+  # Feature key used to resolve installation level per-feature model overrides.
+  # Subclasses override this with their feature (e.g. 'contact_notes').
+  def model_feature
+    nil
+  end
+
+  # Overrides the resolved model with an account level Captain model override
+  # when one is configured for the given feature. Subclasses call this after
+  # their account is available, since setup_model runs before assignment.
+  def apply_model_override(account, feature_key)
+    override = account&.captain_model_override(feature_key)
+    @model = override if override.present?
   end
 
   def setup_temperature

@@ -25,6 +25,10 @@ class Captain::Llm::ConversationFaqService < Llm::BaseAiService
 
   private
 
+  def model_feature
+    'conversation_faq'
+  end
+
   attr_reader :content, :conversation, :assistant
 
   def no_human_interaction?

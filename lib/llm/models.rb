@@ -1,5 +1,5 @@
 module Llm::Models
-  CONFIG = YAML.load_file(Rails.root.join('config/llm.yml')).freeze
+  CONFIG = YAML.load_file(Rails.root.join('config/llm.yml'), aliases: true).freeze
 
   class << self
     def providers = CONFIG['providers']

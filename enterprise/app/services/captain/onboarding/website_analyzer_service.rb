@@ -22,6 +22,10 @@ class Captain::Onboarding::WebsiteAnalyzerService < Llm::BaseAiService
 
   private
 
+  def model_feature
+    'website_analyzer'
+  end
+
   def normalize_url(url)
     return url if url.match?(%r{\Ahttps?://})
 

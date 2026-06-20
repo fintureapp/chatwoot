@@ -37,6 +37,13 @@ class Captain::BaseTaskService
     "#{endpoint}/v1"
   end
 
+  # Resolves the model for this task, applying account/installation overrides on
+  # top of the call site's default. apply_global: false for tasks that never read
+  # the global CAPTAIN_OPEN_AI_MODEL today (intentionally pinned models).
+  def resolved_model(feature, default: GPT_MODEL, apply_global: true)
+    Captain::ModelResolver.resolve(feature, default: default, account: account, apply_global: apply_global)
+  end
+
   def make_api_call(model:, messages:, schema: nil, tools: [])
     # Community edition prerequisite checks
     # Enterprise module handles these with more specific error messages (cloud vs self-hosted)

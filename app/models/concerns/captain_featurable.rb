@@ -27,6 +27,16 @@ module CaptainFeaturable
     }.with_indifferent_access
   end
 
+  # Returns the account-level model override for a feature, or nil when none is
+  # configured. Conversation call sites use this to override the installation
+  # level model, while keeping the installation value as the fallback.
+  def captain_model_override(feature_key)
+    stored_value = (captain_models || {})[feature_key.to_s]
+    return stored_value if stored_value.present? && Llm::Models.valid_model_for?(feature_key, stored_value)
+
+    nil
+  end
+
   private
 
   def captain_models_with_defaults
