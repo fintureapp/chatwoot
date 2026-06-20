@@ -1,0 +1,64 @@
+<%# Tailwind-styled table for has_many associations on show pages (e.g. account members).
+    Reuses Administrate's field rendering, row actions and pagination; only the markup changes.
+    The column pointing back to the parent record is dropped as redundant. %>
+<% if field.resources.any? %>
+  <% order = field.order_from_params(params.fetch(field.name, {})) %>
+  <% page_number = params.fetch(field.name, {}).fetch(:page, nil) %>
+  <% presenter = field.associated_collection(order) %>
+  <% resources = field.resources(page_number, order) %>
+  <% parent_key = page.resource.class.model_name.singular %>
+  <% columns = presenter.attribute_types.reject { |attr_name, _type| attr_name.to_s == parent_key } %>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm border-collapse">
+      <thead>
+        <tr class="border-b border-n-weak">
+          <% columns.each_key do |attr_name| %>
+            <th class="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-n-slate-10">
+              <%= t("helpers.label.#{presenter.resource_name}.#{attr_name}", default: field.associated_class.human_attribute_name(attr_name).titleize) %>
+            </th>
+          <% end %>
+          <th class="px-3 py-2"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% resources.each do |resource| %>
+          <tr class="border-b border-n-weak last:border-b-0 hover:bg-n-alpha-1 transition-colors">
+            <% presenter.attributes_for(resource).reject { |attribute| attribute.name.to_s == parent_key }.each do |attribute| %>
+              <td class="px-3 py-2.5 align-middle text-n-slate-12">
+                <% if attribute.data.is_a?(User) %>
+                  <%= render 'super_admin/shared/user_cell', user: attribute.data, namespace: namespace %>
+                <% elsif attribute.name.to_s == 'role' %>
+                  <span class="inline-flex items-center h-6 px-2 rounded-md text-xs font-medium bg-n-slate-3 text-n-slate-11"><%= attribute.data.to_s.humanize %></span>
+                <% elsif accessible_action?(resource, :show) %>
+                  <a href="<%= polymorphic_path([namespace, resource]) %>" class="text-n-slate-12 hover:text-n-brand no-underline"><%= render_field attribute %></a>
+                <% else %>
+                  <%= render_field attribute %>
+                <% end %>
+              </td>
+            <% end %>
+            <td class="px-3 py-2.5 text-right whitespace-nowrap">
+              <%= render(
+                "collection_item_actions",
+                collection_presenter: presenter,
+                collection_field_name: field.name,
+                page: page,
+                namespace: namespace,
+                resource: resource,
+                table_title: "page-title"
+              ) %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <% if field.more_than_limit? %>
+    <div class="mt-3 text-sm text-n-slate-11">
+      <%= render("pagination", resources: field.resources(page_number), param_name: "#{field.name}[page]") %>
+    </div>
+  <% end %>
+<% else %>
+  <p class="text-sm text-n-slate-10">None yet.</p>
+<% end %>

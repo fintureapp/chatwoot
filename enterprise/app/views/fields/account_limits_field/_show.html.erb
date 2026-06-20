@@ -1,3 +1,8 @@
-<% JSON.parse(field.to_s).each do |k,v| %>
-<%= k %>: <%= v %> </br>
-<% end %>
+<dl class="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-4">
+  <% JSON.parse(field.to_s).each do |k, v| %>
+    <div>
+      <dt class="text-xs font-medium uppercase tracking-wide text-n-slate-10"><%= k.to_s.humanize %></dt>
+      <dd class="mt-0.5 text-sm text-n-slate-12 font-mono"><%= v.nil? || v.to_s.empty? ? '—' : v %></dd>
+    </div>
+  <% end %>
+</dl>

@@ -19,6 +19,7 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
     params['app_config'].each do |key, value|
       next unless @allowed_configs.include?(key)
 
+      value = normalize_config_value(key, value)
       i = InstallationConfig.where(name: key).first_or_create(value: value, locked: false)
       i.value = value
       errors.concat(i.errors.full_messages) unless i.save
@@ -32,6 +33,15 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
   end
 
   private
+
+  # CAPTAIN_FEATURE_MODELS is submitted as a nested feature => model hash. Convert
+  # it to a plain hash and drop blank selections so they fall back to the default.
+  def normalize_config_value(key, value)
+    return value unless key == 'CAPTAIN_FEATURE_MODELS'
+
+    hash = value.respond_to?(:to_unsafe_h) ? value.to_unsafe_h : value.to_h
+    hash.compact_blank
+  end
 
   def set_config
     @config = params[:config] || 'general'
@@ -50,7 +60,7 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
       'whatsapp_embedded' => %w[WHATSAPP_APP_ID WHATSAPP_APP_SECRET WHATSAPP_CONFIGURATION_ID WHATSAPP_API_VERSION],
       'notion' => %w[NOTION_CLIENT_ID NOTION_CLIENT_SECRET],
       'google' => %w[GOOGLE_OAUTH_CLIENT_ID GOOGLE_OAUTH_CLIENT_SECRET GOOGLE_OAUTH_REDIRECT_URI ENABLE_GOOGLE_OAUTH_LOGIN],
-      'captain' => %w[CAPTAIN_OPEN_AI_API_KEY CAPTAIN_OPEN_AI_MODEL CAPTAIN_OPEN_AI_ENDPOINT]
+      'captain' => %w[CAPTAIN_OPEN_AI_API_KEY CAPTAIN_OPEN_AI_MODEL CAPTAIN_FEATURE_MODELS CAPTAIN_OPEN_AI_ENDPOINT]
     }
 
     @allowed_configs = mapping.fetch(

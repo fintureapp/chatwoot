@@ -1,0 +1,93 @@
+<div class="field-unit__field">
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
+    <% CaptainModelsField::FEATURE_KEYS.each do |feature_key| %>
+      <% selected = field.selected_choice(feature_key) %>
+      <% selected_value = field.selected_models[feature_key] %>
+      <div class="flex flex-col gap-1.5">
+        <label class="text-sm font-medium text-n-slate-12"><%= feature_key.titleize %></label>
+        <div class="cw-model-select relative" data-feature="<%= feature_key %>">
+          <input type="hidden" name="account[captain_models][<%= feature_key %>]" value="<%= selected_value %>">
+          <div role="button" tabindex="0"
+               class="cw-model-trigger relative flex items-center gap-2 w-full h-11 rounded-lg bg-n-solid-1 pl-3 pr-9 outline outline-1 -outline-offset-1 outline-n-weak hover:outline-n-slate-6 focus:outline-2 focus:outline-n-brand text-sm text-n-slate-12 transition-all cursor-pointer select-none"
+               aria-haspopup="listbox" aria-expanded="false">
+            <span class="cw-model-label flex items-center gap-2 w-full min-w-0">
+              <% if selected %><%= render 'fields/captain_models_field/option_content', model: selected %><% else %><span class="text-n-slate-10">Use default</span><% end %>
+            </span>
+            <svg class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-n-slate-10" width="14" height="14" viewBox="0 0 20 20" fill="none">
+              <path d="M5.5 7.5 10 12l4.5-4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
+          <div class="cw-model-panel hidden absolute z-50 mt-1 w-full max-h-72 overflow-auto rounded-xl bg-n-solid-1 outline outline-1 outline-n-container shadow-lg p-1" role="listbox">
+            <div role="option" tabindex="-1" class="cw-model-option flex items-center gap-2 w-full rounded-lg px-2 py-1.5 cursor-pointer hover:bg-n-alpha-1 transition-colors <%= 'bg-n-alpha-2' if selected.nil? %>" data-value="">
+              <span class="cw-opt-content flex items-center gap-2 w-full min-w-0"><span class="text-sm text-n-slate-11">Use default</span></span>
+              <svg class="cw-opt-check ml-1 shrink-0 text-n-brand <%= 'hidden' unless selected.nil? %>" width="15" height="15"><use xlink:href="#icon-tick-line" /></svg>
+            </div>
+            <% field.model_choices(feature_key).each do |model| %>
+              <% is_selected = selected_value == model[:id] %>
+              <div role="option" tabindex="-1"
+                   class="cw-model-option flex items-center gap-2 w-full rounded-lg px-2 py-1.5 transition-colors <%= model[:coming_soon] ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-n-alpha-1' %> <%= 'bg-n-alpha-2' if is_selected %>"
+                   data-value="<%= model[:id] %>" <%= 'data-disabled=true' if model[:coming_soon] %>>
+                <span class="cw-opt-content flex items-center gap-2 w-full min-w-0"><%= render 'fields/captain_models_field/option_content', model: model %></span>
+                <svg class="cw-opt-check ml-1 shrink-0 text-n-brand <%= 'hidden' unless is_selected %>" width="15" height="15"><use xlink:href="#icon-tick-line" /></svg>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+  <p class="pt-3 text-xs text-n-slate-10">
+    Sets the model this account uses for each Captain feature. &ldquo;Use default&rdquo; keeps the installation-wide model.
+  </p>
+</div>
+
+<% content_for(:javascript) do %>
+  <script>
+    (function () {
+      function closeAll(except) {
+        document.querySelectorAll('.cw-model-select').forEach(function (wrap) {
+          var panel = wrap.querySelector('.cw-model-panel');
+          if (panel && panel !== except) {
+            panel.classList.add('hidden');
+            wrap.querySelector('.cw-model-trigger').setAttribute('aria-expanded', 'false');
+          }
+        });
+      }
+      function selectOption(opt) {
+        if (opt.getAttribute('data-disabled')) return;
+        var wrap = opt.closest('.cw-model-select');
+        wrap.querySelector('input[type=hidden]').value = opt.getAttribute('data-value');
+        wrap.querySelector('.cw-model-label').innerHTML = opt.querySelector('.cw-opt-content').innerHTML;
+        wrap.querySelectorAll('.cw-model-option').forEach(function (o) {
+          o.classList.remove('bg-n-alpha-2');
+          var c = o.querySelector('.cw-opt-check'); if (c) { c.classList.add('hidden'); }
+        });
+        opt.classList.add('bg-n-alpha-2');
+        var chk = opt.querySelector('.cw-opt-check'); if (chk) { chk.classList.remove('hidden'); }
+        closeAll(null);
+      }
+      function toggle(trigger) {
+        var wrap = trigger.closest('.cw-model-select');
+        var panel = wrap.querySelector('.cw-model-panel');
+        var willOpen = panel.classList.contains('hidden');
+        closeAll(willOpen ? panel : null);
+        panel.classList.toggle('hidden', !willOpen);
+        trigger.setAttribute('aria-expanded', String(willOpen));
+      }
+      document.addEventListener('click', function (e) {
+        var trigger = e.target.closest('.cw-model-trigger');
+        if (trigger) { toggle(trigger); return; }
+        var opt = e.target.closest('.cw-model-option');
+        if (opt) { selectOption(opt); return; }
+        if (!e.target.closest('.cw-model-select')) { closeAll(null); }
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') { closeAll(null); return; }
+        if (e.key === 'Enter' || e.key === ' ') {
+          var el = e.target.closest('.cw-model-trigger, .cw-model-option');
+          if (el) { e.preventDefault(); el.classList.contains('cw-model-trigger') ? toggle(el) : selectOption(el); }
+        }
+      });
+    })();
+  </script>
+<% end %>

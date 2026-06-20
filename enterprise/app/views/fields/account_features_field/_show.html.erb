@@ -1,34 +1,35 @@
-<div class="w-full">
+<div class="w-full space-y-6">
   <% regular_features, premium_features = SuperAdmin::AccountFeaturesHelper.partition_features(field.data) %>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-px">
     <% regular_features.each do |key_array, val| %>
-      <% feature_key, display_name = key_array %>
-      <div class="flex items-center justify-between p-3 bg-white rounded-md outline outline-n-container outline-1 shadow-sm">
-        <span class="text-sm text-n-slate-12"><%= display_name %></span>
-        <span class="<%= val.present? ? 'bg-green-400 text-white': 'bg-slate-50 text-slate-800' %> rounded-full p-1 inline-flex right-4 top-5">
-          <svg width="12" height="12"><use xlink:href="#icon-tick-line" /></svg>
+      <% _feature_key, display_name = key_array %>
+      <div class="flex items-center justify-between gap-3 py-2.5 border-b border-n-weak">
+        <span class="text-sm <%= val.present? ? 'text-n-slate-12' : 'text-n-slate-11' %>"><%= display_name %></span>
+        <span class="relative inline-flex h-4 w-7 shrink-0 rounded-full transition-colors <%= val.present? ? 'bg-n-brand' : 'bg-n-slate-6' %>">
+          <span class="absolute top-0.5 h-3 w-3 rounded-full bg-n-solid-1 shadow-sm transition-all <%= val.present? ? 'left-3.5' : 'left-0.5' %>"></span>
         </span>
       </div>
     <% end %>
   </div>
 
-  <hr class="my-8 border-t border-n-weak">
-
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-    <% premium_features.each do |key_array, val| %>
-      <% feature_key, display_name = key_array %>
-      <div class="flex items-center justify-between p-3 bg-white rounded-md outline outline-n-container outline-1 shadow-sm">
-        <div class="flex items-center gap-2">
-          <span class="bg-n-amber-3 text-n-amber-12 rounded-full p-1 inline-flex right-4 top-5">
-            <svg width="12" height="12"><use xlink:href="#icon-lock-line" /></svg>
-          </span>
-          <span class="text-sm text-n-slate-12"><%= display_name %></span>
-        </div>
-        <span class="<%= val.present? ? 'bg-green-400 text-white': 'bg-slate-50 text-slate-800' %> rounded-full p-1 inline-flex right-4 top-5">
-          <svg width="12" height="12"><use xlink:href="#icon-tick-line" /></svg>
-        </span>
+  <% if premium_features.any? %>
+    <div>
+      <p class="text-xs font-medium uppercase tracking-wide text-n-slate-10 mb-2">Premium</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-px">
+        <% premium_features.each do |key_array, val| %>
+          <% _feature_key, display_name = key_array %>
+          <div class="flex items-center justify-between gap-3 py-2.5 border-b border-n-weak">
+            <span class="flex items-center gap-1.5 text-sm <%= val.present? ? 'text-n-slate-12' : 'text-n-slate-11' %>">
+              <svg class="text-n-amber-11" width="13" height="13"><use xlink:href="#icon-lock-line" /></svg>
+              <%= display_name %>
+            </span>
+            <span class="relative inline-flex h-4 w-7 shrink-0 rounded-full transition-colors <%= val.present? ? 'bg-n-brand' : 'bg-n-slate-6' %>">
+              <span class="absolute top-0.5 h-3 w-3 rounded-full bg-n-solid-1 shadow-sm transition-all <%= val.present? ? 'left-3.5' : 'left-0.5' %>"></span>
+            </span>
+          </div>
+        <% end %>
       </div>
-    <% end %>
-  </div>
+    </div>
+  <% end %>
 </div>

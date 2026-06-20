@@ -1,98 +1,196 @@
-<%#
-# Show
+<%# Super admin account details. %>
+<% content_for(:title) do
+  t("administrate.actions.show_resource", name: page.page_title)
+end %>
 
-This view is the template for the show page.
-It renders the attributes of a resource,
-as well as a link to its edit page.
+<% by_name = page.attributes.values.flatten.index_by { |attribute| attribute.name.to_s } %>
+<% account = page.resource %>
+<% ca = account.custom_attributes || {} %>
+<% active = account.status.to_s == 'active' %>
+<% initial = account.name.to_s.strip.first&.upcase.presence || '#' %>
+<% locale_name = LANGUAGES_CONFIG.values.find { |y| y[:iso_639_1_code] == account.locale.to_s }&.dig(:name).presence || account.locale %>
+<% billing_present = %w[plan_name subscription_status stripe_customer_id].any? { |k| ca[k].present? } %>
 
-## Local variables:
+<% tabs = [] %>
+<% tabs << ['overview', 'Overview', 'icon-draft-line'] %>
+<% tabs << ['limits', 'Limits', 'icon-hourglass-line'] if by_name['limits'] %>
+<% tabs << ['captain_models', 'Captain models', 'icon-captain'] if by_name['captain_models'] %>
+<% tabs << ['features', 'Features', 'icon-grid-line'] if by_name['all_features'] %>
+<% tabs << ['members', 'Members', 'icon-user-follow-line'] if by_name['account_users'] %>
+<% tabs << ['manage', 'Manage', 'icon-settings-2-line'] %>
 
-- `page`:
-  An instance of [Administrate::Page::Show][1].
-  Contains methods for accessing the resource to be displayed on the page,
-  as well as helpers for describing how each attribute of the resource
-  should be displayed.
+<div class="bg-n-background min-h-full px-6 py-6 lg:px-8">
+  <div class="max-w-5xl mx-auto space-y-4">
 
-[1]: http://www.rubydoc.info/gems/administrate/Administrate/Page/Show %>
-
-  <% content_for(:title) do
-    t("administrate.actions.show_resource", name: page.page_title)
-  end %>
-
-  <header class="main-content__header" role="banner">
-    <h1 class="main-content__page-title">
-      <%= content_for(:title) %>
-    </h1>
-
-    <div>
-      <%= if accessible_action?(page.resource, :edit)
-        link_to("Edit", [:edit, namespace, page.resource], class: "button")
-      end %>
-    </div>
-  </header>
-
-  <section class="main-content__body">
-    <div class="pr-16">
-      <% page.attributes.each do |title, attributes| %>
-        <% if title.present? && title == 'all_features' %>
-          <% regular_features, premium_features =
-            attributes.partition do |attr|
-              !SuperAdmin::AccountFeaturesHelper.account_premium_features.include?(
-                attr.data.keys.first,
-              )
-            end %>
-
-          <div class="space-y-4">
-            <% regular_features.each do |attribute| %>
-              <div class="attribute-label" id="<%= attribute.name %>">
-                <%= t(
-                  "helpers.label.#{resource_name}.#{attribute.name}",
-                  default: page.resource.class.human_attribute_name(attribute.name),
-                ) %>
-              </div>
-
-              <div class="attribute-data attribute-data--<%=attribute.html_class%>"><%= render_field attribute, page: page %></div>
-            <% end %>
+    <%# Identity %>
+    <section class="rounded-xl bg-n-solid-2 outline outline-1 -outline-offset-1 outline-n-container px-6 py-5">
+      <div class="flex items-start justify-between gap-4">
+        <div class="flex items-center gap-3.5 min-w-0">
+          <div class="h-11 w-11 shrink-0 rounded-xl bg-n-brand/10 text-n-brand flex items-center justify-center text-base font-semibold"><%= initial %></div>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <h1 class="text-lg font-semibold text-n-slate-12 truncate" id="page-title"><%= account.name %></h1>
+              <% if active %>
+                <span class="inline-flex items-center gap-1.5 h-6 px-2 rounded-md text-xs font-medium outline outline-1 -outline-offset-1 bg-n-teal-2 outline-n-teal-4 text-n-teal-11">
+                  <span class="h-1.5 w-1.5 rounded-full bg-n-teal-9"></span> Active
+                </span>
+              <% else %>
+                <span class="inline-flex items-center gap-1.5 h-6 px-2 rounded-md text-xs font-medium outline outline-1 -outline-offset-1 bg-n-ruby-2 outline-n-ruby-4 text-n-ruby-11">
+                  <span class="h-1.5 w-1.5 rounded-full bg-n-ruby-9"></span> <%= account.status.to_s.titleize %>
+                </span>
+              <% end %>
+            </div>
+            <div class="mt-1 flex items-center flex-wrap gap-x-2.5 gap-y-1 text-xs text-n-slate-10">
+              <span class="font-mono">#<%= account.id %></span>
+              <span class="text-n-slate-8">·</span>
+              <span><%= locale_name %></span>
+              <% if account.created_at %>
+                <span class="text-n-slate-8">·</span>
+                <span>joined <%= account.created_at.strftime('%b %-d, %Y') %></span>
+              <% end %>
+            </div>
           </div>
-
-          <hr class="my-8 border-n-weak">
-
-          <div class="space-y-4">
-            <% premium_features.each do |attribute| %>
-              <div class="attribute-label" id="<%= attribute.name %>">
-                <%= t(
-                  "helpers.label.#{resource_name}.#{attribute.name}",
-                  default: page.resource.class.human_attribute_name(attribute.name),
-                ) %>
-              </div>
-
-              <div class="attribute-data attribute-data--<%=attribute.html_class%>"><%= render_field attribute, page: page %></div>
-            <% end %>
-          </div>
-        <% else %>
-          <fieldset class="<%= "field-unit--nested" if title.present? %>">
-            <% if title.present? %>
-              <legend><%= t "helpers.label.#{page.resource_name}.#{title}", default: title %></legend>
-            <% end %>
-
-            <% attributes.each do |attribute| %>
-              <div class="attribute-label" id="<%= attribute.name %>">
-                <%= t(
-                  "helpers.label.#{resource_name}.#{attribute.name}",
-                  default: page.resource.class.human_attribute_name(attribute.name),
-                ) %>
-              </div>
-
-              <div class="attribute-data attribute-data--<%=attribute.html_class%>"><%= render_field attribute, page: page %></div>
-            <% end %>
-          </fieldset>
+        </div>
+        <% if accessible_action?(account, :edit) %>
+          <%= link_to "Edit account", [:edit, namespace, account],
+            class: "shrink-0 inline-flex items-center h-9 px-4 rounded-lg bg-n-brand text-white text-sm font-medium hover:brightness-110 transition-all no-underline" %>
         <% end %>
+      </div>
+
+      <div class="mt-5 flex flex-wrap divide-x divide-n-weak border-t border-n-weak pt-4">
+        <% [['Inboxes', account.inboxes.size], ['Members', account.account_users.size]].each_with_index do |(label, value), i| %>
+          <div class="<%= i.zero? ? 'pr-6' : 'px-6' %>">
+            <p class="text-xl font-semibold text-n-slate-12 tabular-nums"><%= value %></p>
+            <p class="mt-0.5 text-xs text-n-slate-10"><%= label %></p>
+          </div>
+        <% end %>
+      </div>
+    </section>
+
+    <%# Tabbed sections %>
+    <section class="rounded-xl bg-n-solid-2 outline outline-1 -outline-offset-1 outline-n-container" data-tabs>
+      <nav class="flex items-center gap-1 px-3 border-b border-n-weak overflow-x-auto" role="tablist">
+        <% tabs.each_with_index do |(id, title, icon), i| %>
+          <div role="tab" tabindex="0" data-tab="<%= id %>" aria-selected="<%= i.zero? %>"
+               class="cw-tab inline-flex items-center gap-1.5 cursor-pointer select-none whitespace-nowrap px-3 py-3 text-sm font-medium text-n-slate-11 border-b-2 border-transparent hover:text-n-slate-12 aria-selected:text-n-brand aria-selected:border-n-brand transition-colors">
+            <svg class="w-4 h-4" width="16" height="16"><use xlink:href="#<%= icon %>" /></svg>
+            <%= title %>
+          </div>
+        <% end %>
+      </nav>
+
+      <% tabs.each_with_index do |(id, title, icon), i| %>
+        <div role="tabpanel" data-panel="<%= id %>" class="<%= 'hidden' unless i.zero? %>">
+          <% if id == 'overview' %>
+            <div class="px-6 py-5 space-y-6">
+              <% if billing_present %>
+                <% status = ca['subscription_status'].to_s %>
+                <% pill = case status
+                     when 'active', 'trialing' then 'bg-n-teal-2 outline-n-teal-4 text-n-teal-11'
+                     when 'past_due', 'unpaid' then 'bg-n-amber-2 outline-n-amber-4 text-n-amber-11'
+                     when 'canceled', 'incomplete', 'incomplete_expired' then 'bg-n-ruby-2 outline-n-ruby-4 text-n-ruby-11'
+                     else 'bg-n-slate-3 outline-n-weak text-n-slate-11' end %>
+                <% ends_on = (Time.zone.parse(ca['subscription_ends_on'].to_s).strftime('%b %-d, %Y') rescue ca['subscription_ends_on']) %>
+                <div>
+                  <h3 class="text-xs font-medium uppercase tracking-wide text-n-slate-10 mb-3">Billing</h3>
+                  <dl class="grid grid-cols-2 sm:grid-cols-4 gap-x-8 gap-y-5">
+                    <div>
+                      <dt class="text-xs font-medium uppercase tracking-wide text-n-slate-10 mb-1.5">Plan</dt>
+                      <dd><% if ca['plan_name'].present? %><span class="inline-flex items-center h-6 px-2 rounded-md text-xs font-medium outline outline-1 -outline-offset-1 bg-n-iris-2 outline-n-iris-4 text-n-iris-11"><%= ca['plan_name'] %></span><% else %><span class="text-sm text-n-slate-10">—</span><% end %></dd>
+                    </div>
+                    <div>
+                      <dt class="text-xs font-medium uppercase tracking-wide text-n-slate-10 mb-1.5">Subscription</dt>
+                      <dd><% if status.present? %><span class="inline-flex items-center h-6 px-2 rounded-md text-xs font-medium outline outline-1 -outline-offset-1 <%= pill %>"><%= status.titleize %></span><% else %><span class="text-sm text-n-slate-10">—</span><% end %></dd>
+                    </div>
+                    <div>
+                      <dt class="text-xs font-medium uppercase tracking-wide text-n-slate-10 mb-1.5">Seats</dt>
+                      <dd class="text-sm text-n-slate-12 font-mono tabular-nums"><%= ca['subscribed_quantity'].presence || '—' %></dd>
+                    </div>
+                    <div>
+                      <dt class="text-xs font-medium uppercase tracking-wide text-n-slate-10 mb-1.5">Currency</dt>
+                      <dd class="text-sm text-n-slate-12 font-mono uppercase"><%= ca['billing_currency'].presence || '—' %></dd>
+                    </div>
+                    <div>
+                      <dt class="text-xs font-medium uppercase tracking-wide text-n-slate-10 mb-1.5">Renews / ends</dt>
+                      <dd class="text-sm text-n-slate-12"><%= ends_on.presence || '—' %></dd>
+                    </div>
+                    <div class="sm:col-span-3">
+                      <dt class="text-xs font-medium uppercase tracking-wide text-n-slate-10 mb-1.5">Stripe customer</dt>
+                      <dd class="text-sm font-mono"><% if ca['stripe_customer_id'].present? %><a href="https://dashboard.stripe.com/customers/<%= ca['stripe_customer_id'] %>" target="_blank" rel="noopener noreferrer" class="text-n-brand hover:underline break-all"><%= ca['stripe_customer_id'] %></a><% else %><span class="text-n-slate-10">—</span><% end %></dd>
+                    </div>
+                    <% { 'Price ID' => 'stripe_price_id', 'Product ID' => 'stripe_product_id' }.each do |label, key| %>
+                      <% next if ca[key].blank? %>
+                      <div class="col-span-2">
+                        <dt class="text-xs font-medium uppercase tracking-wide text-n-slate-10 mb-1.5"><%= label %></dt>
+                        <dd class="text-xs text-n-slate-11 font-mono break-all"><%= ca[key] %></dd>
+                      </div>
+                    <% end %>
+                  </dl>
+                </div>
+              <% end %>
+              <div class="<%= 'pt-6 border-t border-n-weak' if billing_present %>">
+                <% if billing_present %><h3 class="text-xs font-medium uppercase tracking-wide text-n-slate-10 mb-3">Details</h3><% end %>
+                <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-4">
+                  <% %w[created_at updated_at locale custom_attributes].each do |key| %>
+                    <% next unless by_name[key] %>
+                    <div class="<%= 'sm:col-span-2' if key == 'custom_attributes' %>">
+                      <dt class="text-xs font-medium uppercase tracking-wide text-n-slate-10 mb-1"><%= account.class.human_attribute_name(key) %></dt>
+                      <dd class="text-sm text-n-slate-12 break-words <%= 'font-mono text-xs' if key == 'custom_attributes' %>">
+                        <% if key == 'locale' %><%= locale_name %>
+                        <% elsif key == 'custom_attributes' && account.custom_attributes.blank? %><span class="text-n-slate-10">None</span>
+                        <% else %><%= render_field by_name[key], page: page %><% end %>
+                      </dd>
+                    </div>
+                  <% end %>
+                </dl>
+              </div>
+            </div>
+          <% elsif id == 'features' %>
+            <div class="px-6 py-5 space-y-6">
+              <div><%= render_field by_name['all_features'], page: page %></div>
+              <% if by_name['manually_managed_features'] %>
+                <div class="pt-6 border-t border-n-weak">
+                  <h3 class="text-xs font-medium uppercase tracking-wide text-n-slate-10 mb-3">Managed features</h3>
+                  <%= render_field by_name['manually_managed_features'], page: page %>
+                </div>
+              <% end %>
+            </div>
+          <% elsif id == 'members' %>
+            <div class="px-6 py-5 space-y-6">
+              <%= render_field by_name['account_users'], page: page %>
+              <div class="pt-6 border-t border-n-weak">
+                <%= render 'super_admin/shared/account_user_form', page: page, namespace: namespace, resource_type: 'account' %>
+              </div>
+            </div>
+          <% elsif id == 'manage' %>
+            <div class="px-6 py-5 space-y-5">
+              <%= render partial: "seed_data", locals: { page: page } %>
+              <%= render partial: "reset_cache", locals: { page: page } %>
+            </div>
+          <% else %>
+            <div class="px-6 py-5 text-sm text-n-slate-12"><%= render_field by_name[id], page: page %></div>
+          <% end %>
+        </div>
       <% end %>
-    </div>
-  </section>
+    </section>
+  </div>
+</div>
 
-  <%= render 'super_admin/shared/account_user_form', page: page, namespace: namespace, resource_type: 'account' %>
-
-  <%= render partial: "seed_data", locals: { page: page } %>
-
-  <%= render partial: "reset_cache", locals: { page: page } %>
+<% content_for(:javascript) do %>
+  <script>
+    (function () {
+      document.querySelectorAll('[data-tabs]').forEach(function (group) {
+        var tabs = group.querySelectorAll('[role=tab]');
+        var panels = group.querySelectorAll('[role=tabpanel]');
+        function activate(id) {
+          tabs.forEach(function (t) { t.setAttribute('aria-selected', t.getAttribute('data-tab') === id ? 'true' : 'false'); });
+          panels.forEach(function (p) { p.classList.toggle('hidden', p.getAttribute('data-panel') !== id); });
+        }
+        tabs.forEach(function (t) {
+          t.addEventListener('click', function () { activate(t.getAttribute('data-tab')); });
+          t.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(t.getAttribute('data-tab')); } });
+        });
+      });
+    })();
+  </script>
+<% end %>

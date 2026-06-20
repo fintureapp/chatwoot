@@ -1,0 +1,87 @@
+<%# Super admin account form. Field rendering is delegated to Administrate via render_field
+    so every field type keeps working. Sections are presented as tabs; inputs in inactive
+    (display:none) tabs are still submitted with the form. %>
+<%= form_for([namespace, page.resource], html: { class: "space-y-4" }) do |f| %>
+  <% if page.resource.errors.any? %>
+    <div class="rounded-xl bg-n-ruby-2 outline outline-1 -outline-offset-1 outline-n-ruby-4 px-5 py-4">
+      <h2 class="text-sm font-medium text-n-ruby-11">
+        <%= t("administrate.form.errors",
+              pluralized_errors: pluralize(page.resource.errors.count, t("administrate.form.error")),
+              resource_name: display_resource_name(page.resource_name, singular: true)) %>
+      </h2>
+      <ul class="mt-2 list-disc pl-5 space-y-1">
+        <% page.resource.errors.full_messages.each do |message| %>
+          <li class="text-sm text-n-ruby-11"><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <% form_fields = page.attributes(controller.action_name).values.flatten %>
+  <% by_name = form_fields.index_by { |attribute| attribute.name.to_s } %>
+  <% sections = [['Account', %w[name locale status]], ['Limits', %w[limits]], ['Captain models', %w[captain_models]],
+                 ['Features', %w[all_features manually_managed_features]]] %>
+  <% placed = sections.flat_map(&:last) %>
+  <% groups = sections.map { |heading, keys| [heading, keys.filter_map { |key| by_name[key] }] }.reject { |_, fields| fields.empty? } %>
+  <% leftovers = form_fields.reject { |attribute| placed.include?(attribute.name.to_s) } %>
+  <% groups << ['Other', leftovers] if leftovers.any? %>
+  <% icons = { 'Account' => 'icon-building-4-line', 'Limits' => 'icon-hourglass-line', 'Captain models' => 'icon-captain',
+               'Features' => 'icon-grid-line', 'Manually managed features' => 'icon-lock-line' } %>
+
+  <section class="rounded-xl bg-n-solid-2 outline outline-1 -outline-offset-1 outline-n-container" data-tabs>
+    <nav class="flex items-center gap-1 px-3 border-b border-n-weak overflow-x-auto" role="tablist">
+      <% groups.each_with_index do |(heading, fields), i| %>
+        <div role="tab" tabindex="0" data-tab="<%= heading.parameterize %>" aria-selected="<%= i.zero? %>"
+             class="cw-tab inline-flex items-center gap-1.5 cursor-pointer select-none whitespace-nowrap px-3 py-3 text-sm font-medium text-n-slate-11 border-b-2 border-transparent hover:text-n-slate-12 aria-selected:text-n-brand aria-selected:border-n-brand transition-colors">
+          <svg class="w-4 h-4" width="16" height="16"><use xlink:href="#<%= icons.fetch(heading, 'icon-draft-line') %>" /></svg>
+          <%= heading %>
+        </div>
+      <% end %>
+    </nav>
+
+    <% groups.each_with_index do |(heading, fields), i| %>
+      <div role="tabpanel" data-panel="<%= heading.parameterize %>" class="px-6 py-5 space-y-5 <%= 'hidden' unless i.zero? %>">
+        <% fields.each do |attribute| %>
+          <%# Use a non-"select" modifier so Administrate's Selectize ($('.field-unit--select select'))
+              leaves these native — keeping our Tailwind styling and the correct selected value. %>
+          <% unit_modifier = attribute.html_class == 'select' ? 'cwselect' : attribute.html_class %>
+          <div class="field-unit field-unit--<%= unit_modifier %> field-unit--<%= requireness(attribute) %>">
+            <%= render_field attribute, f: f %>
+            <% hint_key = "administrate.field_hints.#{page.resource_name}.#{attribute.name}" %>
+            <% if I18n.exists?(hint_key) %>
+              <p class="mt-1 text-xs text-n-slate-10"><%= I18n.t(hint_key) %></p>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </section>
+
+  <div class="sticky bottom-4 flex items-center gap-3 rounded-xl bg-n-solid-2 outline outline-1 -outline-offset-1 outline-n-container px-5 py-3 shadow-lg">
+    <%= f.submit "Save changes",
+      class: "inline-flex items-center h-9 px-4 rounded-lg bg-n-brand text-white text-sm font-medium hover:brightness-110 transition-all cursor-pointer" %>
+    <%= link_to "Cancel", [namespace, page.resource],
+      class: "inline-flex items-center h-9 px-4 rounded-lg text-n-slate-11 hover:text-n-slate-12 text-sm font-medium no-underline transition-all" %>
+  </div>
+<% end %>
+
+<% content_for(:javascript) do %>
+  <script>
+    (function () {
+      document.querySelectorAll('[data-tabs]').forEach(function (group) {
+        if (group.dataset.cwTabsBound) return;
+        group.dataset.cwTabsBound = '1';
+        var tabs = group.querySelectorAll('[role=tab]');
+        var panels = group.querySelectorAll('[role=tabpanel]');
+        function activate(id) {
+          tabs.forEach(function (t) { t.setAttribute('aria-selected', t.getAttribute('data-tab') === id ? 'true' : 'false'); });
+          panels.forEach(function (p) { p.classList.toggle('hidden', p.getAttribute('data-panel') !== id); });
+        }
+        tabs.forEach(function (t) {
+          t.addEventListener('click', function () { activate(t.getAttribute('data-tab')); });
+          t.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(t.getAttribute('data-tab')); } });
+        });
+      });
+    })();
+  </script>
+<% end %>

@@ -1,0 +1,22 @@
+<%# Rich user cell: avatar + name + (#id), linked to the user's admin page when available.
+    Locals: user (a User), namespace. %>
+<% initial = user.name.to_s.strip.first&.upcase.presence || '?' %>
+<% avatar = (user.avatar_url.presence rescue nil) %>
+<% href = (begin; polymorphic_path([namespace, user]); rescue StandardError; nil; end) %>
+<div class="flex items-center gap-2.5 min-w-0">
+  <% if avatar %>
+    <img src="<%= avatar %>" alt="" class="h-7 w-7 rounded-full object-cover bg-n-slate-3 shrink-0" />
+  <% else %>
+    <span class="h-7 w-7 rounded-full bg-n-brand/10 text-n-brand flex items-center justify-center text-xs font-semibold shrink-0"><%= initial %></span>
+  <% end %>
+  <span class="min-w-0 leading-tight">
+    <% if href %>
+      <a href="<%= href %>" class="block text-n-slate-12 hover:text-n-brand no-underline truncate"><%= user.name.presence || 'Unnamed' %></a>
+    <% else %>
+      <span class="block text-n-slate-12 truncate"><%= user.name.presence || 'Unnamed' %></span>
+    <% end %>
+    <span class="block text-xs text-n-slate-10 truncate">
+      <% if user.email.present? %><%= user.email %> · <% end %><span class="font-mono">#<%= user.id %></span>
+    </span>
+  </span>
+</div>

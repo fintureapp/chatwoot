@@ -1,34 +1,88 @@
-<div class="field-unit__label">
-  <%= f.label field.attribute %>
-</div>
-<div class="field-unit__field feature-container">
+<div class="field-unit__field feature-container w-full">
   <% regular_features, premium_features = SuperAdmin::AccountFeaturesHelper.filtered_features(field.data).partition { |key_array, _val| !SuperAdmin::AccountFeaturesHelper.account_premium_features.include?(key_array.first) } %>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-    <% regular_features.each do |key_array, val| %>
-      <% feature_key, display_name = key_array %>
-      <div class="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm outline outline-1 outline-n-container">
-        <span class="text-sm text-slate-700"><%= display_name %></span>
-        <span><%= check_box "enabled_features", "feature_#{feature_key}", { checked: val, class: "h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-600" }, true, false %></span>
-      </div>
-    <% end %>
+  <div class="flex items-center gap-2 mb-4">
+    <div class="relative flex-1 max-w-xs">
+      <svg class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-n-slate-10" width="15" height="15"><use xlink:href="#icon-menu-search-line" /></svg>
+      <input type="text" class="cw-feature-search w-full h-9 rounded-lg bg-n-solid-1 pl-9 pr-3 outline outline-1 -outline-offset-1 outline-n-weak hover:outline-n-slate-6 focus:outline-2 focus:outline-n-brand text-sm text-n-slate-12 transition-all" placeholder="Search features…" aria-label="Search features">
+    </div>
+    <div class="ml-auto flex items-center gap-2">
+      <div role="button" tabindex="0" class="cw-feature-all inline-flex items-center h-9 px-3 rounded-lg bg-n-solid-1 outline outline-1 outline-n-container text-sm font-medium text-n-slate-12 hover:bg-n-alpha-1 cursor-pointer select-none transition-all" data-action="on">Enable all</div>
+      <div role="button" tabindex="0" class="cw-feature-all inline-flex items-center h-9 px-3 rounded-lg bg-n-solid-1 outline outline-1 outline-n-container text-sm font-medium text-n-slate-12 hover:bg-n-alpha-1 cursor-pointer select-none transition-all" data-action="off">Disable all</div>
+    </div>
   </div>
 
-  <hr class="my-8 boshadow-sm outline outline-1 outline-n-container">
+  <div class="cw-feature-empty hidden py-6 text-center text-sm text-n-slate-10">No features match your search.</div>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-    <% premium_features.each do |key_array, val| %>
-      <% feature_key, display_name = key_array %>
-      <div class="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm outline outline-1 outline-n-container">
-        <div class="flex items-center gap-2">
-          <span class="text-amber-500">
-            <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M480 224l-186.828 7.487L401.688 64l-59.247-32L256 208 169.824 32l-59.496 32 108.5 167.487L32 224v64l185.537-10.066L113.65 448l55.969 32L256 304l86.381 176 55.949-32-103.867-170.066L480 288z" fill="currentColor"/></svg>
+  <div class="feature-group">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-px">
+      <% regular_features.each do |key_array, val| %>
+        <% feature_key, display_name = key_array %>
+        <label class="feature-row flex items-center justify-between gap-3 py-2.5 border-b border-n-weak cursor-pointer" data-name="<%= display_name.to_s.downcase %>">
+          <span class="text-sm text-n-slate-12"><%= display_name %></span>
+          <span class="relative inline-flex cursor-pointer">
+            <%= check_box "enabled_features", "feature_#{feature_key}", { checked: val, class: "sr-only peer" }, true, false %>
+            <span class="relative h-4 w-7 rounded-full bg-n-slate-6 transition-colors peer-checked:bg-n-brand after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:h-3 after:w-3 after:rounded-full after:bg-n-solid-1 after:shadow-sm after:transition-all peer-checked:after:translate-x-3"></span>
           </span>
-          <span class="text-sm text-slate-700"><%= display_name %></span>
-        </div>
-        <% should_disable = ChatwootHub.pricing_plan == 'community' %>
-        <span><%= check_box "enabled_features", "feature_#{feature_key}", { checked: val, disabled: should_disable, class: "h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-600" }, true, false %></span>
-      </div>
-    <% end %>
+        </label>
+      <% end %>
+    </div>
   </div>
+
+  <% if premium_features.any? %>
+    <% should_disable = ChatwootHub.pricing_plan == 'community' %>
+    <div class="feature-group mt-6">
+      <p class="text-xs font-medium uppercase tracking-wide text-n-slate-10 mb-2">Premium</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-px">
+        <% premium_features.each do |key_array, val| %>
+          <% feature_key, display_name = key_array %>
+          <label class="feature-row flex items-center justify-between gap-3 py-2.5 border-b border-n-weak <%= should_disable ? 'cursor-not-allowed' : 'cursor-pointer' %>" data-name="<%= display_name.to_s.downcase %>">
+            <span class="flex items-center gap-1.5 text-sm text-n-slate-12">
+              <svg class="text-n-amber-11" width="13" height="13"><use xlink:href="#icon-lock-line" /></svg>
+              <%= display_name %>
+            </span>
+            <span class="relative inline-flex">
+              <%= check_box "enabled_features", "feature_#{feature_key}", { checked: val, disabled: should_disable, class: "sr-only peer" }, true, false %>
+              <span class="relative h-4 w-7 rounded-full bg-n-slate-6 transition-colors peer-checked:bg-n-brand peer-disabled:opacity-40 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:h-3 after:w-3 after:rounded-full after:bg-n-solid-1 after:shadow-sm after:transition-all peer-checked:after:translate-x-3"></span>
+            </span>
+          </label>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
 </div>
+
+<% content_for(:javascript) do %>
+  <script>
+    (function () {
+      document.querySelectorAll('.feature-container').forEach(function (container) {
+        var search = container.querySelector('.cw-feature-search');
+        var toggles = container.querySelectorAll('.cw-feature-all');
+        if (!search && !toggles.length) return;
+        var empty = container.querySelector('.cw-feature-empty');
+        function filter() {
+          var q = (search && search.value || '').trim().toLowerCase();
+          var anyVisible = false;
+          container.querySelectorAll('.feature-row').forEach(function (row) {
+            var match = !q || (row.getAttribute('data-name') || '').indexOf(q) !== -1;
+            row.classList.toggle('hidden', !match);
+            if (match) anyVisible = true;
+          });
+          container.querySelectorAll('.feature-group').forEach(function (group) {
+            group.classList.toggle('hidden', !group.querySelector('.feature-row:not(.hidden)'));
+          });
+          if (empty) empty.classList.toggle('hidden', anyVisible);
+        }
+        if (search) search.addEventListener('input', filter);
+        toggles.forEach(function (btn) {
+          function apply() {
+            var on = btn.getAttribute('data-action') === 'on';
+            container.querySelectorAll('.feature-row:not(.hidden) input[type=checkbox]:not([disabled])').forEach(function (cb) { cb.checked = on; });
+          }
+          btn.addEventListener('click', apply);
+          btn.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); apply(); } });
+        });
+      });
+    })();
+  </script>
+<% end %>

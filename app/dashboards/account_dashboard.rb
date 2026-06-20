@@ -19,6 +19,9 @@ class AccountDashboard < Administrate::BaseDashboard
                                  # Add all_features last so it appears after manually_managed_features
                                  attributes[:all_features] = AccountFeaturesField
 
+                                 # Per-account Captain model overrides
+                                 attributes[:captain_models] = CaptainModelsField
+
                                  attributes
                                else
                                  {}
@@ -31,9 +34,9 @@ class AccountDashboard < Administrate::BaseDashboard
     updated_at: Field::DateTime,
     users: CountField,
     conversations: CountField,
-    locale: Field::Select.with_options(collection: LANGUAGES_CONFIG.map { |_x, y| y[:iso_639_1_code] }),
+    locale: Field::Select.with_options(collection: LANGUAGES_CONFIG.map { |_x, y| [y[:name], y[:iso_639_1_code]] }),
     status: Field::Select.with_options(collection: [%w[Active active], %w[Suspended suspended]]),
-    account_users: Field::HasMany,
+    account_users: Field::HasMany.with_options(limit: 25),
     custom_attributes: Field::String
   }.merge(enterprise_attribute_types).freeze
 
@@ -57,6 +60,7 @@ class AccountDashboard < Administrate::BaseDashboard
                                       attrs = %i[custom_attributes limits]
                                       attrs << :manually_managed_features if ChatwootApp.chatwoot_cloud?
                                       attrs << :all_features
+                                      attrs << :captain_models
                                       attrs
                                     else
                                       []
@@ -79,6 +83,7 @@ class AccountDashboard < Administrate::BaseDashboard
                                  attrs = %i[limits]
                                  attrs << :manually_managed_features if ChatwootApp.chatwoot_cloud?
                                  attrs << :all_features
+                                 attrs << :captain_models
                                  attrs
                                else
                                  []
@@ -121,6 +126,9 @@ class AccountDashboard < Administrate::BaseDashboard
 
     # Add manually_managed_features to permitted attributes only for Chatwoot Cloud
     attrs << { manually_managed_features: [] } if ChatwootApp.chatwoot_cloud?
+
+    # Per-account Captain model overrides (feature => model hash)
+    attrs << { captain_models: {} } if ChatwootApp.enterprise?
 
     attrs
   end

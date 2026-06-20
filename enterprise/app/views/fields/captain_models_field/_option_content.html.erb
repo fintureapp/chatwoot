@@ -1,0 +1,8 @@
+<%= render 'fields/captain_models_field/provider_badge', model: model %>
+<span class="flex flex-col min-w-0 leading-tight">
+  <span class="cw-opt-name text-sm font-medium text-n-slate-12 truncate"><%= model[:name] %></span>
+  <span class="font-mono text-xxs text-n-slate-10 truncate"><%= model[:id] %></span>
+</span>
+<% if model[:coming_soon] %>
+  <span class="ml-auto shrink-0 inline-flex items-center h-5 px-1.5 rounded text-xxs font-medium bg-n-iris-2 text-n-iris-11">Soon</span>
+<% end %>

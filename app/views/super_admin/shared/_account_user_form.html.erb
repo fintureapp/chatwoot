@@ -11,9 +11,10 @@ Used by both account and user show pages.
 - `resource_type`: Either 'account' or 'user' to determine hidden field
 %>
 
-<section class="main-content__body">
+<div>
+  <h3 class="text-sm font-medium text-n-slate-12 mb-3">Add member</h3>
   <% account_user_page = Administrate::Page::Form.new(AccountUserDashboard.new, AccountUser.new) %>
-  <%= form_for([namespace, account_user_page.resource], html: { class: "form" }) do |f| %>
+  <%= form_for([namespace, account_user_page.resource], html: { class: "form space-y-4 max-w-md" }) do |f| %>
     <% if account_user_page.resource.errors.any? %>
       <div id="error_explanation">
         <h2>
@@ -40,7 +41,8 @@ Used by both account and user show pages.
         <% if attribute.name == resource_type %>
           <%= f.hidden_field("#{resource_type}_id", value: page.resource.id) %>
         <% else %>
-          <div class="field-unit field-unit--<%= attribute.html_class %> field-unit--<%= requireness(attribute) %>">
+          <% unit_modifier = attribute.html_class == 'select' ? 'cwselect' : attribute.html_class %>
+          <div class="field-unit field-unit--<%= unit_modifier %> field-unit--<%= requireness(attribute) %>">
             <%= render_field attribute, f: f %>
           </div>
         <% end %>
@@ -48,7 +50,37 @@ Used by both account and user show pages.
     <% end -%>
 
     <div class="form-actions">
-      <%= f.submit %>
+      <%= f.submit class: "inline-flex items-center h-9 px-4 rounded-lg bg-n-brand text-white text-sm font-medium hover:brightness-110 transition-all cursor-pointer" %>
     </div>
   <% end %>
-</section>
+</div>
+
+<%# The User picker is a Selectize AJAX-search widget (it searches across all users, so it
+    can't be a plain native select). Selectize renders its own DOM with a CSS-pseudo caret that
+    Tailwind utilities can't reach, so we match it to the other selects with a token-based style. %>
+<% content_for(:stylesheet) do %>
+  <style>
+    .field-unit--belongs-to-search .selectize-control { position: relative; }
+    .field-unit--belongs-to-search .selectize-input {
+      display: flex; align-items: center; min-height: 2.25rem; height: 2.25rem;
+      border: 0; outline: 1px solid rgb(var(--border-weak)); outline-offset: -1px;
+      border-radius: 0.5rem; background: rgb(var(--solid-1)); box-shadow: none;
+      padding: 0 2.25rem 0 0.75rem; font-size: 0.875rem; line-height: 1.25rem; color: rgb(var(--slate-12));
+    }
+    .field-unit--belongs-to-search .selectize-input.focus { outline: 2px solid #2781F6; }
+    .field-unit--belongs-to-search .selectize-input input { font-size: 0.875rem; color: rgb(var(--slate-12)); }
+    .field-unit--belongs-to-search .selectize-input::after { display: none !important; }
+    .field-unit--belongs-to-search .selectize-control::after {
+      content: ""; position: absolute; right: 0.85rem; top: 50%; width: 0.45rem; height: 0.45rem;
+      border-right: 1.5px solid rgb(var(--slate-10)); border-bottom: 1.5px solid rgb(var(--slate-10));
+      transform: translateY(-70%) rotate(45deg); pointer-events: none;
+    }
+    .field-unit--belongs-to-search .selectize-dropdown {
+      border: 0; outline: 1px solid rgb(var(--border-container)); border-radius: 0.5rem;
+      background: rgb(var(--solid-1)); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      margin-top: 0.25rem; overflow: hidden; font-size: 0.875rem;
+    }
+    .field-unit--belongs-to-search .selectize-dropdown .option { padding: 0.5rem 0.75rem; color: rgb(var(--slate-12)); }
+    .field-unit--belongs-to-search .selectize-dropdown .active { background: rgba(var(--alpha-2)); }
+  </style>
+<% end %>
