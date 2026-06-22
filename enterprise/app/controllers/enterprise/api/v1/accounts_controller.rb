@@ -12,7 +12,7 @@ class Enterprise::Api::V1::AccountsController < Api::BaseController
   end
 
   def select_billing_currency
-    return render_could_not_create_error(I18n.t('errors.billing.currency_locked')) if stripe_customer_id.present?
+    return render_could_not_create_error(I18n.t('errors.billing.currency_locked')) if currency_locked?
 
     currency = Enterprise::Billing::Currencies.normalize(params[:currency])
     return render_could_not_create_error(I18n.t('errors.billing.invalid_currency')) unless Enterprise::Billing::Currencies.supported?(currency)
@@ -126,6 +126,12 @@ class Enterprise::Api::V1::AccountsController < Api::BaseController
 
   def stripe_customer_id
     @account.custom_attributes['stripe_customer_id']
+  end
+
+  # Currency is fixed once a customer exists or creation is already in flight,
+  # so a second click can't bill a different currency than setup started with.
+  def currency_locked?
+    stripe_customer_id.present? || @account.custom_attributes['is_creating_customer'].present?
   end
 
   def mark_for_deletion

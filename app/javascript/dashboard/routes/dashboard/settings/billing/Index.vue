@@ -202,6 +202,7 @@ onMounted(handleBillingPageLogic);
                 solid
                 blue
                 :is-loading="uiFlags.isCheckoutInProcess"
+                :disabled="uiFlags.isCheckoutInProcess"
                 @click="onSelectCurrency(code)"
               >
                 {{ $t(getCurrencyConfig(code).i18nLabelKey) }}
