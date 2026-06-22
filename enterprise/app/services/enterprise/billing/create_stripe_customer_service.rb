@@ -81,7 +81,14 @@ class Enterprise::Billing::CreateStripeCustomerService
       'subscribed_quantity' => subscription['quantity'],
       'subscription_status' => subscription['status'],
       'subscription_ends_on' => subscription_ends_on(subscription),
-      'billing_currency' => account.billing_currency
+      'billing_currency' => billing_currency_for(subscription)
     )
+  end
+
+  # Persist the currency of the price actually used; the requested currency may
+  # lack a configured price and fall back to usd, so don't blindly trust it.
+  def billing_currency_for(subscription)
+    _plan, currency = Enterprise::Billing::PlanConfiguration.find_plan_by_price_id(subscription['plan']['id'])
+    currency || account.billing_currency
   end
 end
