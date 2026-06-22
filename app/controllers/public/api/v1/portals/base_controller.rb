@@ -23,8 +23,6 @@ class Public::Api::V1::Portals::BaseController < PublicController
     @portal_layout = PORTAL_LAYOUTS.include?(@portal&.layout) ? @portal.layout : 'classic'
   end
 
-  # Each layout is a template/layout variant (see Rails layouts & rendering guide), so the
-  # view files stay free of layout conditionals: classic (default), :documentation, :plain.
   def set_view_variant
     request.variant = if @is_plain_layout_enabled
                         :plain
