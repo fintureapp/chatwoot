@@ -30,9 +30,7 @@ class CallFinder
   end
 
   def accessible_conversations
-    inbox_ids = @current_user.assigned_inboxes.select(:id)
-    team_ids = @current_user.teams.where(account_id: @current_account.id).select(:id)
-    @current_account.conversations.where(inbox_id: inbox_ids).or(@current_account.conversations.where(team_id: team_ids)).select(:id)
+    Conversations::PermissionFilterService.new(@current_account.conversations, @current_user, @current_account).perform.select(:id)
   end
 
   def account_wide_access?
