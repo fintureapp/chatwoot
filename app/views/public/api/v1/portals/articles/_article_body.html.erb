@@ -1,0 +1,49 @@
+<%# locals: (parsed_content:, content_padding: 'pt-8 pb-12') %>
+<div class="flex max-w-5xl w-full px-4 md:px-8 mx-auto">
+  <article id="cw-article-content" class="article-content flex-grow flex-2 mx-auto text-slate-800 dark:text-slate-50 max-w-3xl prose-headings:font-620 prose-p:font-420 prose-li:font-420 prose-blockquote:font-420 prose-td:font-420 prose-code:[&>p]:p-1 prose-code:[&>p]:rounded-sm prose-code:[&>p]:bg-black-100 dark:prose-code:[&>p]:bg-black-600 prose-code:after:content-none prose-code:before:content-none prose dark:prose-invert break-words w-full [&_table]:!border-slate-200 dark:[&_table]:!border-slate-800 [&_th]:!border-slate-200 dark:[&_th]:!border-slate-800 [&_td]:!border-slate-200 dark:[&_td]:!border-slate-800 [&_th]:!bg-slate-50 dark:[&_th]:!bg-slate-800/50 <%= content_padding %>">
+    <%= parsed_content %>
+  </article>
+  <div class="flex-1" id="cw-hc-toc"></div>
+</div>
+<style>
+  .article-content li > p {
+    margin: 0;
+  }
+  .article-content .tableWrapper {
+    overflow-x: auto;
+    margin-bottom: 1rem;
+  }
+  .article-content table {
+    min-width: 100%;
+    border: 1px solid;
+    border-radius: 8px;
+    border-spacing: 0;
+    border-collapse: separate;
+    margin: 0;
+  }
+  .article-content th,
+  .article-content td {
+    border-bottom: 1px solid;
+    border-inline-end: 1px solid;
+    border-color: inherit;
+    padding: 0.5rem 0.75rem;
+    text-align: start;
+    vertical-align: top;
+  }
+  .article-content th:last-child,
+  .article-content td:last-child {
+    border-inline-end: none;
+  }
+  .article-content th {
+    font-weight: 600;
+  }
+  .article-content th:first-child {
+    border-start-start-radius: 7px;
+  }
+  .article-content th:last-child {
+    border-start-end-radius: 7px;
+  }
+  .article-content tr:last-child td {
+    border-bottom: none;
+  }
+</style>
