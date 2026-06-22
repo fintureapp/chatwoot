@@ -1,19 +1,17 @@
 # frozen_string_literal: true
 
-class CustomExceptions::Inbox::Disabled < CustomExceptions::Base
-  def initialize(data = {})
-    super
-  end
+module CustomExceptions::Inbox
+  class Disabled < CustomExceptions::Base
+    def message
+      'This inbox is currently disabled'
+    end
 
-  def message
-    'This inbox is currently disabled'
-  end
+    def error_code
+      'inbox_disabled'
+    end
 
-  def error_code
-    'inbox_disabled'
-  end
-
-  def http_status
-    :forbidden
+    def http_status
+      :forbidden
+    end
   end
 end
