@@ -4,23 +4,23 @@ ruby '3.4.4'
 
 ##-- base gems for rails --##
 gem 'rack-cors', '2.0.0', require: 'rack/cors'
-gem 'rails', '~> 7.1'
+gem 'rails', '~> 7.1', '>= 7.1.6'
 # Reduces boot times through caching; required in config/boot.rb
 gem 'bootsnap', require: false
 
 ##-- rails application helper gems --##
-gem 'acts-as-taggable-on'
+gem 'acts-as-taggable-on', '>= 13.0.0'
 gem 'attr_extras'
 gem 'browser'
 gem 'hashie'
-gem 'jbuilder'
+gem 'jbuilder', '>= 2.12.0'
 gem 'kaminari'
-gem 'responders', '>= 3.1.1'
+gem 'responders', '>= 3.2.0'
 gem 'rest-client'
 gem 'telephone_number'
 gem 'time_diff'
-gem 'tzinfo-data'
-gem 'valid_email2'
+gem 'tzinfo-data', '>= 1.2023.4'
+gem 'valid_email2', '>= 5.3.0'
 gem 'email-provider-info'
 gem 'gemoji'
 # compress javascript config.assets.js_compressor
@@ -59,43 +59,43 @@ gem 'google-cloud-storage', '>= 1.48.0', require: false
 gem 'image_processing'
 
 ##-- for actionmailbox --##
-gem 'aws-actionmailbox-ses', '~> 0'
+gem 'aws-actionmailbox-ses', '~> 0', '>= 0.1.1'
 
 ##-- gems for database --#
-gem 'groupdate'
+gem 'groupdate', '>= 6.3.0'
 gem 'pg'
 gem 'redis'
 gem 'redis-namespace'
 # super fast record imports in bulk
-gem 'activerecord-import'
+gem 'activerecord-import', '>= 2.2.0'
 
-gem 'searchkick'
+gem 'searchkick', '>= 6.0.0'
 gem 'opensearch-ruby'
 gem 'faraday_middleware-aws-sigv4'
 
 ##--- gems for server & infra configuration ---##
-gem 'dotenv-rails', '>= 3.0.0'
+gem 'dotenv-rails', '>= 3.1.3'
 gem 'foreman'
 gem 'puma', '~> 7.2', '>= 7.2.1'
-gem 'vite_rails'
+gem 'vite_rails', '>= 3.11.0'
 # metrics on heroku
 gem 'barnes'
 
 ##--- gems for authentication & authorization ---##
-gem 'devise', '>= 4.9.4'
+gem 'devise', '>= 5.0.0'
 gem 'devise-secure_password', git: 'https://github.com/chatwoot/devise-secure_password', branch: 'chatwoot'
-gem 'devise_token_auth', '>= 1.2.3'
-gem 'rails-i18n', '~> 7.0'
+gem 'devise_token_auth', '>= 1.2.6'
+gem 'rails-i18n', '~> 8.0', '>= 8.0.0'
 # two-factor authentication
-gem 'devise-two-factor', '>= 5.0.0'
+gem 'devise-two-factor', '>= 6.2.0'
 # authorization
 gem 'jwt', '~> 2.10', '>= 2.10.3'
-gem 'pundit'
+gem 'pundit', '>= 2.3.1'
 
 # super admin
-gem 'administrate', '>= 0.20.1'
-gem 'administrate-field-active_storage', '>= 1.0.3'
-gem 'administrate-field-belongs_to_search', '>= 0.9.0'
+gem 'administrate', '>= 1.0.0'
+gem 'administrate-field-active_storage', '>= 1.0.4'
+gem 'administrate-field-belongs_to_search', '>= 0.10.0'
 
 ##--- gems for pubsub service ---##
 # https://karolgalanciak.com/blog/2019/11/30/from-activerecord-callbacks-to-publish-slash-subscribe-pattern-and-event-driven-design/
@@ -124,16 +124,16 @@ gem 'google-cloud-translate-v3', '>= 0.7.0'
 # loaded only when environment variables are set.
 # ref application.rb
 gem 'datadog', '~> 2.0', require: false
-gem 'elastic-apm', require: false
+gem 'elastic-apm', '>= 4.7.0', require: false
 gem 'newrelic_rpm', require: false
 gem 'newrelic-sidekiq-metrics', '>= 1.6.2', require: false
 gem 'scout_apm', require: false
-gem 'sentry-rails', '>= 5.19.0', require: false
-gem 'sentry-ruby', require: false
-gem 'sentry-sidekiq', '>= 5.19.0', require: false
+gem 'sentry-rails', '>= 5.20.0', require: false
+gem 'sentry-ruby', '>= 5.20.0', require: false
+gem 'sentry-sidekiq', '>= 5.20.0', require: false
 
 ##-- background job processing --##
-gem 'sidekiq', '~> 7.3', '>= 7.3.1'
+gem 'sidekiq', '~> 7.3', '>= 7.3.2'
 # We want cron jobs
 gem 'sidekiq-cron', '>= 2.4.0'
 # for sidekiq healthcheck
@@ -150,7 +150,7 @@ gem 'geocoder'
 gem 'maxminddb'
 
 # to create db triggers
-gem 'hairtrigger'
+gem 'hairtrigger', '>= 1.1.0'
 
 gem 'procore-sift'
 
@@ -160,17 +160,17 @@ gem 'email_reply_trimmer'
 gem 'html2text'
 
 # to calculate working hours
-gem 'working_hours'
+gem 'working_hours', '>= 1.5.0'
 
 # full text search for articles
-gem 'pg_search'
+gem 'pg_search', '>= 2.3.7'
 
 # Subscriptions, Billing
 gem 'stripe', '~> 18.0'
 
 ## - helper gems --##
 ## to populate db with sample data
-gem 'faker'
+gem 'faker', '>= 3.2.1'
 
 # Include logrange conditionally in intializer using env variable
 gem 'lograge', '~> 0.14.0', require: false
@@ -178,17 +178,17 @@ gem 'lograge', '~> 0.14.0', require: false
 # worked with microsoft refresh token
 gem 'omniauth-oauth2'
 
-gem 'audited', '~> 5.4', '>= 5.4.1'
+gem 'audited', '~> 5.4', '>= 5.4.2'
 
 # need for google auth
 gem 'omniauth', '>= 2.1.2'
 gem 'omniauth-saml'
 gem 'omniauth-google-oauth2', '>= 1.1.3'
-gem 'omniauth-rails_csrf_protection', '~> 1.0', '>= 1.0.2'
+gem 'omniauth-rails_csrf_protection', '~> 2.0', '>= 2.0.0'
 
 ## Gems for reponse bot
 # adds cosine similarity to postgres using vector extension
-gem 'neighbor'
+gem 'neighbor', '>= 0.3.0'
 gem 'pgvector'
 # Convert Website HTML to Markdown
 gem 'reverse_markdown'
@@ -207,7 +207,7 @@ gem 'cld3', '~> 3.7'
 gem 'opentelemetry-sdk'
 gem 'opentelemetry-exporter-otlp'
 
-gem 'shopify_api'
+gem 'shopify_api', '>= 14.9.0'
 
 gem 'firecrawl-sdk', '~> 1.0', require: 'firecrawl'
 
@@ -218,16 +218,16 @@ group :production do
   # we dont want request timing out in development while using byebug
   gem 'rack-timeout'
   # for heroku autoscaling
-  gem 'judoscale-rails', require: false
-  gem 'judoscale-sidekiq', require: false
+  gem 'judoscale-rails', '>= 1.8.3', require: false
+  gem 'judoscale-sidekiq', '>= 1.8.3', require: false
 end
 
 group :development do
-  gem 'annotaterb'
-  gem 'bullet'
+  gem 'annotaterb', '>= 4.21.0'
+  gem 'bullet', '>= 8.0.8'
   gem 'letter_opener'
   gem 'scss_lint', require: false
-  gem 'web-console', '>= 4.2.1'
+  gem 'web-console', '>= 4.3.0'
 
   # When we want to squash migrations
   gem 'squasher'
@@ -236,14 +236,14 @@ group :development do
   gem 'rack-mini-profiler', '>= 3.2.0', require: false
   gem 'stackprof'
   # Should install the associated chrome extension to view query logs
-  gem 'meta_request', '>= 0.8.3'
+  gem 'meta_request', '>= 0.8.6'
 
-  gem 'tidewave'
+  gem 'tidewave', '>= 0.3.0'
 end
 
 group :test do
   # fast cleaning of database
-  gem 'database_cleaner'
+  gem 'database_cleaner', '>= 2.1.0'
   # mock http calls
   gem 'webmock'
   # test profiling
@@ -260,19 +260,19 @@ group :development, :test do
   gem 'byebug', platform: :mri
   gem 'climate_control'
   gem 'debug', '~> 1.8'
-  gem 'factory_bot_rails', '>= 6.4.3'
+  gem 'factory_bot_rails', '>= 6.4.4'
   gem 'listen'
   gem 'mock_redis'
   gem 'pry-rails'
   gem 'rspec_junit_formatter'
-  gem 'rspec-rails', '>= 6.1.5'
+  gem 'rspec-rails', '>= 7.0.2'
   gem 'rubocop', require: false
   gem 'rubocop-performance', require: false
-  gem 'rubocop-rails', require: false
+  gem 'rubocop-rails', '>= 2.33.0', require: false
   gem 'rubocop-rspec', require: false
   gem 'rubocop-factory_bot', require: false
-  gem 'seed_dump'
-  gem 'shoulda-matchers'
+  gem 'seed_dump', '>= 3.4.0'
+  gem 'shoulda-matchers', '>= 6.0.0'
   gem 'simplecov', '>= 0.21', require: false
   gem 'skooma'
   gem 'spring'
