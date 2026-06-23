@@ -151,13 +151,20 @@ RSpec.describe Crm::Leadsquared::ProcessorService do
           allow(activity_client).to receive(:post_activity)
             .with('test_lead_id', 1001, activity_note)
             .and_raise(StandardError.new('Activity error'))
-
-          allow(Rails.logger).to receive(:error)
         end
 
-        it 'logs the error' do
+        it 'captures the exception with leadsquared context' do
+          tracker = instance_double(ChatwootExceptionTracker, capture_exception: nil)
+          allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
+
           service.handle_conversation_created(conversation)
-          expect(Rails.logger).to have_received(:error).with(/LeadSquared conversation activity failed/)
+
+          expect(ChatwootExceptionTracker).to have_received(:new).with(
+            instance_of(StandardError),
+            account: account,
+            additional_context: { leadsquared: hash_including(activity_type: 'conversation', conversation_display_id: conversation.display_id) }
+          )
+          expect(tracker).to have_received(:capture_exception)
         end
       end
     end

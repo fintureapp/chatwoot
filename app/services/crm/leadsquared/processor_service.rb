@@ -95,13 +95,20 @@ class Crm::Leadsquared::ProcessorService < Crm::BaseProcessorService
   end
 
   def log_activity_error(error, activity_type, conversation, payload: nil)
-    ChatwootExceptionTracker.new(error, account: @account).capture_exception
-    context = "account_id=#{conversation.account_id}, conversation_display_id=#{conversation.display_id}"
+    context = {
+      activity_type: activity_type,
+      account_id: conversation.account_id,
+      conversation_display_id: conversation.display_id
+    }
     if payload
-      context += ", http_status=#{error.code}, prospect_id=#{payload[:lead_id]}, " \
-                 "activity_event=#{payload[:activity_code]}, note_bytes=#{payload[:activity_note].to_s.bytesize}"
+      context.merge!(
+        http_status: error.code,
+        prospect_id: payload[:lead_id],
+        activity_event: payload[:activity_code],
+        note_bytes: payload[:activity_note].to_s.bytesize
+      )
     end
-    Rails.logger.error("LeadSquared #{activity_type} activity failed: #{error.message} (#{context})")
+    ChatwootExceptionTracker.new(error, account: @account, additional_context: { leadsquared: context }).capture_exception
   end
 
   def get_activity_code(key)
