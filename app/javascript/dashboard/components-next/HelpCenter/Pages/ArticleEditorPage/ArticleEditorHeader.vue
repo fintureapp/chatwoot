@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
-import { useStore } from 'dashboard/composables/store.js';
+import { useStore, useMapGetter } from 'dashboard/composables/store.js';
 import { useAlert, useTrack } from 'dashboard/composables';
 import { PORTALS_EVENTS } from 'dashboard/helper/AnalyticsHelper/events';
 import { OnClickOutside } from '@vueuse/components';
@@ -17,6 +17,7 @@ import wootConstants from 'dashboard/constants/globals';
 import ButtonGroup from 'dashboard/components-next/buttonGroup/ButtonGroup.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import DropdownMenu from 'dashboard/components-next/dropdown-menu/DropdownMenu.vue';
+import ArticlePendingChangesPopover from 'dashboard/components-next/HelpCenter/Pages/ArticleEditorPage/ArticlePendingChangesPopover.vue';
 
 const props = defineProps({
   isUpdating: {
@@ -35,6 +36,10 @@ const props = defineProps({
     type: Number,
     default: 0,
   },
+  pendingChanges: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(['goBack', 'previewArticle']);
@@ -49,9 +54,24 @@ const { ARTICLE_STATUS_TYPES } = wootConstants;
 
 const showArticleActionMenu = ref(false);
 
+const pendingChangesPopoverRef = ref(null);
+const requestedStatus = ref(null);
+
+// Per-article update flag the store already maintains, used to drive the popover loader.
+const articleUiFlags = useMapGetter('articles/uiFlags');
+const isUpdatingArticle = computed(
+  () => articleUiFlags.value(props.articleId).isUpdating
+);
+
+const isPublished = computed(() => props.status === ARTICLE_STATUSES.PUBLISHED);
+
+const hasPendingChanges = computed(
+  () => isPublished.value && props.pendingChanges
+);
+
 const articleMenuItems = computed(() => {
   const statusOptions = ARTICLE_EDITOR_STATUS_OPTIONS[props.status] ?? [];
-  return statusOptions.map(option => {
+  const items = statusOptions.map(option => {
     const { label, value, icon } = ARTICLE_MENU_ITEMS[option];
     return {
       label: t(label),
@@ -60,6 +80,17 @@ const articleMenuItems = computed(() => {
       icon,
     };
   });
+
+  if (hasPendingChanges.value) {
+    items.push({
+      label: t('HELP_CENTER.EDIT_ARTICLE_PAGE.HEADER.DISCARD_CHANGES'),
+      value: 'discard-draft',
+      action: 'discard-draft',
+      icon: 'i-lucide-undo-2',
+    });
+  }
+
+  return items;
 });
 
 const statusText = computed(() =>
@@ -85,8 +116,9 @@ const getStatusMessage = (status, isSuccess) => {
     : '';
 };
 
-const updateArticleStatus = async ({ value }) => {
-  showArticleActionMenu.value = false;
+// draftAction (publishDraft/discardDraft) resolves a pending draft in the same
+// update; omit it for a plain status change.
+const performStatusUpdate = async (value, draftAction) => {
   const status = getArticleStatus(value);
   if (status === ARTICLE_STATUS_TYPES.PUBLISH) {
     isArticlePublishing.value = true;
@@ -94,7 +126,7 @@ const updateArticleStatus = async ({ value }) => {
   const { portalSlug } = route.params;
 
   try {
-    await store.dispatch('articles/update', {
+    await store.dispatch(`articles/${draftAction ?? 'update'}`, {
       portalSlug,
       articleId: props.articleId,
       status,
@@ -107,11 +139,86 @@ const updateArticleStatus = async ({ value }) => {
     } else if (status === ARTICLE_STATUS_TYPES.PUBLISH) {
       useTrack(PORTALS_EVENTS.PUBLISH_ARTICLE);
     }
-    isArticlePublishing.value = false;
   } catch (error) {
     useAlert(error?.message ?? getStatusMessage(status, false));
+  } finally {
     isArticlePublishing.value = false;
   }
+};
+
+const updateArticleStatus = ({ value }) => {
+  showArticleActionMenu.value = false;
+  // Leaving published with unsaved draft edits — ask whether to apply or discard first.
+  if (hasPendingChanges.value) {
+    requestedStatus.value = value;
+    pendingChangesPopoverRef.value?.open();
+    return;
+  }
+  performStatusUpdate(value);
+};
+
+const publishDraftChanges = async () => {
+  isArticlePublishing.value = true;
+  const { portalSlug } = route.params;
+  try {
+    await store.dispatch('articles/publishDraft', {
+      portalSlug,
+      articleId: props.articleId,
+    });
+    useAlert(t('HELP_CENTER.EDIT_ARTICLE_PAGE.HEADER.PUBLISH_CHANGES_SUCCESS'));
+    useTrack(PORTALS_EVENTS.PUBLISH_ARTICLE);
+  } catch (error) {
+    useAlert(
+      error?.message ??
+        t('HELP_CENTER.EDIT_ARTICLE_PAGE.HEADER.PUBLISH_CHANGES_ERROR')
+    );
+  } finally {
+    isArticlePublishing.value = false;
+  }
+};
+
+const discardDraftChanges = async () => {
+  const { portalSlug } = route.params;
+  try {
+    await store.dispatch('articles/discardDraft', {
+      portalSlug,
+      articleId: props.articleId,
+    });
+    useAlert(t('HELP_CENTER.EDIT_ARTICLE_PAGE.HEADER.DISCARD_CHANGES_SUCCESS'));
+  } catch (error) {
+    useAlert(
+      error?.message ??
+        t('HELP_CENTER.EDIT_ARTICLE_PAGE.HEADER.DISCARD_CHANGES_ERROR')
+    );
+  }
+};
+
+const onPrimaryAction = () => {
+  if (hasPendingChanges.value) {
+    publishDraftChanges();
+  } else {
+    updateArticleStatus({ value: ARTICLE_STATUSES.PUBLISHED });
+  }
+};
+
+const onMenuAction = event => {
+  showArticleActionMenu.value = false;
+  if (event.action === 'discard-draft') {
+    discardDraftChanges();
+  } else {
+    updateArticleStatus(event);
+  }
+};
+
+// Popover actions: resolve the draft and change status in one update, then close.
+const applyChangesAndUpdateStatus = async () => {
+  await performStatusUpdate(requestedStatus.value, 'publishDraft');
+  pendingChangesPopoverRef.value?.close();
+};
+
+const discardChangesAndUpdateStatus = async () => {
+  await performStatusUpdate(requestedStatus.value, 'discardDraft');
+  pendingChangesPopoverRef.value?.close();
 };
 </script>
 
@@ -128,12 +235,19 @@ const updateArticleStatus = async ({ value }) => {
     />
     <div class="flex items-center gap-4">
       <span
+        v-if="hasPendingChanges"
+        class="flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded-lg text-n-amber-11 bg-n-amber-3 outline outline-1 outline-n-amber-5"
+      >
+        <span class="rounded-full size-1.5 bg-n-amber-9 shrink-0" />
+        {{ t('HELP_CENTER.EDIT_ARTICLE_PAGE.HEADER.PENDING_CHANGES') }}
+      </span>
+      <span
         v-if="isUpdating || isSaved"
         class="text-xs font-medium transition-all duration-300 text-n-slate-11"
       >
         {{ statusText }}
       </span>
-      <div class="flex items-center gap-2">
+      <div class="relative flex items-center gap-2">
         <Button
           :label="t('HELP_CENTER.EDIT_ARTICLE_PAGE.HEADER.PREVIEW')"
           color="slate"
@@ -143,17 +257,21 @@ const updateArticleStatus = async ({ value }) => {
         />
         <ButtonGroup class="flex items-center">
           <Button
-            :label="t('HELP_CENTER.EDIT_ARTICLE_PAGE.HEADER.PUBLISH')"
+            :label="
+              hasPendingChanges
+                ? t('HELP_CENTER.EDIT_ARTICLE_PAGE.HEADER.PUBLISH_CHANGES')
+                : t('HELP_CENTER.EDIT_ARTICLE_PAGE.HEADER.PUBLISH')
+            "
             size="sm"
             class="ltr:rounded-r-none rtl:rounded-l-none"
             no-animation
             :is-loading="isArticlePublishing"
             :disabled="
-              status === ARTICLE_STATUSES.PUBLISHED ||
               !articleId ||
-              isArticlePublishing
+              isArticlePublishing ||
+              (isPublished && !hasPendingChanges)
             "
-            @click="updateArticleStatus({ value: ARTICLE_STATUSES.PUBLISHED })"
+            @click="onPrimaryAction"
           />
           <div class="relative">
             <OnClickOutside @trigger="showArticleActionMenu = false">
@@ -169,11 +287,17 @@ const updateArticleStatus = async ({ value }) => {
                 v-if="showArticleActionMenu"
                 :menu-items="articleMenuItems"
                 class="mt-2 ltr:right-0 rtl:left-0 top-full"
-                @action="updateArticleStatus($event)"
+                @action="onMenuAction($event)"
               />
             </OnClickOutside>
           </div>
         </ButtonGroup>
+        <ArticlePendingChangesPopover
+          ref="pendingChangesPopoverRef"
+          :is-loading="isUpdatingArticle"
+          @apply="applyChangesAndUpdateStatus"
+          @discard="discardChangesAndUpdateStatus"
+        />
       </div>
     </div>
   </div>

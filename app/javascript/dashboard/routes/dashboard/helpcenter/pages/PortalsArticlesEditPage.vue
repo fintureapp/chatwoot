@@ -4,7 +4,10 @@ import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useAlert, useTrack } from 'dashboard/composables';
 import { PORTALS_EVENTS } from 'dashboard/helper/AnalyticsHelper/events';
-import { buildPortalArticleURL } from 'dashboard/helper/portalHelper';
+import {
+  buildPortalArticleURL,
+  ARTICLE_STATUSES,
+} from 'dashboard/helper/portalHelper';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 
 import ArticleEditor from 'dashboard/components-next/HelpCenter/Pages/ArticleEditorPage/ArticleEditor.vue';
@@ -40,13 +43,29 @@ const articleLink = computed(() => {
   );
 });
 
+// On a published article, title/content edits are staged into draft_* columns
+// (kept off the live site); everything else saves straight to the live record.
+const stageDraftFields = values => {
+  if (article.value?.status !== ARTICLE_STATUSES.PUBLISHED) return values;
+  const staged = { ...values };
+  if ('title' in staged) {
+    staged.draft_title = staged.title;
+    delete staged.title;
+  }
+  if ('content' in staged) {
+    staged.draft_content = staged.content;
+    delete staged.content;
+  }
+  return staged;
+};
+
 const saveArticle = async ({ ...values }) => {
   isUpdating.value = true;
   try {
     await store.dispatch('articles/update', {
       portalSlug,
       articleId: articleSlug,
-      ...values,
+      ...stageDraftFields(values),
     });
     isSaved.value = true;
   } catch (error) {

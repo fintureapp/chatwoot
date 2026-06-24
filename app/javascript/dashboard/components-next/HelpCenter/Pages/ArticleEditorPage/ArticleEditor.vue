@@ -38,17 +38,34 @@ const { t } = useI18n();
 
 const isNewArticle = computed(() => !props.article?.id);
 
-const localTitle = ref(props.article?.title ?? '');
-const localContent = ref(props.article?.content ?? '');
+// Prefer the draft copy so the editor shows pending edits. `!= null` keeps a
+// deliberately-cleared empty string instead of falling back to the live value.
+const effectiveTitle = () =>
+  props.article?.draftTitle != null
+    ? props.article.draftTitle
+    : (props.article?.title ?? '');
+const effectiveContent = () =>
+  props.article?.draftContent != null
+    ? props.article.draftContent
+    : (props.article?.content ?? '');
 
-// Sync local state when navigating to a different article or on initial fetch
+const hasPendingChanges = computed(
+  () => props.article?.draftTitle != null || props.article?.draftContent != null
+);
+
+const localTitle = ref(effectiveTitle());
+const localContent = ref(effectiveContent());
+
+const syncLocalState = () => {
+  localTitle.value = effectiveTitle();
+  localContent.value = effectiveContent();
+};
+
+// Reseed the editor when switching articles or after a draft is published/discarded.
 watch(
-  () => props.article?.id,
-  newId => {
-    if (newId) {
-      localTitle.value = props.article?.title ?? '';
-      localContent.value = props.article?.content ?? '';
-    }
+  [() => props.article?.id, hasPendingChanges],
+  ([id, pending], [prevId, prevPending]) => {
+    if ((id && id !== prevId) || (prevPending && !pending)) syncLocalState();
   }
 );
 
@@ -108,6 +125,7 @@ const handleCreateArticle = event => {
         :is-saved="isSaved"
         :status="article.status"
         :article-id="article.id"
+        :pending-changes="hasPendingChanges"
         @go-back="onClickGoBack"
         @preview-article="previewArticle"
       />
