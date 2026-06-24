@@ -235,7 +235,7 @@ const handleAction = ({ action, id }) => {
   nextTick(() => {
     if (action === 'delete') {
       handleDelete();
-    } else if (action === 'viewRelatedQuestions') {
+    } else if (action === 'viewDetails') {
       handleShowRelatedDocument();
     } else if (action === 'sync') {
       handleSync(id);
@@ -416,6 +416,7 @@ onUnmounted(() => {
           :last-sync-error-code="doc.last_sync_error_code"
           :sync-in-progress="doc.sync_in_progress"
           :sync-stale-after-hours="syncIntervalHours"
+          :responses-count="doc.responses_count"
           :is-selected="canManageDocuments && bulkSelectedIds.has(doc.id)"
           :selectable="canManageDocuments"
           :show-selection-control="shouldShowSelectionControl(doc.id)"
