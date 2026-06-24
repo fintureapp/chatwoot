@@ -36,11 +36,15 @@ class Captain::Assistant < ApplicationRecord
   has_many :copilot_threads, dependent: :destroy_async
   has_many :scenarios, class_name: 'Captain::Scenario', dependent: :destroy_async
 
-  store_accessor :config, :temperature, :feature_faq, :feature_memory, :feature_contact_attributes, :product_name
+  store_accessor :config, :temperature, :feature_faq, :feature_memory, :feature_contact_attributes, :product_name, :response_window
+
+  RESPONSE_WINDOWS = %w[always business_hours outside_business_hours].freeze
 
   validates :name, presence: true
   validates :description, presence: true
   validates :account_id, presence: true
+  validate :validate_audience_structure
+  validate :validate_response_window
 
   scope :ordered, -> { order(created_at: :desc) }
 
@@ -48,6 +52,32 @@ class Captain::Assistant < ApplicationRecord
 
   def available_name
     name
+  end
+
+  # Whether this assistant should engage the given conversation right now — combines the audience
+  # filter (who) and the schedule (when).
+  def engages?(contact, conversation)
+    responds_to_audience?(contact, conversation) && available_now?(conversation)
+  end
+
+  # Whether this assistant should engage the given contact, based on its audience filter.
+  # No audience configured => responds to everyone (back-compat).
+  def responds_to_audience?(contact, conversation)
+    return true if config['audience'].blank?
+
+    Captain::AudienceMatcher.new(config['audience']).matches?(contact, conversation)
+  end
+
+  # Whether the assistant is on duty for this conversation based on the response window.
+  # Inboxes without business hours configured are always covered (fail open).
+  def available_now?(conversation)
+    window = config['response_window']
+    return true if window.blank? || window == 'always'
+
+    inbox = conversation.inbox
+    return true unless inbox.working_hours_enabled?
+
+    window == 'business_hours' ? !inbox.out_of_office? : inbox.out_of_office?
   end
 
   def available_agent_tools
@@ -86,6 +116,39 @@ class Captain::Assistant < ApplicationRecord
   end
 
   private
+
+  def validate_audience_structure
+    audience = config['audience']
+    return if audience.blank?
+
+    errors.add(:config, 'audience must be a valid condition tree') unless valid_audience_node?(audience, 1)
+  end
+
+  def validate_response_window
+    window = config['response_window']
+    return if window.blank?
+
+    errors.add(:config, 'invalid response_window') unless RESPONSE_WINDOWS.include?(window)
+  end
+
+  def valid_audience_node?(node, depth)
+    return false unless node.is_a?(Hash) && depth <= Captain::AudienceMatcher::MAX_DEPTH
+
+    node = node.with_indifferent_access
+    return valid_audience_group?(node, depth) if node.key?(:conditions)
+
+    valid_audience_leaf?(node)
+  end
+
+  def valid_audience_group?(node, depth)
+    node[:conditions].is_a?(Array) &&
+      node[:conditions].present? &&
+      node[:conditions].all? { |child| valid_audience_node?(child, depth + 1) }
+  end
+
+  def valid_audience_leaf?(node)
+    node[:attribute_key].present? && Captain::AudienceMatcher::OPERATORS.include?(node[:filter_operator])
+  end
 
   def agent_name
     name.parameterize(separator: '_')

@@ -126,6 +126,36 @@ RSpec.describe MessageTemplates::HookExecutionService do
     end
   end
 
+  context 'when the contact is outside the assistant audience' do
+    before do
+      assistant.update!(config: assistant.config.merge('audience' => {
+                                                         'attribute_key' => 'country_code', 'filter_operator' => 'equal_to', 'values' => ['US']
+                                                       }))
+      contact.update!(additional_attributes: { 'country_code' => 'CA' })
+    end
+
+    it 'does not schedule captain response job' do
+      expect(Captain::Conversation::ResponseBuilderJob).not_to receive(:perform_later)
+
+      create(:message, conversation: conversation, message_type: :incoming, account: account)
+    end
+  end
+
+  context 'when the contact is inside the assistant audience' do
+    before do
+      assistant.update!(config: assistant.config.merge('audience' => {
+                                                         'attribute_key' => 'country_code', 'filter_operator' => 'equal_to', 'values' => ['US']
+                                                       }))
+      contact.update!(additional_attributes: { 'country_code' => 'US' })
+    end
+
+    it 'schedules captain response job' do
+      expect(Captain::Conversation::ResponseBuilderJob).to receive(:perform_later).with(conversation, assistant)
+
+      create(:message, conversation: conversation, message_type: :incoming, account: account)
+    end
+  end
+
   context 'when message is outgoing' do
     it 'does not schedule captain response job' do
       expect(Captain::Conversation::ResponseBuilderJob).not_to receive(:perform_later)

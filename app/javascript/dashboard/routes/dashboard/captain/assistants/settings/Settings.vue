@@ -12,7 +12,8 @@ import PageLayout from 'dashboard/components-next/captain/PageLayout.vue';
 import SettingsHeader from 'dashboard/components-next/captain/pageComponents/settings/SettingsHeader.vue';
 import AssistantBasicSettingsForm from 'dashboard/components-next/captain/pageComponents/assistant/settings/AssistantBasicSettingsForm.vue';
 import AssistantSystemSettingsForm from 'dashboard/components-next/captain/pageComponents/assistant/settings/AssistantSystemSettingsForm.vue';
-import AssistantControlItems from 'dashboard/components-next/captain/pageComponents/assistant/settings/AssistantControlItems.vue';
+import AssistantAudienceForm from 'dashboard/components-next/captain/pageComponents/assistant/settings/AssistantAudienceForm.vue';
+import AssistantScheduleForm from 'dashboard/components-next/captain/pageComponents/assistant/settings/AssistantScheduleForm.vue';
 import DeleteDialog from 'dashboard/components-next/captain/pageComponents/DeleteDialog.vue';
 
 const { t } = useI18n();
@@ -35,28 +36,55 @@ const assistant = computed(() =>
   store.getters['captainAssistants/getRecord'](assistantId.value)
 );
 
-const controlItems = computed(() => {
-  return [
+const activeSection = ref('basic');
+
+const navItems = computed(() => {
+  const items = [
     {
-      name: t(
-        'CAPTAIN.ASSISTANTS.SETTINGS.CONTROL_ITEMS.OPTIONS.GUARDRAILS.TITLE'
-      ),
-      description: t(
-        'CAPTAIN.ASSISTANTS.SETTINGS.CONTROL_ITEMS.OPTIONS.GUARDRAILS.DESCRIPTION'
-      ),
-      routeName: 'captain_assistants_guardrails_index',
+      id: 'basic',
+      label: t('CAPTAIN.ASSISTANTS.SETTINGS.BASIC_SETTINGS.TITLE'),
     },
     {
-      name: t(
-        'CAPTAIN.ASSISTANTS.SETTINGS.CONTROL_ITEMS.OPTIONS.RESPONSE_GUIDELINES.TITLE'
-      ),
-      description: t(
-        'CAPTAIN.ASSISTANTS.SETTINGS.CONTROL_ITEMS.OPTIONS.RESPONSE_GUIDELINES.DESCRIPTION'
-      ),
-      routeName: 'captain_assistants_guidelines_index',
+      id: 'system',
+      label: t('CAPTAIN.ASSISTANTS.SETTINGS.SYSTEM_SETTINGS.TITLE'),
     },
+    { id: 'audience', label: t('CAPTAIN.ASSISTANTS.SETTINGS.AUDIENCE.TITLE') },
+    { id: 'schedule', label: t('CAPTAIN.ASSISTANTS.SETTINGS.SCHEDULE.TITLE') },
   ];
+
+  if (isCaptainV2Enabled.value) {
+    items.push(
+      {
+        routeName: 'captain_assistants_guardrails_index',
+        label: t(
+          'CAPTAIN.ASSISTANTS.SETTINGS.CONTROL_ITEMS.OPTIONS.GUARDRAILS.TITLE'
+        ),
+      },
+      {
+        routeName: 'captain_assistants_guidelines_index',
+        label: t(
+          'CAPTAIN.ASSISTANTS.SETTINGS.CONTROL_ITEMS.OPTIONS.RESPONSE_GUIDELINES.TITLE'
+        ),
+      }
+    );
+  }
+
+  return items;
 });
+
+const handleNavClick = item => {
+  if (item.routeName) {
+    router.push({
+      name: item.routeName,
+      params: {
+        accountId: route.params.accountId,
+        assistantId: assistantId.value,
+      },
+    });
+    return;
+  }
+  activeSection.value = item.id;
+};
 
 const handleSubmit = async updatedAssistant => {
   try {
@@ -107,18 +135,30 @@ const handleDeleteSuccess = () => {
     :is-fetching="isFetching"
     :show-pagination-footer="false"
     :show-know-more="false"
-    :class="{
-      '[&>header>div]:max-w-[80rem] [&>main>div]:max-w-[80rem]':
-        isCaptainV2Enabled,
-    }"
   >
     <template #body>
-      <div
-        class="gap-6 lg:gap-16 pb-8"
-        :class="{ 'grid grid-cols-2': isCaptainV2Enabled }"
-      >
-        <div class="flex flex-col gap-6">
-          <div class="flex flex-col gap-6">
+      <div class="flex gap-8 pb-8">
+        <nav
+          class="sticky self-start flex flex-col flex-shrink-0 w-48 gap-1 top-0"
+        >
+          <button
+            v-for="item in navItems"
+            :key="item.id ?? item.routeName"
+            type="button"
+            class="px-3 py-2 text-sm text-left rounded-lg transition-colors"
+            :class="
+              activeSection === item.id
+                ? 'bg-n-alpha-2 text-n-slate-12 font-medium'
+                : 'text-n-slate-11 hover:bg-n-alpha-1'
+            "
+            @click="handleNavClick(item)"
+          >
+            {{ item.label }}
+          </button>
+        </nav>
+
+        <div class="flex flex-col flex-1 min-w-0 gap-6">
+          <section v-if="activeSection === 'basic'" class="flex flex-col gap-6">
             <SettingsHeader
               :heading="t('CAPTAIN.ASSISTANTS.SETTINGS.BASIC_SETTINGS.TITLE')"
               :description="
@@ -129,9 +169,35 @@ const handleDeleteSuccess = () => {
               :assistant="assistant"
               @submit="handleSubmit"
             />
-          </div>
-          <span class="h-px w-full bg-n-weak mt-2" />
-          <div class="flex flex-col gap-6">
+            <span class="w-full h-px mt-2 bg-n-weak" />
+            <div class="flex items-end justify-between w-full gap-4">
+              <div class="flex flex-col gap-2">
+                <h6 class="text-base font-medium text-n-slate-12">
+                  {{ t('CAPTAIN.ASSISTANTS.SETTINGS.DELETE.TITLE') }}
+                </h6>
+                <span class="text-sm text-n-slate-11">
+                  {{ t('CAPTAIN.ASSISTANTS.SETTINGS.DELETE.DESCRIPTION') }}
+                </span>
+              </div>
+              <div class="flex-shrink-0">
+                <Button
+                  :label="
+                    t('CAPTAIN.ASSISTANTS.SETTINGS.DELETE.BUTTON_TEXT', {
+                      assistantName: assistant.name,
+                    })
+                  "
+                  color="ruby"
+                  class="max-w-56 !w-fit"
+                  @click="handleDelete"
+                />
+              </div>
+            </div>
+          </section>
+
+          <section
+            v-else-if="activeSection === 'system'"
+            class="flex flex-col gap-6"
+          >
             <SettingsHeader
               :heading="t('CAPTAIN.ASSISTANTS.SETTINGS.SYSTEM_SETTINGS.TITLE')"
               :description="
@@ -142,45 +208,39 @@ const handleDeleteSuccess = () => {
               :assistant="assistant"
               @submit="handleSubmit"
             />
-          </div>
-          <span class="h-px w-full bg-n-weak mt-2" />
-          <div class="flex items-end justify-between w-full gap-4">
-            <div class="flex flex-col gap-2">
-              <h6 class="text-n-slate-12 text-base font-medium">
-                {{ t('CAPTAIN.ASSISTANTS.SETTINGS.DELETE.TITLE') }}
-              </h6>
-              <span class="text-n-slate-11 text-sm">
-                {{ t('CAPTAIN.ASSISTANTS.SETTINGS.DELETE.DESCRIPTION') }}
-              </span>
-            </div>
-            <div class="flex-shrink-0">
-              <Button
-                :label="
-                  t('CAPTAIN.ASSISTANTS.SETTINGS.DELETE.BUTTON_TEXT', {
-                    assistantName: assistant.name,
-                  })
-                "
-                color="ruby"
-                class="max-w-56 !w-fit"
-                @click="handleDelete"
-              />
-            </div>
-          </div>
-        </div>
-        <div v-if="isCaptainV2Enabled" class="flex flex-col gap-6">
-          <SettingsHeader
-            :heading="t('CAPTAIN.ASSISTANTS.SETTINGS.CONTROL_ITEMS.TITLE')"
-            :description="
-              t('CAPTAIN.ASSISTANTS.SETTINGS.CONTROL_ITEMS.DESCRIPTION')
-            "
-          />
-          <div class="flex flex-col gap-6">
-            <AssistantControlItems
-              v-for="item in controlItems"
-              :key="item.name"
-              :control-item="item"
+          </section>
+
+          <section
+            v-else-if="activeSection === 'audience'"
+            class="flex flex-col gap-6"
+          >
+            <SettingsHeader
+              :heading="t('CAPTAIN.ASSISTANTS.SETTINGS.AUDIENCE.TITLE')"
+              :description="
+                t('CAPTAIN.ASSISTANTS.SETTINGS.AUDIENCE.DESCRIPTION')
+              "
             />
-          </div>
+            <AssistantAudienceForm
+              :assistant="assistant"
+              @submit="handleSubmit"
+            />
+          </section>
+
+          <section
+            v-else-if="activeSection === 'schedule'"
+            class="flex flex-col gap-6"
+          >
+            <SettingsHeader
+              :heading="t('CAPTAIN.ASSISTANTS.SETTINGS.SCHEDULE.TITLE')"
+              :description="
+                t('CAPTAIN.ASSISTANTS.SETTINGS.SCHEDULE.DESCRIPTION')
+              "
+            />
+            <AssistantScheduleForm
+              :assistant="assistant"
+              @submit="handleSubmit"
+            />
+          </section>
         </div>
       </div>
     </template>

@@ -50,7 +50,7 @@ module Enterprise::MessageTemplates::HookExecutionService
   end
 
   def should_process_captain_response?
-    conversation.pending? && message.incoming? && inbox.captain_assistant.present?
+    conversation.pending? && message.incoming? && captain_should_engage?
   end
 
   def perform_handoff
@@ -76,6 +76,15 @@ module Enterprise::MessageTemplates::HookExecutionService
   end
 
   def captain_handling_conversation?
-    conversation.pending? && inbox.respond_to?(:captain_assistant) && inbox.captain_assistant.present?
+    conversation.pending? && captain_should_engage?
+  end
+
+  # True only when the inbox has a Captain assistant that should engage this conversation now —
+  # i.e. the contact is within the audience AND the assistant is on-schedule. Otherwise the
+  # conversation falls back to normal human handling (greeting/OOO templates fire, Captain silent).
+  def captain_should_engage?
+    inbox.respond_to?(:captain_assistant) &&
+      inbox.captain_assistant.present? &&
+      inbox.captain_assistant.engages?(conversation.contact, conversation)
   end
 end

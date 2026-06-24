@@ -15,6 +15,22 @@ module Enterprise::Message
 
   private
 
+  # On reopen, a Captain inbox would normally re-pend the conversation for the bot. When the
+  # assistant won't engage (contact outside audience, or off-schedule), route to the human queue
+  # (open) instead of pending.
+  def reopen_resolved_conversation
+    return conversation.open! if captain_should_not_engage?
+
+    super
+  end
+
+  def captain_should_not_engage?
+    inbox = conversation.inbox
+    inbox.respond_to?(:captain_assistant) &&
+      inbox.captain_assistant.present? &&
+      !inbox.captain_assistant.engages?(conversation.contact, conversation)
+  end
+
   def mark_pending_conversation_as_open_for_human_response
     return unless captain_pending_conversation?
     return unless human_response?
