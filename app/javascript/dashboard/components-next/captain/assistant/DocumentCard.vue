@@ -165,6 +165,10 @@ const handleAction = ({ action, value }) => {
   emit('action', { action, value, id: props.id });
 };
 
+const handleViewDetails = () => {
+  emit('action', { action: 'viewDetails', id: props.id });
+};
+
 const handleRetry = () => {
   emit('action', { action: 'sync', id: props.id });
 };
@@ -184,9 +188,13 @@ const handleRetry = () => {
       <Checkbox v-model="modelValue" />
     </div>
     <div class="flex gap-1 justify-between w-full">
-      <span class="text-base text-n-slate-12 line-clamp-1">
+      <button
+        type="button"
+        class="p-0 text-base text-left bg-transparent border-0 outline-transparent text-n-slate-12 line-clamp-1 hover:underline"
+        @click="handleViewDetails"
+      >
         {{ name }}
-      </span>
+      </button>
       <div v-if="showMenu" class="flex gap-2 items-center">
         <div
           v-on-clickaway="() => toggleDropdown(false)"
