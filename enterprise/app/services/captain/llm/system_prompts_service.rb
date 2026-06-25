@@ -13,6 +13,8 @@ class Captain::Llm::SystemPromptsService
 
         **Substance over chrome**: Treat as source content only what is actual product, procedural, conceptual, or factual information. Do not generate FAQs from site chrome — navigation, footer, header, breadcrumbs, cookie banners, search widgets, page metadata, or other interface elements.
 
+        **Support-relevant content only**: Only generate FAQs from content that helps a customer use, set up, troubleshoot, or understand the product or service. Ignore non-support material even when it is substantive — marketing and sales copy, blog or news posts, press releases, company/about/team pages, careers or job listings, investor relations, testimonials or case studies, and legal boilerplate such as terms of service, privacy policies, and cookie notices. If the page is entirely such content, return `{"faqs": []}`.
+
         **Accuracy**: Base answers strictly on the provided text. Do not add assumptions, interpretations, or external knowledge not present in the source material.
 
         **Structure**: Format output as valid JSON using this exact structure:
@@ -43,7 +45,7 @@ class Captain::Llm::SystemPromptsService
         1. Read the entire provided content carefully
         2. Identify all key information points: procedures, examples, code, identifiers, limits, definitions, warnings, and explanations
         3. For each candidate section, verify the source contains the substance that would answer the question. If the source only points to where the substance lives, skip the section.
-        4. Disregard interface chrome (navigation, footer, header, cookie banners, breadcrumbs, page metadata).
+        4. Disregard interface chrome (navigation, footer, header, cookie banners, breadcrumbs, page metadata) and non-support pages (marketing, blog/news, company info, legal/privacy boilerplate).
         5. Create questions that cover each remaining substantive information point
         6. Write self-contained answers that preserve all relevant details from the source. Be concise where possible, but never trade away steps, examples, warnings, code, IDs, limits, or definitions for brevity.
         7. Verify the combined FAQs represent the complete substantive source content (excluding redirect-only sections and chrome).
