@@ -1,6 +1,15 @@
 class Captain::Tools::FirecrawlService
   BASE_URL = 'https://api.firecrawl.dev/v2'.freeze
   FIRECRAWL_EXCLUDE_TAGS = %w[iframe .sidebar .cookie-banner [role=navigation] [role=banner] [role=contentinfo]].freeze
+  # Pathname regex patterns kept out of the crawl so promotional, legal, and
+  # auth pages do not get indexed as Captain documents (and do not consume quota).
+  FIRECRAWL_EXCLUDE_PATHS = %w[
+    ^/blog ^/news ^/press
+    ^/careers ^/jobs ^/about ^/team ^/investors
+    ^/customers ^/testimonials ^/case-studies
+    ^/login ^/signup ^/register
+    ^/legal ^/terms ^/privacy
+  ].freeze
 
   def self.configured?
     InstallationConfig.find_by(name: 'CAPTAIN_FIRECRAWL_API_KEY')&.value
@@ -38,6 +47,7 @@ class Captain::Tools::FirecrawlService
       maxDiscoveryDepth: 50,
       sitemap: 'include',
       limit: crawl_limit,
+      excludePaths: FIRECRAWL_EXCLUDE_PATHS,
       webhook: { url: webhook_url },
       scrapeOptions: scrape_options
     }.to_json
