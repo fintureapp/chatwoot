@@ -81,12 +81,20 @@ class Whatsapp::IncomingCallService
     sdp_offer = payload.dig(:session, :sdp)
     extra_meta = { 'sdp_offer' => sdp_offer, 'ice_servers' => Call.default_ice_servers }
 
+    identity = caller_identity(payload)
     call = Voice::InboundCallBuilder.perform!(
       inbox: inbox, call_sid: payload[:id], provider: :whatsapp,
-      extra_meta: extra_meta, caller: caller_identity(payload)
+      extra_meta: extra_meta, caller: identity
     )
+    sync_caller_identifiers(call, identity)
     update_conversation(call)
     broadcast_incoming(call, sdp_offer)
+  end
+
+  # Backfill every caller alias (the builder only stores the first) so a later event keyed on any one lands on this thread.
+  def sync_caller_identifiers(call, identity)
+    Whatsapp::IdentifierSyncService.new(contact_inbox: call.conversation.contact_inbox, contact: call.contact)
+                                   .perform(source_ids: identity[:source_ids], phone_number: identity.dig(:contact_attributes, :phone_number))
   end
 
   # Build the message path's source_id set (phone wa_id -> user_id -> parent_user_id) plus
