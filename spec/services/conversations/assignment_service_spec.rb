@@ -65,14 +65,6 @@ describe Conversations::AssignmentService do
         expect(conversation.assignee_id).to be_nil
         expect(conversation.status).to eq('pending')
       end
-
-      it 'preserves status when assigning an agent bot to a closed conversation' do
-        conversation.update!(assignee: agent, assignee_agent_bot: nil, status: :resolved)
-
-        service.perform
-
-        expect(conversation.reload.status).to eq('resolved')
-      end
     end
   end
 end
