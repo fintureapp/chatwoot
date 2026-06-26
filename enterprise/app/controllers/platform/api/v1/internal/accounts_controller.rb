@@ -7,15 +7,18 @@ class Platform::Api::V1::Internal::AccountsController < ActionController::API
   DEFAULT_LIMIT = 100
   MAX_LIMIT = 1000
 
+  before_action :ensure_chatwoot_cloud
   before_action :authenticate_internal_token!
 
   def index
-    return render_not_found unless ChatwootApp.chatwoot_cloud?
-
     @accounts = filtered_accounts.limit(limit)
   end
 
   private
+
+  def ensure_chatwoot_cloud
+    render_not_found unless ChatwootApp.chatwoot_cloud?
+  end
 
   def authenticate_internal_token!
     return if internal_token.present? && secure_token_match?(request_token, internal_token)
