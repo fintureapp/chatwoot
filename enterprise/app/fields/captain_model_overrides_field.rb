@@ -33,8 +33,14 @@ class CaptainModelOverridesField < Administrate::Field::Base
   end
 
   def model_options(feature_key)
-    Llm::Models.feature_config(feature_key)[:models].map do |model|
-      [model[:display_name] || model[:id], model[:id]]
+    models_by_provider = Llm::Models.feature_config(feature_key)[:models].group_by { |model| model[:provider] }
+
+    grouped_models = models_by_provider.transform_keys do |provider|
+      provider_label(provider)
+    end
+
+    grouped_models.transform_values do |models|
+      models.map { |model| [model[:display_name] || model[:id], model[:id]] }
     end
   end
 

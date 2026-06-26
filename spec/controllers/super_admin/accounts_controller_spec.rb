@@ -64,6 +64,7 @@ RSpec.describe 'Super Admin accounts API', type: :request do
         default_model = Llm::Models.model_config(default_model_id)['display_name']
 
         expect(editor_select.at_css('option[value=""]').text.squish).to eq("Use default: #{default_model} (#{default_model_id})")
+        expect(editor_select.css('optgroup').map { |group| group['label'] }).to include('Default routing', 'OpenAI')
       end
     end
   end

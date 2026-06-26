@@ -56,6 +56,17 @@ RSpec.describe 'Super Admin Application Config API', type: :request do
         expect(flash[:alert]).to be_blank
         expect(flash[:notice]).to be_blank
       end
+
+      it 'allows Captain provider credentials to be configured' do
+        sign_in(super_admin, scope: :super_admin)
+
+        post '/super_admin/app_config?config=captain',
+             params: { app_config: { CAPTAIN_ANTHROPIC_API_KEY: 'anthropic-key', CAPTAIN_GEMINI_API_KEY: 'gemini-key' } }
+
+        expect(response).to have_http_status(:found)
+        expect(GlobalConfig.get('CAPTAIN_ANTHROPIC_API_KEY')['CAPTAIN_ANTHROPIC_API_KEY']).to eq('anthropic-key')
+        expect(GlobalConfig.get('CAPTAIN_GEMINI_API_KEY')['CAPTAIN_GEMINI_API_KEY']).to eq('gemini-key')
+      end
     end
   end
 end

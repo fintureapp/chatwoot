@@ -50,7 +50,7 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
       'whatsapp_embedded' => %w[WHATSAPP_APP_ID WHATSAPP_APP_SECRET WHATSAPP_CONFIGURATION_ID WHATSAPP_API_VERSION],
       'notion' => %w[NOTION_CLIENT_ID NOTION_CLIENT_SECRET],
       'google' => %w[GOOGLE_OAUTH_CLIENT_ID GOOGLE_OAUTH_CLIENT_SECRET GOOGLE_OAUTH_REDIRECT_URI ENABLE_GOOGLE_OAUTH_LOGIN],
-      'captain' => %w[CAPTAIN_OPEN_AI_API_KEY CAPTAIN_OPEN_AI_MODEL CAPTAIN_OPEN_AI_ENDPOINT]
+      'captain' => captain_config_options
     }
 
     @allowed_configs = mapping.fetch(
@@ -72,6 +72,18 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
 
   def restart_required_config_saved?
     params.fetch('app_config', {}).keys.intersect?(InstallationConfig::RESTART_REQUIRED_CONFIG_KEYS)
+  end
+
+  def captain_config_options
+    %w[
+      CAPTAIN_OPEN_AI_API_KEY
+      CAPTAIN_OPEN_AI_MODEL
+      CAPTAIN_OPEN_AI_ENDPOINT
+      CAPTAIN_ANTHROPIC_API_KEY
+      CAPTAIN_ANTHROPIC_API_BASE
+      CAPTAIN_GEMINI_API_KEY
+      CAPTAIN_GEMINI_API_BASE
+    ]
   end
 end
 

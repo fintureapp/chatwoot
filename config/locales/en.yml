@@ -577,6 +577,7 @@ en:
     captain_model_overrides:
       form:
         helper_text: 'Leave a model blank to use the YAML default for that AI feature.'
+        default_group: 'Default routing'
         use_default: 'Use default: %{model} (%{model_id})'
       show:
         summary: 'View model routing'
@@ -591,6 +592,7 @@ en:
         copilot: 'Copilot'
         label_suggestion: 'Label suggestion'
         document_faq_generation: 'Document FAQ generation'
+        pdf_faq_generation: 'PDF FAQ generation'
         help_center_article_generation: 'Help center article generation'
         onboarding_content_generation: 'Onboarding content generation'
         help_center_query_translation: 'Help center query translation'
