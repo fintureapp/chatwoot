@@ -16,6 +16,7 @@ class Conversations::AssignmentService
   def assign_agent
     conversation.assignee = assignee
     conversation.assignee_agent_bot = nil
+    conversation.status = :open if assignee
     conversation.save!
     assignee
   end
@@ -25,6 +26,7 @@ class Conversations::AssignmentService
 
     conversation.assignee = nil
     conversation.assignee_agent_bot = agent_bot
+    conversation.status = :pending
     conversation.save!
     agent_bot
   end

@@ -44,6 +44,7 @@ RSpec.describe 'Conversation Assignment API', type: :request do
       end
 
       it 'assigns a user to the conversation' do
+        conversation.update!(status: :pending)
         params = { assignee_id: agent.id }
 
         post api_v1_account_conversation_assignments_url(account_id: account.id, conversation_id: conversation.display_id),
@@ -52,10 +53,13 @@ RSpec.describe 'Conversation Assignment API', type: :request do
              as: :json
 
         expect(response).to have_http_status(:success)
-        expect(conversation.reload.assignee).to eq(agent)
+        conversation.reload
+        expect(conversation.assignee).to eq(agent)
+        expect(conversation.status).to eq('open')
       end
 
       it 'assigns an agent bot to the conversation' do
+        conversation.update!(status: :open)
         params = { assignee_id: agent_bot.id, assignee_type: 'AgentBot' }
 
         expect(Conversations::AssignmentService).to receive(:new)
@@ -72,6 +76,7 @@ RSpec.describe 'Conversation Assignment API', type: :request do
         conversation.reload
         expect(conversation.assignee_agent_bot).to eq(agent_bot)
         expect(conversation.assignee).to be_nil
+        expect(conversation.status).to eq('pending')
       end
 
       it 'assigns a team to the conversation' do

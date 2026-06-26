@@ -23,16 +23,17 @@ describe Conversations::AssignmentService do
 
     context 'when assigning a user' do
       before do
-        conversation.update!(assignee_agent_bot: agent_bot, assignee: nil)
+        conversation.update!(assignee_agent_bot: agent_bot, assignee: nil, status: :pending)
       end
 
-      it 'sets the agent and clears agent bot' do
+      it 'sets the agent, clears agent bot and opens the conversation' do
         result = described_class.new(conversation: conversation, assignee_id: agent.id).perform
 
         conversation.reload
         expect(result).to eq(agent)
         expect(conversation.assignee_id).to eq(agent.id)
         expect(conversation.assignee_agent_bot_id).to be_nil
+        expect(conversation.status).to eq('open')
       end
     end
 
@@ -45,8 +46,8 @@ describe Conversations::AssignmentService do
         )
       end
 
-      it 'sets the agent bot and clears human assignee' do
-        conversation.update!(assignee: agent, assignee_agent_bot: nil)
+      it 'sets the agent bot, clears human assignee and marks the conversation pending' do
+        conversation.update!(assignee: agent, assignee_agent_bot: nil, status: :open)
 
         result = service.perform
 
@@ -54,6 +55,7 @@ describe Conversations::AssignmentService do
         expect(result).to eq(agent_bot)
         expect(conversation.assignee_agent_bot_id).to eq(agent_bot.id)
         expect(conversation.assignee_id).to be_nil
+        expect(conversation.status).to eq('pending')
       end
     end
   end

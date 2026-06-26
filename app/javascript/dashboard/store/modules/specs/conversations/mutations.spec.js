@@ -699,11 +699,11 @@ describe('#mutations', () => {
   });
 
   describe('#ASSIGN_AGENT', () => {
-    it('should assign agent to the correct conversation by ID', () => {
+    it('should assign agent bot to the correct conversation by ID', () => {
       const assignee = { id: 1, name: 'Agent' };
       const state = {
         allConversations: [
-          { id: 1, meta: {} },
+          { id: 1, meta: {}, status: 'open' },
           { id: 2, meta: {} },
         ],
         selectedChatId: 2,
@@ -716,7 +716,23 @@ describe('#mutations', () => {
       });
       expect(state.allConversations[0].meta.assignee).toEqual(assignee);
       expect(state.allConversations[0].meta.assignee_type).toEqual('AgentBot');
+      expect(state.allConversations[0].status).toEqual('pending');
       expect(state.allConversations[1].meta.assignee).toBeUndefined();
+    });
+
+    it('should open the conversation when assigning a user', () => {
+      const assignee = { id: 1, name: 'Agent' };
+      const state = {
+        allConversations: [{ id: 1, meta: {}, status: 'pending' }],
+      };
+
+      mutations[types.ASSIGN_AGENT](state, {
+        conversationId: 1,
+        assignee,
+        assigneeType: 'User',
+      });
+
+      expect(state.allConversations[0].status).toEqual('open');
     });
   });
 

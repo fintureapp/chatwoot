@@ -113,6 +113,11 @@ export const mutations = {
     if (chat) {
       chat.meta.assignee = assignee;
       chat.meta.assignee_type = assigneeType;
+      if (assigneeType === 'AgentBot') {
+        chat.status = 'pending';
+      } else if (assignee) {
+        chat.status = 'open';
+      }
     }
   },
 
