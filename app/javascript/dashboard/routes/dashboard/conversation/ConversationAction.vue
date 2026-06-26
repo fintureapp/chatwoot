@@ -25,7 +25,7 @@ export default {
     },
   },
   setup() {
-    const { agentsList } = useAgentsList();
+    const { agentsList } = useAgentsList(true, true);
     return {
       agentsList,
     };
@@ -81,18 +81,27 @@ export default {
     },
     assignedAgent: {
       get() {
-        return this.currentChat.meta.assignee;
+        const assignee = this.currentChat.meta.assignee;
+        if (!assignee) return assignee;
+
+        return {
+          ...assignee,
+          assignee_type: this.currentChat.meta.assignee_type || 'User',
+        };
       },
       set(agent) {
         const agentId = agent ? agent.id : null;
+        const assigneeType = agent ? agent.assignee_type || 'User' : null;
         this.$store.dispatch('setCurrentChatAssignee', {
           conversationId: this.currentChat.id,
           assignee: agent,
+          assigneeType,
         });
         this.$store
           .dispatch('assignAgent', {
             conversationId: this.currentChat.id,
             agentId,
+            assigneeType,
           })
           .then(() => {
             useAlert(this.$t('CONVERSATION.CHANGE_AGENT'));
@@ -158,6 +167,9 @@ export default {
       return false;
     },
   },
+  mounted() {
+    this.$store.dispatch('agentBots/get');
+  },
   methods: {
     onSelfAssign() {
       const {
@@ -174,6 +186,7 @@ export default {
         account_id,
         availability_status,
         available_name,
+        assignee_type: 'User',
         email,
         id,
         name,
@@ -183,7 +196,14 @@ export default {
       this.assignedAgent = selfAssign;
     },
     onClickAssignAgent(selectedItem) {
-      if (this.assignedAgent && this.assignedAgent.id === selectedItem.id) {
+      const currentAssigneeType = this.assignedAgent?.assignee_type || 'User';
+      const selectedAssigneeType = selectedItem.assignee_type || 'User';
+
+      if (
+        this.assignedAgent &&
+        this.assignedAgent.id === selectedItem.id &&
+        currentAssigneeType === selectedAssigneeType
+      ) {
         this.assignedAgent = null;
       } else {
         this.assignedAgent = selectedItem;

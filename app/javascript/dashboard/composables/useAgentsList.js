@@ -10,14 +10,19 @@ import {
  * A composable function that provides a list of agents for assignment.
  *
  * @param {boolean} [includeNoneAgent=true] - Whether to include a 'None' agent option.
+ * @param {boolean} [includeAgentBots=false] - Whether to include agent bots as assignment options.
  * @returns {Object} An object containing the agents list and assignable agents.
  */
-export function useAgentsList(includeNoneAgent = true) {
+export function useAgentsList(
+  includeNoneAgent = true,
+  includeAgentBots = false
+) {
   const { t } = useI18n();
   const currentUser = useMapGetter('getCurrentUser');
   const currentChat = useMapGetter('getSelectedChat');
   const currentAccountId = useMapGetter('getCurrentAccountId');
   const assignable = useMapGetter('inboxAssignableAgents/getAssignableAgents');
+  const agentBots = useMapGetter('agentBots/getBots');
 
   const inboxId = computed(() => currentChat.value?.inbox_id);
   const isAgentSelected = computed(() => currentChat.value?.meta?.assignee);
@@ -47,6 +52,13 @@ export function useAgentsList(includeNoneAgent = true) {
    */
   const agentsList = computed(() => {
     const agents = assignableAgents.value || [];
+    const bots = includeAgentBots
+      ? agentBots.value.map(bot => ({
+          ...bot,
+          assignee_type: 'AgentBot',
+          icon: 'i-lucide-bot',
+        }))
+      : [];
     const agentsByUpdatedPresence = getAgentsByUpdatedPresence(
       agents,
       currentUser.value,
@@ -60,6 +72,7 @@ export function useAgentsList(includeNoneAgent = true) {
     return [
       ...(includeNoneAgent && isAgentSelected.value ? [createNoneAgent()] : []),
       ...filteredAgentsByAvailability,
+      ...bots,
     ];
   });
 

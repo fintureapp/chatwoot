@@ -67,7 +67,13 @@ export default {
       this.$refs.searchbar.focus();
     },
     isActive(option) {
-      return this.selectedItems.some(item => item && option.id === item.id);
+      return this.selectedItems.some(item => {
+        if (!item || option.id !== item.id) return false;
+
+        return (
+          (option.assignee_type || 'User') === (item.assignee_type || 'User')
+        );
+      });
     },
   },
 };
@@ -88,7 +94,10 @@ export default {
     <div class="flex items-start justify-start flex-auto overflow-auto mt-2">
       <div class="w-full max-h-[10rem]">
         <WootDropdownMenu>
-          <WootDropdownItem v-for="option in filteredOptions" :key="option.id">
+          <WootDropdownItem
+            v-for="option in filteredOptions"
+            :key="`${option.assignee_type || 'User'}-${option.id}`"
+          >
             <NextButton
               slate
               :variant="isActive(option) ? 'faded' : 'ghost'"
