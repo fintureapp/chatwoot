@@ -1,12 +1,18 @@
 import axios from 'axios';
+import InboxesAPI from 'dashboard/api/inboxes';
 import { actions, types } from '../../inboxAssignableAgents';
 import agentsData from './fixtures';
 
 const commit = vi.fn();
 global.axios = axios;
 vi.mock('axios');
+vi.mock('dashboard/api/inboxes');
 
 describe('#actions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   describe('#fetch', () => {
     it('sends correct actions if API is success', async () => {
       axios.get.mockResolvedValue({
@@ -31,6 +37,22 @@ describe('#actions', () => {
         [types.SET_INBOX_ASSIGNABLE_AGENTS_UI_FLAG, { isFetching: true }],
         [types.SET_INBOX_ASSIGNABLE_AGENTS_UI_FLAG, { isFetching: false }],
       ]);
+    });
+  });
+
+  describe('#fetchAssignableOwners', () => {
+    it('stores assignable owners for the inbox', async () => {
+      InboxesAPI.getAssignableOwners.mockResolvedValue({
+        data: { payload: agentsData },
+      });
+
+      await actions.fetchAssignableOwners({ commit }, 1);
+
+      expect(InboxesAPI.getAssignableOwners).toHaveBeenCalledWith(1);
+      expect(commit).toHaveBeenCalledWith(types.SET_INBOX_ASSIGNABLE_OWNERS, {
+        inboxId: 1,
+        owners: agentsData,
+      });
     });
   });
 });

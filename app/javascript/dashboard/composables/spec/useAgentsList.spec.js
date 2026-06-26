@@ -31,7 +31,7 @@ const mockUseMapGetter = (overrides = {}) => {
     getSelectedChat: ref({ inbox_id: 1, meta: { assignee: true } }),
     getCurrentAccountId: ref(1),
     'inboxAssignableAgents/getAssignableAgents': ref(() => allAgentsData),
-    'agentBots/getBots': ref([]),
+    'inboxAssignableAgents/getAssignableOwners': ref(() => []),
   };
 
   const mergedGetters = { ...defaultGetters, ...overrides };
@@ -78,7 +78,16 @@ describe('useAgentsList', () => {
 
   it('includes agent bots when includeAgentBots is true', () => {
     mockUseMapGetter({
-      'agentBots/getBots': ref([{ id: 1, name: 'Bot', thumbnail: '' }]),
+      'inboxAssignableAgents/getAssignableOwners': ref(() => [
+        { id: 2, name: 'Agent', assignee_type: 'User' },
+        {
+          id: 1,
+          name: 'Bot',
+          thumbnail: '',
+          assignee_type: 'AgentBot',
+          icon: 'i-lucide-bot',
+        },
+      ]),
     });
 
     const { agentsList } = useAgentsList(true, true);

@@ -168,7 +168,10 @@ export default {
     },
   },
   mounted() {
-    this.$store.dispatch('agentBots/get');
+    this.$store.dispatch(
+      'inboxAssignableAgents/fetchAssignableOwners',
+      this.currentChat.inbox_id
+    );
   },
   methods: {
     onSelfAssign() {

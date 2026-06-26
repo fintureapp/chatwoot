@@ -15,6 +15,10 @@ class Inboxes extends CacheEnabledApiClient {
     return axios.get(`${this.url}/${inboxId}/campaigns`);
   }
 
+  getAssignableOwners(inboxId) {
+    return axios.get(`${this.url}/${inboxId}/assignable_owners`);
+  }
+
   deleteInboxAvatar(inboxId) {
     return axios.delete(`${this.url}/${inboxId}/avatar`);
   }

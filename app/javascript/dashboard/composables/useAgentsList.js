@@ -22,7 +22,9 @@ export function useAgentsList(
   const currentChat = useMapGetter('getSelectedChat');
   const currentAccountId = useMapGetter('getCurrentAccountId');
   const assignable = useMapGetter('inboxAssignableAgents/getAssignableAgents');
-  const agentBots = useMapGetter('agentBots/getBots');
+  const assignableOwners = useMapGetter(
+    'inboxAssignableAgents/getAssignableOwners'
+  );
 
   const inboxId = computed(() => currentChat.value?.inbox_id);
   const isAgentSelected = computed(() => currentChat.value?.meta?.assignee);
@@ -47,18 +49,22 @@ export function useAgentsList(
     return inboxId.value ? assignable.value(inboxId.value) : [];
   });
 
+  const owners = computed(() => {
+    return includeAgentBots && inboxId.value
+      ? assignableOwners.value(inboxId.value)
+      : [];
+  });
+
   /**
    * @type {import('vue').ComputedRef<Array>}
    */
   const agentsList = computed(() => {
-    const agents = assignableAgents.value || [];
-    const bots = includeAgentBots
-      ? agentBots.value.map(bot => ({
-          ...bot,
-          assignee_type: 'AgentBot',
-          icon: 'i-lucide-bot',
-        }))
-      : [];
+    const agents = includeAgentBots
+      ? owners.value.filter(owner => owner.assignee_type === 'User')
+      : assignableAgents.value || [];
+    const bots = owners.value.filter(
+      owner => owner.assignee_type === 'AgentBot'
+    );
     const agentsByUpdatedPresence = getAgentsByUpdatedPresence(
       agents,
       currentUser.value,

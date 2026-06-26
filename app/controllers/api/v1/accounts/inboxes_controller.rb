@@ -21,6 +21,11 @@ class Api::V1::Accounts::InboxesController < Api::V1::Accounts::BaseController
     @assignable_agents = @inbox.assignable_agents
   end
 
+  def assignable_owners
+    @assignable_agents = @inbox.assignable_agents.select(&:confirmed?)
+    @agent_bots = AgentBot.accessible_to(Current.account)
+  end
+
   def campaigns
     @campaigns = @inbox.campaigns
   end

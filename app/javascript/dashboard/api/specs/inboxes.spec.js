@@ -9,6 +9,7 @@ describe('#InboxesAPI', () => {
     expect(inboxesAPI).toHaveProperty('create');
     expect(inboxesAPI).toHaveProperty('update');
     expect(inboxesAPI).toHaveProperty('delete');
+    expect(inboxesAPI).toHaveProperty('getAssignableOwners');
     expect(inboxesAPI).toHaveProperty('getCampaigns');
     expect(inboxesAPI).toHaveProperty('getAgentBot');
     expect(inboxesAPI).toHaveProperty('setAgentBot');
@@ -35,6 +36,13 @@ describe('#InboxesAPI', () => {
     it('#getCampaigns', () => {
       inboxesAPI.getCampaigns(2);
       expect(axiosMock.get).toHaveBeenCalledWith('/api/v1/inboxes/2/campaigns');
+    });
+
+    it('#getAssignableOwners', () => {
+      inboxesAPI.getAssignableOwners(2);
+      expect(axiosMock.get).toHaveBeenCalledWith(
+        '/api/v1/inboxes/2/assignable_owners'
+      );
     });
 
     it('#deleteInboxAvatar', () => {

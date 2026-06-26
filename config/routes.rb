@@ -254,6 +254,7 @@ Rails.application.routes.draw do
           resources :custom_filters, only: [:index, :show, :create, :update, :destroy]
           resources :inboxes, only: [:index, :show, :create, :update, :destroy] do
             get :assignable_agents, on: :member
+            get :assignable_owners, on: :member
             get :campaigns, on: :member
             get :agent_bot, on: :member
             post :set_agent_bot, on: :member

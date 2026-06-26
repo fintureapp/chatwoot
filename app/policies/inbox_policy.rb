@@ -30,6 +30,10 @@ class InboxPolicy < ApplicationPolicy
     true
   end
 
+  def assignable_owners?
+    true
+  end
+
   def agent_bot?
     true
   end
