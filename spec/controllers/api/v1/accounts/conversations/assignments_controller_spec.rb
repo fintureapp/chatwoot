@@ -44,7 +44,7 @@ RSpec.describe 'Conversation Assignment API', type: :request do
       end
 
       it 'assigns a user to the conversation' do
-        conversation.update!(status: :pending)
+        conversation.update!(assignee_agent_bot: agent_bot, status: :pending)
         params = { assignee_id: agent.id }
 
         post api_v1_account_conversation_assignments_url(account_id: account.id, conversation_id: conversation.display_id),

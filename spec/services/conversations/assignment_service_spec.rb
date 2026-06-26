@@ -35,6 +35,14 @@ describe Conversations::AssignmentService do
         expect(conversation.assignee_agent_bot_id).to be_nil
         expect(conversation.status).to eq('open')
       end
+
+      it 'preserves status for ordinary human assignment changes' do
+        conversation.update!(assignee_agent_bot: nil, status: :resolved)
+
+        described_class.new(conversation: conversation, assignee_id: agent.id).perform
+
+        expect(conversation.reload.status).to eq('resolved')
+      end
     end
 
     context 'when assigning an agent bot' do
