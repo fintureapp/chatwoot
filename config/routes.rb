@@ -555,7 +555,7 @@ Rails.application.routes.draw do
           end
           resources :email_channel_migrations, only: [:create]
         end
-        if ChatwootApp.enterprise?
+        if ChatwootApp.chatwoot_cloud?
           namespace :internal do
             resources :accounts, only: [:index]
           end

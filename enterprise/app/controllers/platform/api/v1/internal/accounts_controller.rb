@@ -3,13 +3,15 @@
 class Platform::Api::V1::Internal::AccountsController < ActionController::API
   include RequestExceptionHandler
 
-  CONFIG_KEY = 'SIGNALS_PLATFORM_API_TOKEN'
+  CONFIG_KEY = 'CHATWOOT_CLOUD_SIGNALS_API_TOKEN'
   DEFAULT_LIMIT = 100
   MAX_LIMIT = 1000
 
   before_action :authenticate_internal_token!
 
   def index
+    return render_not_found unless ChatwootApp.chatwoot_cloud?
+
     @accounts = filtered_accounts.limit(limit)
   end
 
@@ -19,6 +21,10 @@ class Platform::Api::V1::Internal::AccountsController < ActionController::API
     return if internal_token.present? && secure_token_match?(request_token, internal_token)
 
     render json: { error: 'Invalid access_token' }, status: :unauthorized
+  end
+
+  def render_not_found
+    render json: { error: 'Not found' }, status: :not_found
   end
 
   def request_token
