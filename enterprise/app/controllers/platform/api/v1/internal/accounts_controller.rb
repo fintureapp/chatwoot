@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 class Platform::Api::V1::Internal::AccountsController < ActionController::API
-  CONFIG_KEY = 'CHATWOOT_CLOUD_SIGNALS_API_TOKEN'
   DEFAULT_LIMIT = 100
   MAX_LIMIT = 1000
 
@@ -19,27 +18,11 @@ class Platform::Api::V1::Internal::AccountsController < ActionController::API
   end
 
   def authenticate_internal_token!
-    return if valid_token?
+    token = request.headers[:api_access_token] || request.headers[:HTTP_API_ACCESS_TOKEN]
+    config_token = GlobalConfigService.load('CHATWOOT_CLOUD_SIGNALS_API_TOKEN', nil)
+    return if token.present? && config_token.present? && ActiveSupport::SecurityUtils.secure_compare(token, config_token)
 
     render json: { error: 'Invalid access_token' }, status: :unauthorized
-  end
-
-  def valid_token?
-    internal_token.present? &&
-      request_token.present? &&
-      ActiveSupport::SecurityUtils.secure_compare(request_token, internal_token)
-  end
-
-  def request_token
-    bearer_token || request.headers[:api_access_token] || request.headers[:HTTP_API_ACCESS_TOKEN]
-  end
-
-  def bearer_token
-    request.authorization&.split&.then { |scheme, token| token if scheme&.casecmp('Bearer')&.zero? }
-  end
-
-  def internal_token
-    @internal_token ||= GlobalConfigService.load(CONFIG_KEY, nil)
   end
 
   def filtered_accounts
