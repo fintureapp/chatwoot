@@ -77,8 +77,7 @@ class Enterprise::Billing::HandleStripeEventService
   def billing_currency_for(subscription, plan)
     return account.billing_currency if plan['name'] == Enterprise::Billing::PlanConfiguration.default_plan&.dig('name')
 
-    _plan, inferred_currency = Enterprise::Billing::PlanConfiguration.find_plan_by_price_id(subscription['plan']['id'])
-    inferred_currency || account.billing_currency
+    Enterprise::Billing::Currencies.to_supported(subscription['plan']['currency'])
   end
 
   def track_marketing_plan_activation(previous_plan_name, current_plan_name)

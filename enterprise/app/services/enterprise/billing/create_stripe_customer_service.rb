@@ -69,7 +69,7 @@ class Enterprise::Billing::CreateStripeCustomerService
   end
 
   def default_plan_subscription?(subscription)
-    Enterprise::Billing::PlanConfiguration.plan_contains_price_id?(default_plan, subscription['plan']['id'])
+    Enterprise::Billing::PlanConfiguration.plan_contains_product_id?(default_plan, subscription['plan']['product'])
   end
 
   def build_custom_attributes(customer_id, subscription)
@@ -85,10 +85,9 @@ class Enterprise::Billing::CreateStripeCustomerService
     )
   end
 
-  # Persist the currency of the price actually used; the requested currency may
-  # lack a configured price and fall back to usd, so don't blindly trust it.
+  # Persist the currency Stripe actually billed, read straight from the price; the
+  # requested currency may lack a configured price and fall back to usd.
   def billing_currency_for(subscription)
-    _plan, currency = Enterprise::Billing::PlanConfiguration.find_plan_by_price_id(subscription['plan']['id'])
-    currency || account.billing_currency
+    Enterprise::Billing::Currencies.to_supported(subscription['plan']['currency'])
   end
 end
