@@ -84,13 +84,12 @@ class Integrations::LlmBaseService
   end
 
   def api_base
-    endpoint = InstallationConfig.find_by(name: 'CAPTAIN_OPEN_AI_ENDPOINT')&.value.presence || 'https://api.openai.com/'
-    endpoint = endpoint.chomp('/')
-    "#{endpoint}/v1"
+    Llm::Config.api_base_for(llm_provider)
   end
 
   def make_api_call(body)
     parsed_body = JSON.parse(body)
+    @llm_provider = provider_for_model(parsed_body['model'])
     instrumentation_params = build_instrumentation_params(parsed_body)
 
     instrument_llm_call(instrumentation_params) do
@@ -102,9 +101,10 @@ class Integrations::LlmBaseService
     messages = parsed_body['messages']
     model = parsed_body['model']
     credential = llm_credential
+    return { error: I18n.t('captain.api_key_missing'), error_code: 401, request_messages: messages } if credential.blank?
 
-    Llm::Config.with_api_key(credential[:api_key], api_base: api_base) do |context|
-      chat = context.chat(model: model)
+    Llm::Config.with_api_key(credential[:api_key], provider: llm_provider, api_base: api_base) do |context|
+      chat = Llm::ProviderChat.new(context.chat(model: model, provider: llm_provider, assume_model_exists: true), provider: llm_provider)
       setup_chat_with_messages(chat, messages)
     end
   rescue StandardError => e
@@ -161,13 +161,22 @@ class Integrations::LlmBaseService
       conversation_id: conversation&.display_id,
       feature_name: event_name,
       model: parsed_body['model'],
+      provider: llm_provider,
       messages: parsed_body['messages'],
       temperature: parsed_body['temperature']
     }
   end
 
   def llm_credential
-    @llm_credential ||= { api_key: hook.settings['api_key'], source: :hook }
+    @llm_credential ||= Llm::CredentialResolver.new(provider: llm_provider, openai_hook: hook).resolve
+  end
+
+  def llm_provider
+    @llm_provider || Llm::Config::DEFAULT_PROVIDER
+  end
+
+  def provider_for_model(model)
+    Llm::Models.provider_for(model) || Llm::Config::DEFAULT_PROVIDER
   end
 
   def exception_tracking_account

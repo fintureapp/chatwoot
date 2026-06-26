@@ -6,7 +6,7 @@ class Llm::BaseAiService
   DEFAULT_MODEL = Llm::Config::DEFAULT_MODEL
   DEFAULT_TEMPERATURE = 1.0
 
-  attr_reader :model, :temperature
+  attr_reader :model, :provider, :temperature
 
   def initialize(feature: nil, account: nil, fallback_model: nil)
     @llm_feature = feature
@@ -19,7 +19,8 @@ class Llm::BaseAiService
   end
 
   def chat(model: @model, temperature: @temperature)
-    RubyLLM.chat(model: model).with_temperature(temperature)
+    chat = RubyLLM.chat(model: model, provider: provider_for_model(model), assume_model_exists: true).with_temperature(temperature)
+    Llm::ProviderChat.new(chat, provider: provider_for_model(model))
   end
 
   private
@@ -34,9 +35,13 @@ class Llm::BaseAiService
 
   def setup_model
     route = feature_route
-    return @model = route[:model] if account_override_route?(route)
+    if account_override_route?(route)
+      @model = route[:model]
+      return setup_provider(route)
+    end
 
     @model = @fallback_model.presence || installation_model.presence || route&.dig(:model) || DEFAULT_MODEL
+    setup_provider(route)
   end
 
   def feature_route
@@ -51,6 +56,14 @@ class Llm::BaseAiService
 
   def installation_model
     InstallationConfig.find_by(name: 'CAPTAIN_OPEN_AI_MODEL')&.value
+  end
+
+  def setup_provider(route)
+    @provider = provider_for_model(@model, route&.dig(:provider))
+  end
+
+  def provider_for_model(model, fallback_provider = Llm::Config::DEFAULT_PROVIDER)
+    Llm::Models.provider_for(model) || fallback_provider || Llm::Config::DEFAULT_PROVIDER
   end
 
   def setup_temperature

@@ -171,22 +171,22 @@ RSpec.describe Captain::BaseTaskService do
     it 'uses the resolved feature model for the request and instrumentation' do
       account.update!(captain_models: { 'editor' => 'gpt-4.1' })
 
-      expect(mock_context).to receive(:chat).with(model: 'gpt-4.1').and_return(mock_chat)
+      expect(mock_context).to receive(:chat).with(model: 'gpt-4.1', provider: 'openai', assume_model_exists: true).and_return(mock_chat)
       expect(service).to receive(:instrument_llm_call).with(
-        hash_including(model: 'gpt-4.1', feature_name: 'test_event')
+        hash_including(model: 'gpt-4.1', provider: 'openai', feature_name: 'test_event')
       ).and_call_original
 
       service.send(:make_api_call, feature: 'editor', messages: messages)
     end
 
     it 'uses the supplied model as a feature fallback when there is no account override' do
-      expect(mock_context).to receive(:chat).with(model: 'gpt-5.2').and_return(mock_chat)
+      expect(mock_context).to receive(:chat).with(model: 'gpt-5.2', provider: 'openai', assume_model_exists: true).and_return(mock_chat)
 
       service.send(:make_api_call, feature: 'document_faq_generation', model: 'gpt-5.2', messages: messages)
     end
 
     it 'uses the help center article generation feature default' do
-      expect(mock_context).to receive(:chat).with(model: 'gpt-5.2').and_return(mock_chat)
+      expect(mock_context).to receive(:chat).with(model: 'gpt-5.2', provider: 'openai', assume_model_exists: true).and_return(mock_chat)
 
       service.send(:make_api_call, feature: 'help_center_article_generation', messages: messages)
     end
@@ -194,9 +194,32 @@ RSpec.describe Captain::BaseTaskService do
     it 'prefers account overrides over supplied feature fallback models' do
       account.update!(captain_models: { 'help_center_article_generation' => 'gpt-4.1' })
 
-      expect(mock_context).to receive(:chat).with(model: 'gpt-4.1').and_return(mock_chat)
+      expect(mock_context).to receive(:chat).with(model: 'gpt-4.1', provider: 'openai', assume_model_exists: true).and_return(mock_chat)
 
       service.send(:make_api_call, feature: 'help_center_article_generation', model: 'gpt-5.2', messages: messages)
+    end
+
+    it 'uses the model provider for account overrides' do
+      create(:installation_config, name: 'CAPTAIN_ANTHROPIC_API_KEY', value: 'anthropic-key')
+      account.update!(captain_models: { 'assistant' => 'claude-haiku-4.5' })
+
+      expect(Llm::Config).to receive(:with_api_key).with('anthropic-key', provider: 'anthropic', api_base: nil).and_yield(mock_context)
+      expect(mock_context).to receive(:chat).with(model: 'claude-haiku-4.5', provider: 'anthropic', assume_model_exists: true).and_return(mock_chat)
+
+      service.send(:make_api_call, feature: 'assistant', messages: messages)
+    end
+
+    it 'does not attach schemas or tools for non-OpenAI providers' do
+      create(:installation_config, name: 'CAPTAIN_ANTHROPIC_API_KEY', value: 'anthropic-key')
+      account.update!(captain_models: { 'assistant' => 'claude-haiku-4.5' })
+
+      expect(mock_context).to receive(:chat).with(model: 'claude-haiku-4.5', provider: 'anthropic', assume_model_exists: true).and_return(mock_chat)
+      expect(mock_chat).not_to receive(:with_schema)
+      expect(mock_chat).not_to receive(:with_tool)
+      expect(service).not_to receive(:instrument_tool_session)
+      expect(service).to receive(:instrument_llm_call).and_call_original
+
+      service.send(:make_api_call, feature: 'assistant', messages: messages, schema: Class.new, tools: [Class.new])
     end
 
     it 'returns formatted response with tokens' do
@@ -295,7 +318,7 @@ RSpec.describe Captain::BaseTaskService do
     it 'tracks exceptions against the system key when an account hook exists' do
       create(:integrations_hook, :openai, account: account, settings: { 'api_key' => 'hook-key' })
 
-      expect(Llm::Config).to receive(:with_api_key).with('test-key', api_base: anything).and_raise(error)
+      expect(Llm::Config).to receive(:with_api_key).with('test-key', provider: 'openai', api_base: nil).and_raise(error)
       expect(ChatwootExceptionTracker).to receive(:new).with(error, account: account).and_return(exception_tracker)
       expect(exception_tracker).to receive(:capture_exception)
 
