@@ -6,28 +6,28 @@ RSpec.describe Llm::BaseAiService do
   let(:account) { create(:account) }
 
   before do
-    InstallationConfig.where(name: %w[CAPTAIN_OPEN_AI_API_KEY CAPTAIN_OPEN_AI_MODEL]).destroy_all
+    InstallationConfig.where(name: %w[CAPTAIN_OPEN_AI_API_KEY CAPTAIN_OPEN_AI_MODEL CAPTAIN_LLM_MODEL]).destroy_all
     create(:installation_config, name: 'CAPTAIN_OPEN_AI_API_KEY', value: 'test-key')
   end
 
   describe '#initialize' do
     it 'uses the installation model when no feature is provided' do
-      create(:installation_config, name: 'CAPTAIN_OPEN_AI_MODEL', value: 'gpt-4.1-nano')
+      create(:installation_config, name: 'CAPTAIN_LLM_MODEL', value: 'gpt-4.1-nano')
 
       expect(described_class.new.model).to eq('gpt-4.1-nano')
     end
 
     it 'uses the account override when feature context is provided' do
-      create(:installation_config, name: 'CAPTAIN_OPEN_AI_MODEL', value: 'gpt-4.1-nano')
+      create(:installation_config, name: 'CAPTAIN_LLM_MODEL', value: 'gpt-5-mini')
       account.update!(captain_models: { 'assistant' => 'gpt-5.2' })
 
       expect(described_class.new(feature: 'assistant', account: account).model).to eq('gpt-5.2')
     end
 
     it 'uses the installation model when feature context has no account override' do
-      create(:installation_config, name: 'CAPTAIN_OPEN_AI_MODEL', value: 'gpt-4.1-nano')
+      create(:installation_config, name: 'CAPTAIN_LLM_MODEL', value: 'gpt-5-mini')
 
-      expect(described_class.new(feature: 'assistant', account: account).model).to eq('gpt-4.1-nano')
+      expect(described_class.new(feature: 'assistant', account: account).model).to eq('gpt-5-mini')
     end
 
     it 'uses the feature default when feature context has no account override or installation model' do

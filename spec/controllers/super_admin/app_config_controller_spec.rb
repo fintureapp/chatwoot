@@ -64,29 +64,31 @@ RSpec.describe 'Super Admin Application Config API', type: :request do
              params: {
                app_config: {
                  CAPTAIN_LLM_PROVIDER: 'openrouter',
-                 CAPTAIN_ANTHROPIC_API_KEY: 'anthropic-key',
-                 CAPTAIN_GEMINI_API_KEY: 'gemini-key',
+                 CAPTAIN_LLM_MODEL: 'ai21/jamba-large-1.7',
                  CAPTAIN_LLM_OPENROUTER_API_KEY: 'openrouter-key'
                }
              }
 
         expect(response).to have_http_status(:found)
         expect(GlobalConfig.get('CAPTAIN_LLM_PROVIDER')['CAPTAIN_LLM_PROVIDER']).to eq('openrouter')
-        expect(GlobalConfig.get('CAPTAIN_ANTHROPIC_API_KEY')['CAPTAIN_ANTHROPIC_API_KEY']).to eq('anthropic-key')
-        expect(GlobalConfig.get('CAPTAIN_GEMINI_API_KEY')['CAPTAIN_GEMINI_API_KEY']).to eq('gemini-key')
+        expect(GlobalConfig.get('CAPTAIN_LLM_MODEL')['CAPTAIN_LLM_MODEL']).to eq('ai21/jamba-large-1.7')
         expect(GlobalConfig.get('CAPTAIN_LLM_OPENROUTER_API_KEY')['CAPTAIN_LLM_OPENROUTER_API_KEY']).to eq('openrouter-key')
       end
 
       it 'renders provider selection and RubyLLM provider fields for Captain settings' do
         sign_in(super_admin, scope: :super_admin)
 
-        get '/super_admin/app_config?config=captain'
+        get '/super_admin/app_config?config=captain&provider=openrouter'
 
         expect(response).to have_http_status(:success)
         document = Nokogiri::HTML(response.body)
 
-        expect(document.at_css('select[name="app_config[CAPTAIN_LLM_PROVIDER]"] option[value="openrouter"]')).to be_present
+        provider_option = document.at_css('select[name="app_config[CAPTAIN_LLM_PROVIDER]"] option[value="openrouter"]')
+        expect(provider_option).to be_present
+        expect(provider_option['selected']).to eq('selected')
+        expect(document.at_css('select[name="app_config[CAPTAIN_LLM_MODEL]"] option[value="ai21/jamba-large-1.7"]')).to be_present
         expect(document.at_css('input[name="app_config[CAPTAIN_LLM_OPENROUTER_API_KEY]"]')).to be_present
+        expect(document.at_css('input[name="app_config[CAPTAIN_ANTHROPIC_API_KEY]"]')).to be_blank
       end
     end
   end

@@ -95,6 +95,15 @@
         }
       });
     });
+
+    const captainProviderSelect = document.querySelector('select[name="app_config[CAPTAIN_LLM_PROVIDER]"]');
+    if (captainProviderSelect) {
+      captainProviderSelect.addEventListener('change', () => {
+        const url = new URL(window.location.href);
+        url.searchParams.set('provider', captainProviderSelect.value);
+        window.location.href = url.toString();
+      });
+    }
   });
   </script>
 <% end %>

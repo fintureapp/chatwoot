@@ -1,4 +1,8 @@
+require_relative 'provider_model_catalog'
+
 module Llm::Models
+  extend Llm::ProviderModelCatalog
+
   CONFIG = YAML.load_file(Rails.root.join('config/llm.yml')).freeze
   OPENAI_ONLY_FEATURES = %w[audio_transcription help_center_search].freeze
 
@@ -16,18 +20,23 @@ module Llm::Models
     end
 
     def default_model_for(feature)
-      default_model = features.dig(feature.to_s, 'default')
-      return default_model if supported_model?(default_model)
+      installation_default = installation_model
+      return installation_default if valid_model_for?(feature, installation_default)
+
+      feature_default = features.dig(feature.to_s, 'default')
+      return feature_default if valid_model_for?(feature, feature_default)
 
       models_for(feature).first
     end
 
-    def models_for(feature)
-      (configured_models_for(feature) + provider_models_for(feature)).uniq
+    def models_for(feature, provider: provider_for_feature(feature))
+      (configured_models_for(feature, provider: provider) + provider_models_for(feature, provider: provider)).uniq
     end
 
-    def valid_model_for?(feature, model_name)
-      models_for(feature).include?(model_name.to_s)
+    def valid_model_for?(feature, model_name, provider: provider_for_feature(feature))
+      return false if model_name.blank?
+
+      models_for(feature, provider: provider).include?(model_name.to_s)
     end
 
     def model_config(model_name)
@@ -53,8 +62,10 @@ module Llm::Models
       feature = features[feature_key.to_s]
       return nil unless feature
 
+      provider = provider_for_feature(feature_key)
+
       {
-        models: models_for(feature_key).map do |model_name|
+        models: models_for(feature_key, provider: provider).map do |model_name|
           model = model_config(model_name)
           {
             id: model_name,
@@ -64,28 +75,12 @@ module Llm::Models
             credit_multiplier: model['credit_multiplier']
           }
         end,
-        default: feature['default']
+        default: default_model_for(feature_key),
+        provider: provider
       }
     end
 
     private
-
-    def configured_models_for(feature)
-      (features.dig(feature.to_s, 'models') || []).select { |model_name| supported_model?(model_name) }
-    end
-
-    def provider_models_for(feature)
-      return [] if openai_only_feature?(feature)
-
-      provider = Llm::Config.current_provider
-      return [] if provider == Llm::Config::DEFAULT_PROVIDER
-
-      RubyLLM.models.by_provider(provider).chat_models.map(&:id)
-    end
-
-    def openai_only_feature?(feature)
-      OPENAI_ONLY_FEATURES.include?(feature.to_s)
-    end
 
     def ruby_llm_model_config(model_name)
       model = ruby_llm_model(model_name)

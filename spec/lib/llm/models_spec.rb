@@ -53,12 +53,29 @@ RSpec.describe Llm::Models do
       create(:installation_config, name: 'CAPTAIN_LLM_PROVIDER', value: 'openrouter')
 
       expect(described_class.models_for('assistant')).to include('ai21/jamba-large-1.7')
+      expect(described_class.models_for('assistant')).not_to include('gpt-4.1')
     end
 
     it 'does not add selected chat-provider models to OpenAI-only features' do
       create(:installation_config, name: 'CAPTAIN_LLM_PROVIDER', value: 'openrouter')
 
       expect(described_class.models_for('help_center_search')).not_to include('ai21/jamba-large-1.7')
+      expect(described_class.models_for('help_center_search')).to include('text-embedding-3-small')
+    end
+  end
+
+  describe '.default_model_for' do
+    it 'uses the installation model when it is valid for the feature and active provider' do
+      create(:installation_config, name: 'CAPTAIN_LLM_MODEL', value: 'gpt-5-mini')
+
+      expect(described_class.default_model_for('assistant')).to eq('gpt-5-mini')
+    end
+
+    it 'ignores installation models from another provider' do
+      create(:installation_config, name: 'CAPTAIN_LLM_PROVIDER', value: 'openrouter')
+      create(:installation_config, name: 'CAPTAIN_LLM_MODEL', value: 'gpt-5-mini')
+
+      expect(described_class.default_model_for('assistant')).to eq('ai21/jamba-large-1.7')
     end
   end
 

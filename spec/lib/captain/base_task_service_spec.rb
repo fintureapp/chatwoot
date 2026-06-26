@@ -200,6 +200,7 @@ RSpec.describe Captain::BaseTaskService do
     end
 
     it 'uses the model provider for account overrides' do
+      create(:installation_config, name: 'CAPTAIN_LLM_PROVIDER', value: 'anthropic')
       create(:installation_config, name: 'CAPTAIN_ANTHROPIC_API_KEY', value: 'anthropic-key')
       account.update!(captain_models: { 'assistant' => 'claude-haiku-4.5' })
 
@@ -212,6 +213,7 @@ RSpec.describe Captain::BaseTaskService do
     end
 
     it 'does not attach schemas or tools for non-OpenAI providers' do
+      create(:installation_config, name: 'CAPTAIN_LLM_PROVIDER', value: 'anthropic')
       create(:installation_config, name: 'CAPTAIN_ANTHROPIC_API_KEY', value: 'anthropic-key')
       account.update!(captain_models: { 'assistant' => 'claude-haiku-4.5' })
 

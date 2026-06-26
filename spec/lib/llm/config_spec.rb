@@ -18,8 +18,14 @@ RSpec.describe Llm::Config do
     it 'includes dynamic RubyLLM provider credential keys' do
       expect(described_class.provider_config_keys).to include(
         'CAPTAIN_LLM_PROVIDER',
+        'CAPTAIN_LLM_MODEL',
         'CAPTAIN_LLM_OPENROUTER_API_KEY'
       )
+    end
+
+    it 'can be scoped to a single provider' do
+      expect(described_class.provider_config_keys('openrouter')).to include('CAPTAIN_LLM_OPENROUTER_API_KEY')
+      expect(described_class.provider_config_keys('openrouter')).not_to include('CAPTAIN_ANTHROPIC_API_KEY')
     end
   end
 

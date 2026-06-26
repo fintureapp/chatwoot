@@ -189,7 +189,7 @@
   type: secret
 - name: CAPTAIN_OPEN_AI_MODEL
   display_title: 'OpenAI Model'
-  description: 'The OpenAI model configured for use in Captain AI. Default: gpt-4.1-mini'
+  description: 'Legacy OpenAI model setting for Captain AI. Use LLM Model for provider-aware defaults.'
   locked: false
 - name: CAPTAIN_OPEN_AI_ENDPOINT
   display_title: 'OpenAI API Endpoint (optional)'
@@ -197,8 +197,13 @@
   locked: false
 - name: CAPTAIN_LLM_PROVIDER
   display_title: 'LLM Provider'
-  description: 'Provider used to populate Captain model override dropdowns.'
+  description: 'Provider used by Captain AI for chat and generation features.'
   value: openai
+  locked: false
+  type: select
+- name: CAPTAIN_LLM_MODEL
+  display_title: 'LLM Model'
+  description: 'Default model used by Captain AI for chat and generation features.'
   locked: false
   type: select
 - name: CAPTAIN_ANTHROPIC_API_KEY

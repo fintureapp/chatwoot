@@ -393,6 +393,14 @@ RSpec.describe Account do
         expect(account).to be_valid
       end
 
+      it 'rejects models outside the selected LLM provider' do
+        create(:installation_config, name: 'CAPTAIN_LLM_PROVIDER', value: 'openrouter')
+        account.captain_models = { 'assistant' => 'gpt-5.2' }
+
+        expect(account).not_to be_valid
+        expect(account.errors[:captain_models].first).to include('not a valid model for assistant')
+      end
+
       it 'rejects unknown feature keys' do
         account.captain_models = { 'unknown_feature' => 'gpt-4.1' }
 

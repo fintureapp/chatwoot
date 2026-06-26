@@ -40,7 +40,7 @@ class Llm::BaseAiService
       return setup_provider(route)
     end
 
-    @model = @fallback_model.presence || installation_model.presence || route&.dig(:model) || DEFAULT_MODEL
+    @model = @fallback_model.presence || route&.dig(:model) || Llm::Models.installation_model || DEFAULT_MODEL
     setup_provider(route)
   end
 
@@ -52,10 +52,6 @@ class Llm::BaseAiService
 
   def account_override_route?(route)
     route&.dig(:source) == :account_override
-  end
-
-  def installation_model
-    InstallationConfig.find_by(name: 'CAPTAIN_OPEN_AI_MODEL')&.value
   end
 
   def setup_provider(route)

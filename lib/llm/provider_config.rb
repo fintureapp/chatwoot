@@ -2,6 +2,9 @@ require 'ruby_llm'
 
 module Llm::ProviderConfig
   PROVIDER_CONFIG_PREFIX = 'CAPTAIN_LLM'.freeze
+  PROVIDER_CONFIG_KEY = 'CAPTAIN_LLM_PROVIDER'.freeze
+  MODEL_CONFIG_KEY = 'CAPTAIN_LLM_MODEL'.freeze
+  LEGACY_OPENAI_MODEL_CONFIG_KEY = 'CAPTAIN_OPEN_AI_MODEL'.freeze
 
   LEGACY_CONFIG_KEYS = {
     openai_api_key: 'CAPTAIN_OPEN_AI_API_KEY',
@@ -22,20 +25,22 @@ module Llm::ProviderConfig
     end
   end
 
-  def provider_config_keys
-    (['CAPTAIN_LLM_PROVIDER'] + provider_config_options.values).uniq
+  def provider_config_keys(provider = nil)
+    ([PROVIDER_CONFIG_KEY, MODEL_CONFIG_KEY] + provider_config_options(provider).values).uniq
   end
 
-  def provider_config_options
-    provider_options.keys.each_with_object({}) do |provider, result|
-      provider_configuration_options(provider).each do |option|
+  def provider_config_options(provider = nil)
+    providers = provider.present? ? [provider.to_s] : provider_options.keys
+
+    providers.each_with_object({}) do |provider_name, result|
+      provider_configuration_options(provider_name).each do |option|
         result[option] = installation_config_name(option)
       end
     end
   end
 
   def current_provider
-    provider = InstallationConfig.find_by(name: 'CAPTAIN_LLM_PROVIDER')&.value.presence
+    provider = InstallationConfig.find_by(name: PROVIDER_CONFIG_KEY)&.value.presence
     return provider if provider_options.key?(provider)
 
     Llm::Config::DEFAULT_PROVIDER

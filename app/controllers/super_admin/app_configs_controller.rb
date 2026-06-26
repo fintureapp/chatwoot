@@ -21,7 +21,7 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
       next unless @allowed_configs.include?(key)
 
       i = InstallationConfig.where(name: key).first_or_create(value: value, locked: false)
-      i.value = value
+      i.value = app_config_value(key, value)
       errors.concat(i.errors.full_messages) unless i.save
     end
 
@@ -73,30 +73,61 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
 
   def restart_required_config_saved?
     saved_keys = params.fetch('app_config', {}).keys
-    saved_keys.intersect?(InstallationConfig::RESTART_REQUIRED_CONFIG_KEYS) || saved_keys.intersect?(Llm::Config.provider_config_keys)
+    saved_keys.intersect?(InstallationConfig::RESTART_REQUIRED_CONFIG_KEYS) ||
+      saved_keys.intersect?(Llm::Config.provider_config_keys(captain_provider))
   end
 
   def captain_config_options
-    (Llm::Config.provider_config_keys + %w[CAPTAIN_OPEN_AI_MODEL]).uniq
+    Llm::Config.provider_config_keys(captain_provider)
   end
 
   def populate_captain_config_metadata
-    @app_config['CAPTAIN_LLM_PROVIDER'] ||= Llm::Config.current_provider
+    @app_config[Llm::ProviderConfig::PROVIDER_CONFIG_KEY] = captain_provider
 
-    @installation_configs['CAPTAIN_LLM_PROVIDER'] = {
+    populate_provider_metadata
+    populate_model_metadata
+    populate_provider_field_metadata
+  end
+
+  def populate_provider_metadata
+    @installation_configs[Llm::ProviderConfig::PROVIDER_CONFIG_KEY] = {
       'display_title' => 'LLM Provider',
-      'description' => 'Provider used to populate Captain model override dropdowns.',
+      'description' => 'Provider used by Captain AI for chat and generation features.',
       'type' => 'select',
       'options' => Llm::Config.provider_options
     }
+  end
 
-    Llm::Config.provider_config_options.each do |option, config_key|
+  def populate_model_metadata
+    @installation_configs[Llm::ProviderConfig::MODEL_CONFIG_KEY] = {
+      'display_title' => 'LLM Model',
+      'description' => "Default #{Llm::Config.provider_options[captain_provider]} model used by Captain AI.",
+      'type' => 'select',
+      'options' => Llm::Models.provider_default_model_options(captain_provider)
+    }
+  end
+
+  def populate_provider_field_metadata
+    Llm::Config.provider_config_options(captain_provider).each do |option, config_key|
       @installation_configs[config_key] ||= {
         'display_title' => option.to_s.humanize.titleize,
         'description' => "RubyLLM #{option} configuration.",
-        'type' => option.to_s.end_with?('api_key', 'secret_key', 'session_token', 'service_account_key', 'auth_token') ? 'secret' : 'text'
+        'type' => option.to_s.end_with?('api_key', 'secret_key', 'session_token', 'service_account_key', 'auth_token') ? 'secret' : 'text',
+        'provider' => captain_provider
       }
     end
+  end
+
+  def captain_provider
+    requested_provider = params.dig(:app_config, Llm::ProviderConfig::PROVIDER_CONFIG_KEY).presence || params[:provider].presence
+    return requested_provider if Llm::Config.provider_options.key?(requested_provider)
+
+    Llm::Config.current_provider
+  end
+
+  def app_config_value(key, value)
+    return value unless @config == 'captain' && key == Llm::ProviderConfig::MODEL_CONFIG_KEY
+    return value if Llm::Models.provider_default_model_options(captain_provider).key?(value)
   end
 end
 
