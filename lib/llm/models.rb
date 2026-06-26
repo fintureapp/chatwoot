@@ -12,11 +12,14 @@ module Llm::Models
     end
 
     def default_model_for(feature)
-      features.dig(feature.to_s, 'default')
+      default_model = features.dig(feature.to_s, 'default')
+      return default_model if supported_model?(default_model)
+
+      models_for(feature).first
     end
 
     def models_for(feature)
-      features.dig(feature.to_s, 'models') || []
+      (features.dig(feature.to_s, 'models') || []).select { |model_name| supported_model?(model_name) }
     end
 
     def valid_model_for?(feature, model_name)
@@ -29,6 +32,17 @@ module Llm::Models
 
     def provider_for(model_name)
       model_config(model_name)&.dig('provider')
+    end
+
+    def supported_provider?(provider)
+      providers.key?(provider.to_s) && Llm::Config.ruby_llm_provider_supported?(provider)
+    end
+
+    def supported_model?(model_name)
+      config = model_config(model_name)
+      return false unless config
+
+      supported_provider?(config['provider'])
     end
 
     def feature_config(feature_key)

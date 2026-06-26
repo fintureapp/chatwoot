@@ -40,6 +40,16 @@ RSpec.describe Llm::Models do
     end
   end
 
+  describe '.models_for' do
+    it 'filters out models whose provider is not supported by RubyLLM' do
+      allow(Llm::Config).to receive(:ruby_llm_provider_supported?) do |provider|
+        provider.to_s != 'anthropic'
+      end
+
+      expect(described_class.models_for('assistant')).not_to include('claude-haiku-4.5')
+    end
+  end
+
   describe '.feature_config' do
     it 'returns model metadata for a feature' do
       config = described_class.feature_config('editor')
