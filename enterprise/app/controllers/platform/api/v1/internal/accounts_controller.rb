@@ -27,7 +27,6 @@ class Platform::Api::V1::Internal::AccountsController < ActionController::API
   def valid_token?
     internal_token.present? &&
       request_token.present? &&
-      request_token.bytesize == internal_token.bytesize &&
       ActiveSupport::SecurityUtils.secure_compare(request_token, internal_token)
   end
 
