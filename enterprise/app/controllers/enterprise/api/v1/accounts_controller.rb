@@ -13,6 +13,7 @@ class Enterprise::Api::V1::AccountsController < Api::BaseController
 
   def select_billing_currency
     return render_could_not_create_error(I18n.t('errors.billing.currency_locked')) if currency_locked?
+    return render_could_not_create_error(I18n.t('errors.billing.invalid_currency')) unless @account.billing_currency_selection_required?
 
     currency = Enterprise::Billing::Currencies.normalize(params[:currency])
     return render_could_not_create_error(I18n.t('errors.billing.invalid_currency')) unless Enterprise::Billing::Currencies.supported?(currency)
