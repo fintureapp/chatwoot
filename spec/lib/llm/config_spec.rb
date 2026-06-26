@@ -8,8 +8,26 @@ RSpec.describe Llm::Config do
       expect(described_class.provider_options).to include(
         'openai' => 'OpenAI',
         'anthropic' => 'Anthropic',
-        'gemini' => 'Gemini'
+        'gemini' => 'Gemini',
+        'openrouter' => 'OpenRouter'
       )
+    end
+  end
+
+  describe '.provider_config_keys' do
+    it 'includes dynamic RubyLLM provider credential keys' do
+      expect(described_class.provider_config_keys).to include(
+        'CAPTAIN_LLM_PROVIDER',
+        'CAPTAIN_LLM_OPENROUTER_API_KEY'
+      )
+    end
+  end
+
+  describe '.provider_configured?' do
+    it 'uses dynamic provider requirements' do
+      create(:installation_config, name: 'CAPTAIN_LLM_OPENROUTER_API_KEY', value: 'openrouter-key')
+
+      expect(described_class.provider_configured?('openrouter')).to be true
     end
   end
 

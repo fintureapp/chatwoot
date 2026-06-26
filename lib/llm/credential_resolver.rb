@@ -16,11 +16,13 @@ class Llm::CredentialResolver
     return unless Llm::Config.openai_provider?(provider)
 
     key = openai_hook&.settings&.dig('api_key').presence
-    { api_key: key, provider: provider, source: :hook } if key
+    { api_key: key, config_values: { openai_api_key: key }, provider: provider, source: :hook } if key
   end
 
   def system_llm_credential
-    key = Llm::Config.api_key_for(provider).presence
-    { api_key: key, provider: provider, source: :system } if key
+    config_values = Llm::Config.provider_config_values(provider)
+    return unless Llm::Config.provider_configured?(provider)
+
+    { api_key: config_values[:"#{provider}_api_key"], config_values: config_values, provider: provider, source: :system }
   end
 end

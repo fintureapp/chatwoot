@@ -120,7 +120,7 @@ RSpec.describe Captain::BaseTaskService do
     let(:mock_response) { instance_double(RubyLLM::Message, content: 'Response', input_tokens: 10, output_tokens: 20) }
 
     before do
-      allow(Llm::Config).to receive(:with_api_key).and_yield(mock_context)
+      allow(Llm::Config).to receive(:with_provider).and_yield(mock_context)
       allow(mock_chat).to receive(:with_instructions)
       allow(mock_chat).to receive(:ask).and_return(mock_response)
     end
@@ -138,7 +138,7 @@ RSpec.describe Captain::BaseTaskService do
       end
 
       it 'does not make API call' do
-        expect(Llm::Config).not_to receive(:with_api_key)
+        expect(Llm::Config).not_to receive(:with_provider)
         service.send(:make_api_call, model: model, messages: messages)
       end
     end
@@ -158,7 +158,7 @@ RSpec.describe Captain::BaseTaskService do
       end
 
       it 'does not make API call' do
-        expect(Llm::Config).not_to receive(:with_api_key)
+        expect(Llm::Config).not_to receive(:with_provider)
         service.send(:make_api_call, model: model, messages: messages)
       end
     end
@@ -203,7 +203,9 @@ RSpec.describe Captain::BaseTaskService do
       create(:installation_config, name: 'CAPTAIN_ANTHROPIC_API_KEY', value: 'anthropic-key')
       account.update!(captain_models: { 'assistant' => 'claude-haiku-4.5' })
 
-      expect(Llm::Config).to receive(:with_api_key).with('anthropic-key', provider: 'anthropic', api_base: nil).and_yield(mock_context)
+      expect(Llm::Config).to receive(:with_provider)
+        .with(provider: 'anthropic', config_values: hash_including(anthropic_api_key: 'anthropic-key'))
+        .and_yield(mock_context)
       expect(mock_context).to receive(:chat).with(model: 'claude-haiku-4.5', provider: 'anthropic', assume_model_exists: true).and_return(mock_chat)
 
       service.send(:make_api_call, feature: 'assistant', messages: messages)
@@ -239,7 +241,7 @@ RSpec.describe Captain::BaseTaskService do
     let(:mock_response) { instance_double(RubyLLM::Message, content: 'Response', input_tokens: 10, output_tokens: 20) }
 
     before do
-      allow(Llm::Config).to receive(:with_api_key).and_yield(mock_context)
+      allow(Llm::Config).to receive(:with_provider).and_yield(mock_context)
       allow(mock_response).to receive(:input_tokens).and_return(10)
       allow(mock_response).to receive(:output_tokens).and_return(20)
     end
@@ -295,7 +297,7 @@ RSpec.describe Captain::BaseTaskService do
     let(:exception_tracker) { instance_double(ChatwootExceptionTracker) }
 
     before do
-      allow(Llm::Config).to receive(:with_api_key).and_raise(error)
+      allow(Llm::Config).to receive(:with_provider).and_raise(error)
       allow(ChatwootExceptionTracker).to receive(:new).with(error, account: account).and_return(exception_tracker)
       allow(exception_tracker).to receive(:capture_exception)
     end
@@ -318,7 +320,9 @@ RSpec.describe Captain::BaseTaskService do
     it 'tracks exceptions against the system key when an account hook exists' do
       create(:integrations_hook, :openai, account: account, settings: { 'api_key' => 'hook-key' })
 
-      expect(Llm::Config).to receive(:with_api_key).with('test-key', provider: 'openai', api_base: nil).and_raise(error)
+      expect(Llm::Config).to receive(:with_provider)
+        .with(provider: 'openai', config_values: hash_including(openai_api_key: 'test-key'))
+        .and_raise(error)
       expect(ChatwootExceptionTracker).to receive(:new).with(error, account: account).and_return(exception_tracker)
       expect(exception_tracker).to receive(:capture_exception)
 

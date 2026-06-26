@@ -25,14 +25,36 @@ RSpec.describe Captain::Llm::EmbeddingService, type: :service do
 
   describe '#get_embedding' do
     let(:account) { create(:account) }
+    let(:mock_context) { instance_double(RubyLLM::Context) }
     let(:embedding_response) { double('embedding_response', vectors: [0.1, 0.2]) } # rubocop:disable RSpec/VerifiedDoubles
+
+    before do
+      create(:installation_config, name: 'CAPTAIN_OPEN_AI_API_KEY', value: 'test-key')
+    end
 
     it 'sends the installation embedding model to RubyLLM' do
       configure_embedding_model('custom-embedding-model')
 
-      expect(RubyLLM).to receive(:embed).with('search text', model: 'custom-embedding-model').and_return(embedding_response)
+      expect(Llm::Config).to receive(:with_provider).with(provider: 'openai').and_yield(mock_context)
+      expect(mock_context).to receive(:embed).with(
+        'search text',
+        model: 'custom-embedding-model',
+        provider: 'openai',
+        assume_model_exists: true
+      ).and_return(embedding_response)
 
       expect(described_class.new(account_id: account.id).get_embedding('search text')).to eq([0.1, 0.2])
+    end
+
+    it 'requires OpenAI configuration even when another LLM provider is selected' do
+      InstallationConfig.find_by(name: 'CAPTAIN_OPEN_AI_API_KEY').destroy
+      create(:installation_config, name: 'CAPTAIN_LLM_PROVIDER', value: 'openrouter')
+      create(:installation_config, name: 'CAPTAIN_LLM_OPENROUTER_API_KEY', value: 'openrouter-key')
+
+      expect(Llm::Config).not_to receive(:with_provider)
+
+      expect { described_class.new(account_id: account.id).get_embedding('search text') }
+        .to raise_error(described_class::EmbeddingsError, 'OpenAI configuration is required for embeddings.')
     end
   end
 end

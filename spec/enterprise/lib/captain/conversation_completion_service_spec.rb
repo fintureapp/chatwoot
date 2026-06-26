@@ -10,7 +10,7 @@ RSpec.describe Captain::ConversationCompletionService do
 
   before do
     create(:installation_config, name: 'CAPTAIN_OPEN_AI_API_KEY', value: 'test-key')
-    allow(Llm::Config).to receive(:with_api_key).and_yield(mock_context)
+    allow(Llm::Config).to receive(:with_provider).and_yield(mock_context)
     allow(mock_chat).to receive(:with_instructions)
     allow(mock_chat).to receive(:with_schema).and_return(mock_chat)
     allow(account).to receive(:feature_enabled?).and_call_original
@@ -134,7 +134,9 @@ RSpec.describe Captain::ConversationCompletionService do
       end
 
       it 'uses the system API key instead of the account hook key' do
-        expect(Llm::Config).to receive(:with_api_key).with('test-key', api_base: anything).and_yield(mock_context)
+        expect(Llm::Config).to receive(:with_provider)
+          .with(provider: 'openai', config_values: hash_including(openai_api_key: 'test-key'))
+          .and_yield(mock_context)
         allow(mock_chat).to receive(:ask).and_return(
           instance_double(RubyLLM::Message, content: { 'complete' => true, 'reason' => 'Done' }, input_tokens: 10, output_tokens: 5)
         )
@@ -145,7 +147,7 @@ RSpec.describe Captain::ConversationCompletionService do
       it 'does not fall back to the account hook key when no system key exists' do
         InstallationConfig.find_by(name: 'CAPTAIN_OPEN_AI_API_KEY').update!(value: nil)
 
-        expect(Llm::Config).not_to receive(:with_api_key)
+        expect(Llm::Config).not_to receive(:with_provider)
 
         result = service.perform
 

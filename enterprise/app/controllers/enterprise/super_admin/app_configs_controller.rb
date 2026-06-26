@@ -41,14 +41,7 @@ module Enterprise::SuperAdmin::AppConfigsController
   end
 
   def captain_config_options
-    %w[
-      CAPTAIN_OPEN_AI_API_KEY
-      CAPTAIN_OPEN_AI_MODEL
-      CAPTAIN_OPEN_AI_ENDPOINT
-      CAPTAIN_ANTHROPIC_API_KEY
-      CAPTAIN_ANTHROPIC_API_BASE
-      CAPTAIN_GEMINI_API_KEY
-      CAPTAIN_GEMINI_API_BASE
+    super + %w[
       CAPTAIN_EMBEDDING_MODEL
       CAPTAIN_FIRECRAWL_API_KEY
     ]

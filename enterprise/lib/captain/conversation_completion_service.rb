@@ -58,8 +58,9 @@ class Captain::ConversationCompletionService < Captain::BaseTaskService
 
   # This is an internal operational evaluation, not a customer-triggered feature,
   # so it should always use the installation key.
-  def llm_credential
-    @llm_credential ||= system_llm_credential
+  def llm_credential(provider = llm_provider)
+    @llm_credentials ||= {}
+    @llm_credentials[provider.to_s] ||= system_llm_credential(provider)
   end
 
   def counts_toward_usage?

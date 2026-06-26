@@ -76,7 +76,7 @@ class Captain::BaseTaskService
     provider = llm_route[:provider]
     credential = llm_credential(provider)
 
-    Llm::Config.with_api_key(credential[:api_key], provider: provider, api_base: api_base) do |context|
+    Llm::Config.with_provider(provider: provider, config_values: credential[:config_values]) do |context|
       chat = build_chat(context, llm_route: llm_route, messages: messages, schema: schema, tools: tools)
 
       conversation_messages = messages.reject { |m| m[:role] == 'system' }

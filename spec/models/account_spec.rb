@@ -386,6 +386,13 @@ RSpec.describe Account do
         expect(account).to be_valid
       end
 
+      it 'accepts models from the selected RubyLLM provider' do
+        create(:installation_config, name: 'CAPTAIN_LLM_PROVIDER', value: 'openrouter')
+        account.captain_models = { 'assistant' => 'ai21/jamba-large-1.7' }
+
+        expect(account).to be_valid
+      end
+
       it 'rejects unknown feature keys' do
         account.captain_models = { 'unknown_feature' => 'gpt-4.1' }
 

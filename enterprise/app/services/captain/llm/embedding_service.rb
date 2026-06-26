@@ -17,7 +17,11 @@ class Captain::Llm::EmbeddingService
     return [] if content.blank?
 
     instrument_embedding_call(instrumentation_params(content, model)) do
-      RubyLLM.embed(content, model: model).vectors
+      raise EmbeddingsError, 'OpenAI configuration is required for embeddings.' unless Llm::Config.provider_configured?(Llm::Config::DEFAULT_PROVIDER)
+
+      Llm::Config.with_provider(provider: Llm::Config::DEFAULT_PROVIDER) do |context|
+        context.embed(content, model: model, provider: Llm::Config::DEFAULT_PROVIDER, assume_model_exists: true).vectors
+      end
     end
   rescue RubyLLM::Error => e
     Rails.logger.error "Embedding API Error: #{e.message}"

@@ -48,6 +48,24 @@ RSpec.describe Llm::Models do
 
       expect(described_class.models_for('assistant')).not_to include('claude-haiku-4.5')
     end
+
+    it 'adds selected RubyLLM provider chat models for chat features' do
+      create(:installation_config, name: 'CAPTAIN_LLM_PROVIDER', value: 'openrouter')
+
+      expect(described_class.models_for('assistant')).to include('ai21/jamba-large-1.7')
+    end
+
+    it 'does not add selected chat-provider models to OpenAI-only features' do
+      create(:installation_config, name: 'CAPTAIN_LLM_PROVIDER', value: 'openrouter')
+
+      expect(described_class.models_for('help_center_search')).not_to include('ai21/jamba-large-1.7')
+    end
+  end
+
+  describe '.provider_for' do
+    it 'uses RubyLLM model metadata for provider models outside llm.yml' do
+      expect(described_class.provider_for('ai21/jamba-large-1.7')).to eq('openrouter')
+    end
   end
 
   describe '.feature_config' do

@@ -12,6 +12,7 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
     @installation_configs = ConfigLoader.new.general_configs.each_with_object({}) do |config_hash, result|
       result[config_hash['name']] = config_hash.except('name')
     end
+    populate_captain_config_metadata if @config == 'captain'
   end
 
   def create
@@ -71,19 +72,31 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
   end
 
   def restart_required_config_saved?
-    params.fetch('app_config', {}).keys.intersect?(InstallationConfig::RESTART_REQUIRED_CONFIG_KEYS)
+    saved_keys = params.fetch('app_config', {}).keys
+    saved_keys.intersect?(InstallationConfig::RESTART_REQUIRED_CONFIG_KEYS) || saved_keys.intersect?(Llm::Config.provider_config_keys)
   end
 
   def captain_config_options
-    %w[
-      CAPTAIN_OPEN_AI_API_KEY
-      CAPTAIN_OPEN_AI_MODEL
-      CAPTAIN_OPEN_AI_ENDPOINT
-      CAPTAIN_ANTHROPIC_API_KEY
-      CAPTAIN_ANTHROPIC_API_BASE
-      CAPTAIN_GEMINI_API_KEY
-      CAPTAIN_GEMINI_API_BASE
-    ]
+    (Llm::Config.provider_config_keys + %w[CAPTAIN_OPEN_AI_MODEL]).uniq
+  end
+
+  def populate_captain_config_metadata
+    @app_config['CAPTAIN_LLM_PROVIDER'] ||= Llm::Config.current_provider
+
+    @installation_configs['CAPTAIN_LLM_PROVIDER'] = {
+      'display_title' => 'LLM Provider',
+      'description' => 'Provider used to populate Captain model override dropdowns.',
+      'type' => 'select',
+      'options' => Llm::Config.provider_options
+    }
+
+    Llm::Config.provider_config_options.each do |option, config_key|
+      @installation_configs[config_key] ||= {
+        'display_title' => option.to_s.humanize.titleize,
+        'description' => "RubyLLM #{option} configuration.",
+        'type' => option.to_s.end_with?('api_key', 'secret_key', 'session_token', 'service_account_key', 'auth_token') ? 'secret' : 'text'
+      }
+    end
   end
 end
 

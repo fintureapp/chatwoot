@@ -66,6 +66,20 @@ RSpec.describe 'Super Admin accounts API', type: :request do
         expect(editor_select.at_css('option[value=""]').text.squish).to eq("Use default: #{default_model} (#{default_model_id})")
         expect(editor_select.css('optgroup').map { |group| group['label'] }).to include('Default routing', 'OpenAI')
       end
+
+      it 'includes selected RubyLLM provider models in the Captain model selectors', if: ChatwootApp.enterprise? do
+        create(:installation_config, name: 'CAPTAIN_LLM_PROVIDER', value: 'openrouter')
+        sign_in(super_admin, scope: :super_admin)
+
+        get "/super_admin/accounts/#{account.id}/edit"
+
+        expect(response).to have_http_status(:success)
+        document = Nokogiri::HTML(response.body)
+        assistant_select = document.at_css('select[name="account[captain_models][assistant]"]')
+
+        expect(assistant_select.css('optgroup').map { |group| group['label'] }).to include('OpenRouter')
+        expect(assistant_select.at_css('option[value="ai21/jamba-large-1.7"]')).to be_present
+      end
     end
   end
 

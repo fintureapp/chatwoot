@@ -1,8 +1,12 @@
 module Llm::Models
   CONFIG = YAML.load_file(Rails.root.join('config/llm.yml')).freeze
+  OPENAI_ONLY_FEATURES = %w[audio_transcription help_center_search].freeze
 
   class << self
-    def providers = CONFIG.fetch('providers')
+    def providers
+      Llm::Config.provider_options.transform_values { |display_name| { 'display_name' => display_name } }
+    end
+
     def models = CONFIG.fetch('models')
     def features = CONFIG.fetch('features')
     def feature_keys = features.keys
@@ -19,7 +23,7 @@ module Llm::Models
     end
 
     def models_for(feature)
-      (features.dig(feature.to_s, 'models') || []).select { |model_name| supported_model?(model_name) }
+      (configured_models_for(feature) + provider_models_for(feature)).uniq
     end
 
     def valid_model_for?(feature, model_name)
@@ -27,11 +31,11 @@ module Llm::Models
     end
 
     def model_config(model_name)
-      models[model_name.to_s]
+      models[model_name.to_s] || ruby_llm_model_config(model_name)
     end
 
     def provider_for(model_name)
-      model_config(model_name)&.dig('provider')
+      models.dig(model_name.to_s, 'provider') || ruby_llm_model(model_name)&.provider
     end
 
     def supported_provider?(provider)
@@ -62,6 +66,41 @@ module Llm::Models
         end,
         default: feature['default']
       }
+    end
+
+    private
+
+    def configured_models_for(feature)
+      (features.dig(feature.to_s, 'models') || []).select { |model_name| supported_model?(model_name) }
+    end
+
+    def provider_models_for(feature)
+      return [] if openai_only_feature?(feature)
+
+      provider = Llm::Config.current_provider
+      return [] if provider == Llm::Config::DEFAULT_PROVIDER
+
+      RubyLLM.models.by_provider(provider).chat_models.map(&:id)
+    end
+
+    def openai_only_feature?(feature)
+      OPENAI_ONLY_FEATURES.include?(feature.to_s)
+    end
+
+    def ruby_llm_model_config(model_name)
+      model = ruby_llm_model(model_name)
+      return unless model
+
+      {
+        'provider' => model.provider,
+        'display_name' => model.name
+      }
+    end
+
+    def ruby_llm_model(model_name)
+      RubyLLM.models.find(model_name.to_s)
+    rescue StandardError
+      nil
     end
   end
 end
