@@ -663,6 +663,14 @@ RSpec.describe Conversation do
       expect(conversation.assignee).to be_nil
     end
 
+    it 'preserves explicit human assignee' do
+      agent = create(:user, account: bot_inbox.inbox.account)
+      conversation = create(:conversation, inbox: bot_inbox.inbox, assignee: agent)
+
+      expect(conversation.assignee).to eq(agent)
+      expect(conversation.assignee_agent_bot).to be_nil
+    end
+
     context 'with campaigns' do
       let(:user) { create(:user, account: bot_inbox.inbox.account) }
 

@@ -296,6 +296,8 @@ class Conversation < ApplicationRecord
   end
 
   def assign_connected_agent_bot
+    return if assignee_id.present?
+
     self.assignee = nil
     self.assignee_agent_bot = inbox.agent_bot
   end
