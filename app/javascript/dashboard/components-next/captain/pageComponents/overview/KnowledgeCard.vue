@@ -3,20 +3,17 @@ import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 
+const props = defineProps({
+  knowledge: {
+    type: Object,
+    default: () => ({ approved: 0, pending: 0, documents: 0, coverage: 0 }),
+  },
+});
+
 const { t } = useI18n();
 const route = useRoute();
 
-// Knowledge coverage (sample data).
-const knowledge = {
-  approved: 142,
-  pending: 9,
-  documents: 23,
-};
-
-const approvedPct = computed(() => {
-  const total = knowledge.approved + knowledge.pending;
-  return total ? Math.round((knowledge.approved / total) * 100) : 0;
-});
+const approvedPct = computed(() => props.knowledge.coverage ?? 0);
 
 const linkTo = routeName => ({
   name: routeName,
@@ -29,19 +26,19 @@ const linkTo = routeName => ({
 const stats = computed(() => [
   {
     key: 'approved',
-    value: knowledge.approved,
+    value: props.knowledge.approved,
     label: t('CAPTAIN.OVERVIEW.KNOWLEDGE.APPROVED'),
     to: linkTo('captain_assistants_responses_index'),
   },
   {
     key: 'pending',
-    value: knowledge.pending,
+    value: props.knowledge.pending,
     label: t('CAPTAIN.OVERVIEW.KNOWLEDGE.PENDING'),
     to: linkTo('captain_assistants_responses_pending'),
   },
   {
     key: 'documents',
-    value: knowledge.documents,
+    value: props.knowledge.documents,
     label: t('CAPTAIN.OVERVIEW.KNOWLEDGE.DOCUMENTS'),
     to: linkTo('captain_assistants_documents_index'),
   },

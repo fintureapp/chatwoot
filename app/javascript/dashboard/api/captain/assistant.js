@@ -21,6 +21,16 @@ class CaptainAssistant extends ApiClient {
       message_history: messageHistory,
     });
   }
+
+  getStats({ assistantId, range }) {
+    return axios.get(`${this.url}/${assistantId}/stats`, { params: { range } });
+  }
+
+  getSummary({ assistantId, range }) {
+    return axios.get(`${this.url}/${assistantId}/summary`, {
+      params: { range },
+    });
+  }
 }
 
 export default new CaptainAssistant();

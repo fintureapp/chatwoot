@@ -1,7 +1,9 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRoute } from 'vue-router';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import CaptainAssistant from 'dashboard/api/captain/assistant';
 
 import PageLayout from 'dashboard/components-next/captain/PageLayout.vue';
 import WelcomeCard from 'dashboard/components-next/captain/pageComponents/overview/WelcomeCard.vue';
@@ -13,62 +15,83 @@ import QuickLinks from 'dashboard/components-next/captain/pageComponents/overvie
 import InboxBanner from 'dashboard/components-next/captain/pageComponents/overview/InboxBanner.vue';
 
 const { t } = useI18n();
+const route = useRoute();
 
-// NOTE: All figures below are placeholder/sample data. There is no backend
-// wiring yet; this page exists to explore the layout of the assistant overview.
 const ranges = ['7', '30', '90'];
 const selectedRange = ref('30');
 
-// Headline KPI cards. `trendGood` marks whether the trend direction is a
-// good outcome for the user, so we can colour the delta independently of sign.
+const assistantId = computed(() => route.params.assistantId);
+const stats = ref(null);
+
+const fetchStats = async () => {
+  try {
+    const { data } = await CaptainAssistant.getStats({
+      assistantId: assistantId.value,
+      range: selectedRange.value,
+    });
+    stats.value = data;
+  } catch {
+    stats.value = null;
+  }
+};
+
+watch([selectedRange, assistantId], fetchStats, { immediate: true });
+
+// `direction` says whether a rising trend is good ('up'), bad ('down'), or
+// neutral, so we can colour the delta independently of its sign.
+const resolveTrendGood = (trendValue, direction) => {
+  if (direction === 'neutral' || trendValue === 0) return null;
+  return direction === 'up' ? trendValue > 0 : trendValue < 0;
+};
+
+const metricFor = (statKey, formatValue, direction, absoluteTrend = false) => {
+  const data = stats.value?.[statKey];
+  if (!data) return { value: '—', trend: '', trendGood: null };
+
+  const sign = data.trend > 0 ? '+' : '';
+  return {
+    value: formatValue(data.current),
+    trend: absoluteTrend ? `${sign}${data.trend}` : `${sign}${data.trend}%`,
+    trendGood: resolveTrendGood(data.trend, direction),
+  };
+};
+
 const metrics = computed(() => [
   {
     key: 'handled',
     label: t('CAPTAIN.OVERVIEW.METRICS.HANDLED.LABEL'),
     hint: t('CAPTAIN.OVERVIEW.METRICS.HANDLED.HINT'),
-    value: '1,248',
-    trend: '+12.4%',
-    trendGood: true,
+    ...metricFor('conversations_handled', v => v.toLocaleString(), 'up'),
   },
   {
     key: 'autoResolution',
     label: t('CAPTAIN.OVERVIEW.METRICS.AUTO_RESOLUTION.LABEL'),
     hint: t('CAPTAIN.OVERVIEW.METRICS.AUTO_RESOLUTION.HINT'),
-    value: '63.2%',
-    trend: '+4.1%',
-    trendGood: true,
+    ...metricFor('auto_resolution_rate', v => `${v}%`, 'up'),
   },
   {
     key: 'handoff',
     label: t('CAPTAIN.OVERVIEW.METRICS.HANDOFF.LABEL'),
     hint: t('CAPTAIN.OVERVIEW.METRICS.HANDOFF.HINT'),
-    value: '28.7%',
-    trend: '-3.2%',
-    trendGood: true,
+    ...metricFor('handoff_rate', v => `${v}%`, 'down'),
   },
   {
     key: 'hoursSaved',
     label: t('CAPTAIN.OVERVIEW.METRICS.HOURS_SAVED.LABEL'),
     hint: t('CAPTAIN.OVERVIEW.METRICS.HOURS_SAVED.HINT'),
-    value: '612h',
-    trend: '+22.1%',
-    trendGood: true,
+    ...metricFor('hours_saved', v => `${v}h`, 'up'),
   },
   {
     key: 'reopen',
     label: t('CAPTAIN.OVERVIEW.METRICS.REOPEN.LABEL'),
     hint: t('CAPTAIN.OVERVIEW.METRICS.REOPEN.HINT'),
-    value: '6.5%',
-    trend: '+0.8%',
-    trendGood: false,
+    ...metricFor('reopen_rate', v => `${v}%`, 'down'),
   },
   {
     key: 'depth',
     label: t('CAPTAIN.OVERVIEW.METRICS.DEPTH.LABEL'),
     hint: t('CAPTAIN.OVERVIEW.METRICS.DEPTH.HINT'),
-    value: '3.4',
-    trend: '+0.2',
-    trendGood: null,
+    ...metricFor('conversation_depth', v => v.toFixed(1), 'neutral', true),
   },
 ]);
 </script>
@@ -103,7 +126,7 @@ const metrics = computed(() => [
       <div class="flex flex-col gap-6">
         <InboxBanner />
 
-        <WelcomeCard />
+        <WelcomeCard :range="selectedRange" />
 
         <div
           class="grid grid-cols-1 gap-px overflow-hidden border rounded-xl sm:grid-cols-2 lg:grid-cols-3 bg-n-weak border-n-weak"
@@ -120,7 +143,7 @@ const metrics = computed(() => [
         </div>
 
         <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <KnowledgeCard />
+          <KnowledgeCard :knowledge="stats?.knowledge" />
           <ResponseQualityCard />
         </div>
 

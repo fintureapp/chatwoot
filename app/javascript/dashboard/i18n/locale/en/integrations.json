@@ -395,7 +395,8 @@
     "OVERVIEW": {
       "HEADER": "Overview",
       "WELCOME": {
-        "LABEL": "Captain summary"
+        "LABEL": "Captain summary",
+        "LOADING": "Generating summary…"
       },
       "INBOX_BANNER": {
         "TEXT": "This assistant isn't connected to any inbox yet, so it won't respond to conversations.",
