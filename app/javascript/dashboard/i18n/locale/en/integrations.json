@@ -394,14 +394,13 @@
     "HEADER_KNOW_MORE": "Know more",
     "OVERVIEW": {
       "HEADER": "Overview",
+      "WELCOME": {
+        "LABEL": "Captain summary"
+      },
       "INBOX_BANNER": {
         "TEXT": "This assistant isn't connected to any inbox yet, so it won't respond to conversations.",
         "ACTION": "Connect inbox",
         "DISMISS": "Dismiss"
-      },
-      "PERFORMANCE": {
-        "TITLE": "Performance",
-        "SUBTITLE": "How this assistant is doing"
       },
       "RANGES": {
         "DAYS": "{count}d"

@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 import PageLayout from 'dashboard/components-next/captain/PageLayout.vue';
+import WelcomeCard from 'dashboard/components-next/captain/pageComponents/overview/WelcomeCard.vue';
 import MetricCard from 'dashboard/components-next/captain/pageComponents/overview/MetricCard.vue';
 import KnowledgeCard from 'dashboard/components-next/captain/pageComponents/overview/KnowledgeCard.vue';
 import ResponseQualityCard from 'dashboard/components-next/captain/pageComponents/overview/ResponseQualityCard.vue';
@@ -80,38 +81,29 @@ const metrics = computed(() => [
     :show-know-more="false"
     :feature-flag="FEATURE_FLAGS.CAPTAIN"
   >
+    <template #headerActions>
+      <div class="flex items-center gap-1 p-1 rounded-lg bg-n-alpha-1 shrink-0">
+        <button
+          v-for="range in ranges"
+          :key="range"
+          type="button"
+          class="px-3 py-1 text-sm font-medium rounded-md transition-colors"
+          :class="
+            selectedRange === range
+              ? 'bg-n-solid-active text-n-slate-12 shadow-sm'
+              : 'text-n-slate-11 hover:text-n-slate-12'
+          "
+          @click="selectedRange = range"
+        >
+          {{ $t('CAPTAIN.OVERVIEW.RANGES.DAYS', { count: range }) }}
+        </button>
+      </div>
+    </template>
     <template #body>
       <div class="flex flex-col gap-6">
         <InboxBanner />
 
-        <div class="flex items-center justify-between gap-4">
-          <div class="flex flex-col gap-1">
-            <h3 class="text-base font-medium text-n-slate-12">
-              {{ $t('CAPTAIN.OVERVIEW.PERFORMANCE.TITLE') }}
-            </h3>
-            <p class="text-sm text-n-slate-11">
-              {{ $t('CAPTAIN.OVERVIEW.PERFORMANCE.SUBTITLE') }}
-            </p>
-          </div>
-          <div
-            class="flex items-center gap-1 p-1 rounded-lg bg-n-alpha-1 shrink-0"
-          >
-            <button
-              v-for="range in ranges"
-              :key="range"
-              type="button"
-              class="px-3 py-1 text-sm font-medium rounded-md transition-colors"
-              :class="
-                selectedRange === range
-                  ? 'bg-n-solid-active text-n-slate-12 shadow-sm'
-                  : 'text-n-slate-11 hover:text-n-slate-12'
-              "
-              @click="selectedRange = range"
-            >
-              {{ $t('CAPTAIN.OVERVIEW.RANGES.DAYS', { count: range }) }}
-            </button>
-          </div>
-        </div>
+        <WelcomeCard />
 
         <div
           class="grid grid-cols-1 gap-px overflow-hidden border rounded-xl sm:grid-cols-2 lg:grid-cols-3 bg-n-weak border-n-weak"
