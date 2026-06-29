@@ -42,9 +42,8 @@ const assignedAgent = computed({
   },
 });
 
-const isUserTyping = computed(
-  () => props.message !== '' && !props.isOnPrivateNote
-);
+const hasMessage = computed(() => props.message !== '');
+const isUserTyping = computed(() => hasMessage.value && !props.isOnPrivateNote);
 const isUnassigned = computed(() => !assignedAgent.value);
 const isAssignedToOtherAgent = computed(
   () => assignedAgent.value?.id !== currentUser.value?.id
@@ -58,7 +57,7 @@ const showSelfAssignBanner = computed(() => {
 
 const showBotHandoffBanner = computed(() => {
   return (
-    isUserTyping.value && currentChat.value?.meta?.assignee_type === 'AgentBot'
+    hasMessage.value && currentChat.value?.meta?.assignee_type === 'AgentBot'
   );
 });
 

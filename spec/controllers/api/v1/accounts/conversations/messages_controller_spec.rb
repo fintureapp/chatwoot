@@ -136,10 +136,25 @@ RSpec.describe 'Conversation Messages API', type: :request do
     end
 
     context 'when it is an authenticated agent bot' do
-      let!(:agent_bot) { create(:agent_bot) }
+      let!(:agent_bot) { create(:agent_bot, account: account) }
 
       it 'creates a new outgoing message' do
         create(:agent_bot_inbox, inbox: inbox, agent_bot: agent_bot)
+        params = { content: 'test-message' }
+
+        post api_v1_account_conversation_messages_url(account_id: account.id, conversation_id: conversation.display_id),
+             params: params,
+             headers: { api_access_token: agent_bot.access_token.token },
+             as: :json
+
+        expect(response).to have_http_status(:success)
+        expect(conversation.messages.count).to eq(1)
+        expect(conversation.messages.first.content).to eq(params[:content])
+      end
+
+      it 'creates a new outgoing message when the agent bot owns the conversation' do
+        create(:agent_bot_inbox, inbox: inbox, agent_bot: agent_bot)
+        conversation.update!(assignee_agent_bot: agent_bot)
         params = { content: 'test-message' }
 
         post api_v1_account_conversation_messages_url(account_id: account.id, conversation_id: conversation.display_id),

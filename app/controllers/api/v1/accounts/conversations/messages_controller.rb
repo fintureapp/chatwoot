@@ -74,7 +74,7 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
   end
 
   def ensure_agent_bot_takeover
-    return unless Current.user && @conversation.assignee_agent_bot_id.present?
+    return unless Current.user.is_a?(User) && @conversation.assignee_agent_bot_id.present?
     return if private_message? || incoming_message?
 
     render json: { error: 'Conversation is assigned to an Agent Bot. Take over the conversation before replying.' }, status: :unprocessable_entity
