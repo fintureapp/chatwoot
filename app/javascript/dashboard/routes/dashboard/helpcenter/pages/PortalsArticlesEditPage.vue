@@ -44,9 +44,17 @@ const articleLink = computed(() => {
 });
 
 // On a published article, title/content edits stage into draft_* columns (kept
-// off the live site); everything else saves straight to the live record.
+// off the live site). Anywhere else they save straight to the live record — and
+// we drop any leftover draft (e.g. left behind when the card/bulk menu moved a
+// published article to draft) so a later publish can't resurrect stale content.
 const stageDraftFields = values => {
-  if (article.value?.status !== ARTICLE_STATUSES.PUBLISHED) return values;
+  if (article.value?.status !== ARTICLE_STATUSES.PUBLISHED) {
+    const hasStaleDraft =
+      article.value?.draftTitle != null || article.value?.draftContent != null;
+    return hasStaleDraft
+      ? { ...values, draft_title: null, draft_content: null }
+      : values;
+  }
 
   const staged = { ...values };
   ['title', 'content'].forEach(field => {
