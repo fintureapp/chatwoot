@@ -68,6 +68,7 @@ const paragraphs = computed(() =>
 );
 </script>
 
+<!-- eslint-disable-next-line vue/no-root-v-if -->
 <template>
   <div v-if="isLoading || welcomeMarkdown" class="flex flex-col gap-3">
     <div class="flex items-center gap-1.5 text-n-slate-10">
@@ -76,9 +77,18 @@ const paragraphs = computed(() =>
         {{ $t('CAPTAIN.OVERVIEW.WELCOME.LABEL') }}
       </span>
     </div>
-    <p v-if="isLoading" class="text-lg leading-relaxed text-n-slate-10">
-      {{ $t('CAPTAIN.OVERVIEW.WELCOME.LOADING') }}
-    </p>
+    <div
+      v-if="isLoading"
+      class="flex flex-col gap-5"
+      :aria-label="$t('CAPTAIN.OVERVIEW.WELCOME.LOADING')"
+    >
+      <div class="flex flex-col gap-2.5">
+        <div class="w-full h-5 rounded bg-n-slate-3 animate-pulse" />
+        <div class="w-11/12 h-5 rounded bg-n-slate-3 animate-pulse" />
+        <div class="w-4/6 h-5 rounded bg-n-slate-3 animate-pulse" />
+      </div>
+      <div class="w-5/6 h-5 rounded bg-n-slate-3 animate-pulse" />
+    </div>
     <template v-else>
       <p
         v-for="paragraph in paragraphs"
