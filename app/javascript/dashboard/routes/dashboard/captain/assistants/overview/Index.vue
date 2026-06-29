@@ -9,6 +9,7 @@ import KnowledgeCard from 'dashboard/components-next/captain/pageComponents/over
 import ResponseQualityCard from 'dashboard/components-next/captain/pageComponents/overview/ResponseQualityCard.vue';
 import CreditUsageCard from 'dashboard/components-next/captain/pageComponents/overview/CreditUsageCard.vue';
 import QuickLinks from 'dashboard/components-next/captain/pageComponents/overview/QuickLinks.vue';
+import InboxBanner from 'dashboard/components-next/captain/pageComponents/overview/InboxBanner.vue';
 
 const { t } = useI18n();
 
@@ -81,10 +82,17 @@ const metrics = computed(() => [
   >
     <template #body>
       <div class="flex flex-col gap-6">
+        <InboxBanner />
+
         <div class="flex items-center justify-between gap-4">
-          <p class="text-sm text-n-slate-11">
-            {{ $t('CAPTAIN.OVERVIEW.SAMPLE_NOTICE') }}
-          </p>
+          <div class="flex flex-col gap-1">
+            <h3 class="text-base font-medium text-n-slate-12">
+              {{ $t('CAPTAIN.OVERVIEW.PERFORMANCE.TITLE') }}
+            </h3>
+            <p class="text-sm text-n-slate-11">
+              {{ $t('CAPTAIN.OVERVIEW.PERFORMANCE.SUBTITLE') }}
+            </p>
+          </div>
           <div
             class="flex items-center gap-1 p-1 rounded-lg bg-n-alpha-1 shrink-0"
           >
