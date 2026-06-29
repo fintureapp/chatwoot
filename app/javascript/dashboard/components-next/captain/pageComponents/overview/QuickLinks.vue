@@ -2,10 +2,12 @@
 import { computed } from 'vue';
 import { useRoute, RouterLink } from 'vue-router';
 import { useI18n } from 'vue-i18n';
+import { useAccount } from 'dashboard/composables/useAccount';
 import { getHelpUrlForFeature } from 'dashboard/helper/featureHelper';
 
 const { t } = useI18n();
 const route = useRoute();
+const { isOnChatwootCloud } = useAccount();
 
 const assistantParams = computed(() => ({
   accountId: route.params.accountId,
@@ -44,7 +46,7 @@ const links = computed(() => [
 </script>
 
 <template>
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+  <div v-if="isOnChatwootCloud" class="grid grid-cols-1 gap-4 sm:grid-cols-3">
     <component
       :is="link.href ? 'a' : RouterLink"
       v-for="link in links"
