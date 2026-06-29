@@ -5,6 +5,7 @@ RSpec.describe Conversations::UnreadCounts::Listener do
   let(:account) { create(:account) }
   let(:conversation) { create(:conversation, account: account) }
   let(:notifier) { instance_double(Conversations::UnreadCounts::Notifier, perform: true) }
+  let(:filtered_store) { Conversations::UnreadCounts::FilteredCountStore }
 
   before do
     allow(Conversations::UnreadCounts::Notifier).to receive(:new).and_return(notifier)
@@ -41,6 +42,17 @@ RSpec.describe Conversations::UnreadCounts::Listener do
     expect(Conversations::UnreadCounts::Notifier).not_to have_received(:new)
   end
 
+  it 'invalidates filtered counts when any message is created' do
+    account.enable_features!(:unread_count_for_filters)
+    message = create(:message, account: account, inbox: conversation.inbox, conversation: conversation, message_type: :outgoing)
+    event = Events::Base.new('message.created', Time.zone.now, message: message)
+
+    expect do
+      listener.message_created(event)
+    end.to change { filtered_store.conversation_version(account.id) }.by(1)
+    expect(Conversations::UnreadCounts::Notifier).not_to have_received(:new)
+  end
+
   it 'refreshes unread counts when conversation status changes' do
     changed_attributes = { 'status' => %w[open resolved] }
     event = Events::Base.new('conversation.status_changed', Time.zone.now, conversation: conversation, changed_attributes: changed_attributes)
@@ -49,6 +61,16 @@ RSpec.describe Conversations::UnreadCounts::Listener do
 
     expect(Conversations::UnreadCounts::Notifier).to have_received(:new).with(conversation, changed_attributes: changed_attributes)
     expect(notifier).to have_received(:perform)
+  end
+
+  it 'invalidates filtered counts when conversation status changes' do
+    account.enable_features!(:unread_count_for_filters)
+    changed_attributes = { 'status' => %w[open resolved] }
+    event = Events::Base.new('conversation.status_changed', Time.zone.now, conversation: conversation, changed_attributes: changed_attributes)
+
+    expect do
+      listener.conversation_status_changed(event)
+    end.to change { filtered_store.conversation_version(account.id) }.by(1)
   end
 
   it 'refreshes unread counts when labels change' do
@@ -61,12 +83,31 @@ RSpec.describe Conversations::UnreadCounts::Listener do
     expect(notifier).to have_received(:perform)
   end
 
+  it 'invalidates filtered counts when filtered conversation fields change' do
+    account.enable_features!(:unread_count_for_filters)
+    event = Events::Base.new('conversation.updated', Time.zone.now, conversation: conversation, changed_attributes: { priority: [nil, 'high'] })
+
+    expect do
+      listener.conversation_updated(event)
+    end.to change { filtered_store.conversation_version(account.id) }.by(1)
+    expect(Conversations::UnreadCounts::Notifier).not_to have_received(:new)
+  end
+
   it 'ignores conversation updates unrelated to unread count dimensions' do
     event = Events::Base.new('conversation.updated', Time.zone.now, conversation: conversation, changed_attributes: { priority: [nil, 'high'] })
 
     listener.conversation_updated(event)
 
     expect(Conversations::UnreadCounts::Notifier).not_to have_received(:new)
+  end
+
+  it 'invalidates filtered counts when the conversation contact changes' do
+    account.enable_features!(:unread_count_for_filters)
+    event = Events::Base.new('conversation.contact_changed', Time.zone.now, conversation: conversation)
+
+    expect do
+      listener.conversation_contact_changed(event)
+    end.to change { filtered_store.conversation_version(account.id) }.by(1)
   end
 
   it 'refreshes unread counts when assignee changes' do
@@ -79,6 +120,16 @@ RSpec.describe Conversations::UnreadCounts::Listener do
     expect(notifier).to have_received(:perform)
   end
 
+  it 'invalidates filtered counts when a user is mentioned' do
+    account.enable_features!(:unread_count_for_filters)
+    user = create(:user, account: account)
+    event = Events::Base.new('conversation.mentioned', Time.zone.now, conversation: conversation, user: user)
+
+    expect do
+      listener.conversation_mentioned(event)
+    end.to change { filtered_store.built_in_filter_version(account_id: account.id, user_id: user.id) }.by(1)
+  end
+
   it 'refreshes unread counts when team changes' do
     changed_attributes = { team_id: [nil, 1] }
     event = Events::Base.new('team.changed', Time.zone.now, conversation: conversation, changed_attributes: changed_attributes)
@@ -87,6 +138,15 @@ RSpec.describe Conversations::UnreadCounts::Listener do
 
     expect(Conversations::UnreadCounts::Notifier).to have_received(:new).with(conversation, changed_attributes: changed_attributes)
     expect(notifier).to have_received(:perform)
+  end
+
+  it 'invalidates filtered counts when a conversation is deleted' do
+    account.enable_features!(:unread_count_for_filters)
+    conversation_data = deleted_conversation_data(conversation)
+
+    expect do
+      listener.conversation_deleted(Events::Base.new('conversation.deleted', Time.zone.now, conversation_data: conversation_data))
+    end.to change { filtered_store.conversation_version(account.id) }.by(1)
   end
 
   it 'removes unread count memberships when a conversation is deleted' do
