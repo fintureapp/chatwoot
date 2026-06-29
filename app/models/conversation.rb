@@ -283,12 +283,21 @@ class Conversation < ApplicationRecord
     return handle_campaign_status if campaign.present?
 
     # TODO: make this an inbox config instead of assuming bot conversations should start as pending
+    assign_connected_agent_bot if inbox.agent_bot_inbox&.active?
     self.status = :pending if inbox.active_bot?
   end
 
   def handle_campaign_status
     # If campaign has no sender (bot-initiated) and inbox has active bot, let bot handle it
-    self.status = :pending if campaign.sender_id.nil? && inbox.active_bot?
+    return unless campaign.sender_id.nil? && inbox.active_bot?
+
+    assign_connected_agent_bot if inbox.agent_bot_inbox&.active?
+    self.status = :pending
+  end
+
+  def assign_connected_agent_bot
+    self.assignee = nil
+    self.assignee_agent_bot = inbox.agent_bot
   end
 
   def notify_conversation_creation
