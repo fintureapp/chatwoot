@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
-import { debounce } from '@chatwoot/utils';
+import { useTimeoutFn } from '@vueuse/core';
 import { useI18n } from 'vue-i18n';
 import { ARTICLE_EDITOR_MENU_OPTIONS } from 'dashboard/constants/editor';
 
@@ -9,6 +9,7 @@ import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
 import FullEditor from 'dashboard/components/widgets/WootWriter/FullEditor.vue';
 import ArticleEditorHeader from 'dashboard/components-next/HelpCenter/Pages/ArticleEditorPage/ArticleEditorHeader.vue';
 import ArticleEditorControls from 'dashboard/components-next/HelpCenter/Pages/ArticleEditorPage/ArticleEditorControls.vue';
+import ArticleDiffPanel from 'dashboard/components-next/HelpCenter/Pages/ArticleEditorPage/ArticleDiffPanel.vue';
 
 const props = defineProps({
   article: {
@@ -38,16 +39,12 @@ const { t } = useI18n();
 
 const isNewArticle = computed(() => !props.article?.id);
 
-// Prefer the draft copy so the editor shows pending edits. `!= null` keeps a
-// deliberately-cleared empty string instead of falling back to the live value.
+// Prefer the draft; `??` keeps a deliberately-cleared empty string instead of
+// falling back to the live value.
 const effectiveTitle = () =>
-  props.article?.draftTitle != null
-    ? props.article.draftTitle
-    : (props.article?.title ?? '');
+  props.article?.draftTitle ?? props.article?.title ?? '';
 const effectiveContent = () =>
-  props.article?.draftContent != null
-    ? props.article.draftContent
-    : (props.article?.content ?? '');
+  props.article?.draftContent ?? props.article?.content ?? '';
 
 const hasPendingChanges = computed(
   () => props.article?.draftTitle != null || props.article?.draftContent != null
@@ -56,20 +53,31 @@ const hasPendingChanges = computed(
 const localTitle = ref(effectiveTitle());
 const localContent = ref(effectiveContent());
 
+const isDiffPanelOpen = ref(false);
+
+// Autosave on a delay. `start` restarts the timer with the latest value, `stop`
+// cancels a queued save so reseeding can't let it resurrect a resolved draft.
+const { start: debouncedSave, stop: cancelSave } = useTimeoutFn(
+  value => emit('saveArticle', value),
+  500,
+  { immediate: false }
+);
+
 const syncLocalState = () => {
+  cancelSave();
   localTitle.value = effectiveTitle();
   localContent.value = effectiveContent();
 };
 
-// Reseed the editor when switching articles or after a draft is published/discarded.
+// Reseed on article switch or once a draft is published/discarded; close the
+// diff panel in the latter case since there's nothing left to compare.
 watch(
   [() => props.article?.id, hasPendingChanges],
   ([id, pending], [prevId, prevPending]) => {
     if ((id && id !== prevId) || (prevPending && !pending)) syncLocalState();
+    if (prevPending && !pending) isDiffPanelOpen.value = false;
   }
 );
-
-const debouncedSave = debounce(value => emit('saveArticle', value), 500, false);
 
 const handleSave = value => {
   if (isNewArticle.value) return;
@@ -128,7 +136,9 @@ const handleCreateArticle = event => {
         :pending-changes="hasPendingChanges"
         @go-back="onClickGoBack"
         @preview-article="previewArticle"
+        @show-diff="isDiffPanelOpen = !isDiffPanelOpen"
       />
+      <ArticleDiffPanel v-model="isDiffPanelOpen" :article="article" />
     </template>
     <template #content>
       <div class="flex flex-col gap-3 pl-4 mb-3 rtl:pr-3 rtl:pl-0">

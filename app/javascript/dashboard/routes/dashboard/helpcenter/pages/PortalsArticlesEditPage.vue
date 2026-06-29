@@ -43,19 +43,31 @@ const articleLink = computed(() => {
   );
 });
 
-// On a published article, title/content edits are staged into draft_* columns
-// (kept off the live site); everything else saves straight to the live record.
+// On a published article, title/content edits stage into draft_* columns (kept
+// off the live site); everything else saves straight to the live record.
 const stageDraftFields = values => {
   if (article.value?.status !== ARTICLE_STATUSES.PUBLISHED) return values;
+
   const staged = { ...values };
-  if ('title' in staged) {
-    staged.draft_title = staged.title;
-    delete staged.title;
+  ['title', 'content'].forEach(field => {
+    if (field in staged) {
+      staged[`draft_${field}`] = staged[field];
+      delete staged[field];
+    }
+  });
+
+  // Reverting a draft back to the live value clears it, so "pending changes"
+  // doesn't linger over an identical copy.
+  const liveTitle = article.value.title ?? '';
+  const liveContent = article.value.content ?? '';
+  const nextTitle = staged.draft_title ?? article.value.draftTitle ?? liveTitle;
+  const nextContent =
+    staged.draft_content ?? article.value.draftContent ?? liveContent;
+  if (nextTitle === liveTitle && nextContent === liveContent) {
+    staged.draft_title = null;
+    staged.draft_content = null;
   }
-  if ('content' in staged) {
-    staged.draft_content = staged.content;
-    delete staged.content;
-  }
+
   return staged;
 };
 

@@ -42,7 +42,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['goBack', 'previewArticle']);
+const emit = defineEmits(['goBack', 'previewArticle', 'showDiff']);
 
 const { t } = useI18n();
 const store = useStore();
@@ -116,7 +116,7 @@ const getStatusMessage = (status, isSuccess) => {
     : '';
 };
 
-// draftAction (publishDraft/discardDraft) resolves a pending draft in the same
+// Pass draftAction (publishDraft/discardDraft) to resolve a draft in the same
 // update; omit it for a plain status change.
 const performStatusUpdate = async (value, draftAction) => {
   const status = getArticleStatus(value);
@@ -196,6 +196,9 @@ const discardDraftChanges = async () => {
 const onPrimaryAction = () => {
   if (hasPendingChanges.value) {
     publishDraftChanges();
+  } else if (props.pendingChanges) {
+    // Promote leftover draft edits on publish instead of republishing stale content.
+    performStatusUpdate(ARTICLE_STATUSES.PUBLISHED, 'publishDraft');
   } else {
     updateArticleStatus({ value: ARTICLE_STATUSES.PUBLISHED });
   }
@@ -234,13 +237,16 @@ const discardChangesAndUpdateStatus = async () => {
       @click="onClickGoBack"
     />
     <div class="flex items-center gap-4">
-      <span
+      <button
         v-if="hasPendingChanges"
-        class="flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded-lg text-n-amber-11 bg-n-amber-3 outline outline-1 outline-n-amber-5"
+        type="button"
+        :title="t('HELP_CENTER.EDIT_ARTICLE_PAGE.HEADER.VIEW_CHANGES')"
+        class="flex items-center gap-1.5 px-2 py-1 text-xs font-medium transition-colors rounded-lg cursor-pointer text-n-amber-11 bg-n-amber-3 outline outline-1 outline-n-amber-5 hover:bg-n-amber-4"
+        @click="emit('showDiff')"
       >
         <span class="rounded-full size-1.5 bg-n-amber-9 shrink-0" />
         {{ t('HELP_CENTER.EDIT_ARTICLE_PAGE.HEADER.PENDING_CHANGES') }}
-      </span>
+      </button>
       <span
         v-if="isUpdating || isSaved"
         class="text-xs font-medium transition-all duration-300 text-n-slate-11"

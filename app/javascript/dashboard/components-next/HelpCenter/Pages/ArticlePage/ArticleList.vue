@@ -6,8 +6,12 @@ import { useRouter, useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useAlert, useTrack } from 'dashboard/composables';
 import { PORTALS_EVENTS } from 'dashboard/helper/AnalyticsHelper/events';
-import { getArticleStatus } from 'dashboard/helper/portalHelper.js';
+import {
+  getArticleStatus,
+  ARTICLE_STATUSES,
+} from 'dashboard/helper/portalHelper.js';
 import wootConstants from 'dashboard/constants/globals';
+import { hasPendingChanges } from 'dashboard/helper/articleDiffHelper';
 
 import ArticleCard from 'dashboard/components-next/HelpCenter/ArticleCard/ArticleCard.vue';
 
@@ -217,6 +221,10 @@ watch(
           :views="element.views || 0"
           :updated-at="element.updatedAt"
           :is-selected="selectedArticleIds.has(element.id)"
+          :has-pending-changes="
+            element.status === ARTICLE_STATUSES.PUBLISHED &&
+            hasPendingChanges(element)
+          "
           selectable
           :show-selection-control="shouldShowSelectionControl(element.id)"
           :class="{ 'cursor-grab': dragEnabled }"

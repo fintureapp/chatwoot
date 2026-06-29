@@ -533,6 +533,8 @@
             "PUBLISHED": "Published",
             "ARCHIVED": "Archived"
           },
+          "PENDING_EDITS": "Unpublished edits",
+          "PENDING_EDITS_TOOLTIP": "This published article has unpublished edits",
           "CATEGORY": {
             "UNCATEGORISED": "Uncategorised"
           }
@@ -770,6 +772,7 @@
         "DISCARD_CHANGES_SUCCESS": "Changes discarded",
         "DISCARD_CHANGES_ERROR": "Could not discard changes",
         "PENDING_CHANGES": "Pending changes",
+        "VIEW_CHANGES": "View unpublished changes",
         "DRAFT": "Draft",
         "ARCHIVE": "Archive",
         "BACK_TO_ARTICLES": "Back to articles"
@@ -779,6 +782,11 @@
         "DESCRIPTION": "This article has draft changes that aren't live yet. Apply them before changing the status, or discard them?",
         "APPLY": "Apply changes",
         "DISCARD": "Discard changes"
+      },
+      "DIFF_DIALOG": {
+        "TITLE": "Unpublished changes",
+        "DESCRIPTION": "Compare your draft against the version that's currently live.",
+        "TITLE_LABEL": "Title"
       },
       "EDIT_ARTICLE": {
         "MORE_PROPERTIES": "More properties",
