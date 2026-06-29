@@ -1,6 +1,15 @@
 // Powers the "unpublished changes" preview: marks what changed between the live
 // article and the draft — word by word in the title, block by block in the body.
 
+import MarkdownIt from 'markdown-it';
+
+// Matches the public renderer (CommonMark, no typographer). True when two
+// markdown strings render the same — so blank-line/spacing-only edits don't count,
+// but real changes (code indentation, smart quotes, width markers) do.
+const commonmark = MarkdownIt('commonmark');
+export const rendersIdentically = (a, b) =>
+  commonmark.render(a ?? '') === commonmark.render(b ?? '');
+
 const INS_CLASS = '!bg-n-teal-5 !text-n-teal-12 !no-underline rounded px-0.5';
 const DEL_CLASS = '!bg-n-ruby-5 !text-n-ruby-12 !line-through rounded px-0.5';
 
@@ -94,12 +103,38 @@ export const renderInlineDiff = (oldValue, newValue) => {
   return segments.join(' ');
 };
 
+// A fenced code block opener: ``` or ~~~, indented up to 3 spaces (CommonMark).
+const FENCE_RE = /^ {0,3}(```|~~~)/;
+
 // Split on blank lines so each paragraph, heading or list compares as one piece.
-const splitBlocks = text =>
-  (text || '')
-    .split(/\n\s*\n/)
-    .map(block => block.trim())
-    .filter(Boolean);
+// Blank lines inside a fenced code block are content, so we never split there —
+// otherwise a blank line in code would tear the block into broken pieces.
+const splitBlocks = text => {
+  const blocks = [];
+  let buffer = [];
+  let fence = null;
+  const flush = () => {
+    const block = buffer.join('\n').trim();
+    if (block) blocks.push(block);
+    buffer = [];
+  };
+
+  (text || '').split('\n').forEach(line => {
+    const marker = line.match(FENCE_RE)?.[1];
+    if (marker && !fence) {
+      fence = marker;
+    } else if (fence && line.trimStart().startsWith(fence)) {
+      fence = null;
+    }
+    if (!fence && line.trim() === '') {
+      flush();
+    } else {
+      buffer.push(line);
+    }
+  });
+  flush();
+  return blocks;
+};
 
 const normalize = text => text.replace(/\s+/g, ' ').trim();
 

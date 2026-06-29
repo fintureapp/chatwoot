@@ -9,8 +9,7 @@ import {
   ARTICLE_STATUSES,
 } from 'dashboard/helper/portalHelper';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
-
-import MessageFormatter from 'shared/helpers/MessageFormatter';
+import { rendersIdentically } from 'dashboard/helper/articleDiffHelper';
 
 import ArticleEditor from 'dashboard/components-next/HelpCenter/Pages/ArticleEditorPage/ArticleEditor.vue';
 
@@ -45,20 +44,6 @@ const articleLink = computed(() => {
   );
 });
 
-// Table column widths live in a comment the renderer strips, so compare them too.
-const COLWIDTHS_MARKER = /<!--cw-colwidths:[\d,]+-->/g;
-
-// Two versions match when they would render identically. Comparing the rendered
-// HTML is Markdown-aware, so whitespace that affects output (e.g. code-block
-// indentation) still counts, while whitespace the renderer ignores (e.g. an extra
-// blank line) does not — preventing both a phantom badge and dropped edits.
-const unchanged = (live, next) => {
-  const key = md =>
-    new MessageFormatter(md).formattedMessage +
-    (md.match(COLWIDTHS_MARKER) ?? []).join('|');
-  return key(live) === key(next);
-};
-
 // On a published article, title/content edits stage into draft_* columns (kept
 // off the live site). Anywhere else they save straight to the live record — and
 // we drop any leftover draft (e.g. left behind when the card/bulk menu moved a
@@ -67,9 +52,18 @@ const stageDraftFields = values => {
   if (article.value?.status !== ARTICLE_STATUSES.PUBLISHED) {
     const hasStaleDraft =
       article.value?.draftTitle != null || article.value?.draftContent != null;
-    return hasStaleDraft
-      ? { ...values, draft_title: null, draft_content: null }
-      : values;
+    if (!hasStaleDraft) return values;
+    // The editor is showing the staged draft, so promote both fields to the live
+    // record (the field being autosaved wins) before dropping the drafts —
+    // otherwise saving one field would snap the other back to the old live value.
+    return {
+      ...values,
+      title: values.title ?? article.value.draftTitle ?? article.value.title,
+      content:
+        values.content ?? article.value.draftContent ?? article.value.content,
+      draft_title: null,
+      draft_content: null,
+    };
   }
 
   const staged = { ...values };
@@ -80,15 +74,18 @@ const stageDraftFields = values => {
     }
   });
 
-  // Clear the draft when it has no visible difference from the live version, so
-  // a revert — or a whitespace-only edit the diff ignores (e.g. an extra blank
-  // line) — doesn't leave a "pending changes" badge with nothing to compare.
+  // Clear the draft when it would render identically to the live version — a
+  // revert, or a whitespace-only edit (blank line/empty paragraph) — so it
+  // doesn't leave a "pending changes" badge with nothing to compare.
   const liveTitle = article.value.title ?? '';
   const liveContent = article.value.content ?? '';
   const nextTitle = staged.draft_title ?? article.value.draftTitle ?? liveTitle;
   const nextContent =
     staged.draft_content ?? article.value.draftContent ?? liveContent;
-  if (unchanged(liveTitle, nextTitle) && unchanged(liveContent, nextContent)) {
+  if (
+    rendersIdentically(liveTitle, nextTitle) &&
+    rendersIdentically(liveContent, nextContent)
+  ) {
     staged.draft_title = null;
     staged.draft_content = null;
   }

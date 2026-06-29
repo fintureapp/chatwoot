@@ -6,7 +6,12 @@ import { OnClickOutside } from '@vueuse/components';
 import { useMapGetter } from 'dashboard/composables/store.js';
 import { useConfig } from 'dashboard/composables/useConfig';
 import { debounce } from '@chatwoot/utils';
-import { ARTICLE_TABS, CATEGORY_ALL } from 'dashboard/helper/portalHelper';
+import {
+  ARTICLE_TABS,
+  CATEGORY_ALL,
+  ARTICLE_STATUSES,
+} from 'dashboard/helper/portalHelper';
+import { hasPendingChanges } from 'dashboard/helper/articleDiffHelper';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { useAlert } from 'dashboard/composables';
 import articlesAPI from 'dashboard/api/helpCenter/articles';
@@ -224,15 +229,40 @@ const onBulkActionSuccess = message => {
 };
 
 const bulkUpdateStatus = async status => {
+  // Articles with unpublished edits need an explicit publish/discard decision the
+  // bulk action can't make, so skip them and point the user to resolve each one.
+  const selectedIds = [...selectedArticleIds.value];
+  const pendingIds = new Set(
+    props.articles
+      .filter(
+        article =>
+          article.status === ARTICLE_STATUSES.PUBLISHED &&
+          hasPendingChanges(article)
+      )
+      .map(article => article.id)
+  );
+  const articleIds = selectedIds.filter(id => !pendingIds.has(id));
+  const skippedCount = selectedIds.length - articleIds.length;
+
+  if (!articleIds.length) {
+    useAlert(t('HELP_CENTER.ARTICLES_PAGE.BULK_ACTIONS.STATUS_SKIPPED_ALL'));
+    return;
+  }
+
   try {
     await articlesAPI.bulkUpdateStatus({
       portalSlug: route.params.portalSlug,
-      articleIds: [...selectedArticleIds.value],
+      articleIds,
       status,
     });
     onBulkActionSuccess(
       t('HELP_CENTER.ARTICLES_PAGE.BULK_ACTIONS.STATUS_SUCCESS')
     );
+    if (skippedCount) {
+      useAlert(
+        t('HELP_CENTER.ARTICLES_PAGE.BULK_ACTIONS.STATUS_SKIPPED', skippedCount)
+      );
+    }
   } catch (error) {
     useAlert(
       error?.message || t('HELP_CENTER.ARTICLES_PAGE.BULK_ACTIONS.STATUS_ERROR')

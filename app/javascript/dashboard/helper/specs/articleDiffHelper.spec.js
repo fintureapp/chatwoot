@@ -2,6 +2,7 @@ import {
   renderInlineDiff,
   buildDiffBlocks,
   hasPendingChanges,
+  rendersIdentically,
 } from '../articleDiffHelper';
 
 describe('articleDiffHelper', () => {
@@ -72,6 +73,45 @@ describe('articleDiffHelper', () => {
         { type: 'removed', md: 'hello world' },
         { type: 'added', md: 'hello there' },
       ]);
+    });
+
+    it('keeps a fenced code block whole when it contains blank lines', () => {
+      // A blank line inside the fence must not split the block (regression).
+      const code = '```\nline one\n\nline two\n```';
+      const blocks = buildDiffBlocks(code, code);
+      expect(blocks).toEqual([{ type: 'equal', md: code }]);
+    });
+
+    it('diffs an edited code block as one whole removed + added block', () => {
+      const live = '```\ncode line\n```';
+      const draft = '```\ncode line\n\nsd\n```';
+      const blocks = buildDiffBlocks(live, draft);
+      expect(blocks).toContainEqual({ type: 'removed', md: live });
+      expect(blocks).toContainEqual({ type: 'added', md: draft });
+    });
+  });
+
+  describe('rendersIdentically', () => {
+    it('ignores blank-line / empty-paragraph differences', () => {
+      expect(rendersIdentically('a\n\nb', 'a\n\n\nb')).toBe(true);
+      expect(rendersIdentically('hello', 'hello\n\n')).toBe(true);
+    });
+
+    it('counts code-block indentation changes', () => {
+      expect(rendersIdentically('```\n  x\n```', '```\nx\n```')).toBe(false);
+    });
+
+    it('counts smart vs straight quotes (no typographer)', () => {
+      expect(rendersIdentically('"hi"', '“hi”')).toBe(false);
+    });
+
+    it('counts real text changes', () => {
+      expect(rendersIdentically('hello world', 'hello there')).toBe(false);
+    });
+
+    it('treats nullish input as empty', () => {
+      expect(rendersIdentically(null, '')).toBe(true);
+      expect(rendersIdentically(undefined, 'x')).toBe(false);
     });
   });
 

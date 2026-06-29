@@ -158,7 +158,6 @@ const performStatusUpdate = async (value, draftAction) => {
 
 const updateArticleStatus = ({ value }) => {
   showArticleActionMenu.value = false;
-  if (blockedWhileSaving()) return;
   // Leaving published with unsaved draft edits — ask whether to apply or discard
   // first; the popover applies the status itself once resolved.
   if (hasPendingChanges.value) {
@@ -218,6 +217,9 @@ const onPrimaryAction = () => {
 
 const onMenuAction = event => {
   showArticleActionMenu.value = false;
+  // Don't resolve a draft while an autosave is still in flight — it could land
+  // after and recreate the draft we just discarded/applied.
+  if (blockedWhileSaving()) return;
   if (event.action === 'discard-draft') {
     discardDraftChanges();
   } else {
