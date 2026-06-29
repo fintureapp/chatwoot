@@ -33,6 +33,9 @@ const flagReasons = [
 const total = computed(() =>
   flagReasons.reduce((sum, reason) => sum + reason.count, 0)
 );
+
+// Flagged responses as a share of all Captain replies (sample data).
+const rate = '1.3%';
 </script>
 
 <template>
@@ -44,7 +47,7 @@ const total = computed(() =>
         {{ $t('CAPTAIN.OVERVIEW.FLAGGED.TITLE') }}
       </span>
       <span class="text-sm text-n-slate-11">
-        {{ $t('CAPTAIN.OVERVIEW.FLAGGED.TOTAL', { count: total }) }}
+        {{ $t('CAPTAIN.OVERVIEW.FLAGGED.TOTAL', { count: total, rate }) }}
       </span>
     </div>
     <div class="flex flex-col gap-3">

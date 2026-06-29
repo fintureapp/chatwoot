@@ -411,9 +411,9 @@
           "LABEL": "Handoff rate",
           "HINT": "Share of handled conversations escalated to a human agent."
         },
-        "FLAGGED": {
-          "LABEL": "Flagged response rate",
-          "HINT": "Assistant replies agents reported as low quality."
+        "HOURS_SAVED": {
+          "LABEL": "Hours saved",
+          "HINT": "Estimate: Captain replies times the team's average response time. Directional, not measured labor."
         },
         "REOPEN": {
           "LABEL": "Reopen rate",
@@ -433,7 +433,7 @@
       },
       "FLAGGED": {
         "TITLE": "Response quality",
-        "TOTAL": "{count} flagged"
+        "TOTAL": "{count} flagged · {rate}"
       },
       "CREDITS": {
         "TITLE": "Credit usage",
