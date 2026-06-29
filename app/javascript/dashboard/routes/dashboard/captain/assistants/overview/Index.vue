@@ -8,6 +8,7 @@ import MetricCard from 'dashboard/components-next/captain/pageComponents/overvie
 import KnowledgeCard from 'dashboard/components-next/captain/pageComponents/overview/KnowledgeCard.vue';
 import ResponseQualityCard from 'dashboard/components-next/captain/pageComponents/overview/ResponseQualityCard.vue';
 import CreditUsageCard from 'dashboard/components-next/captain/pageComponents/overview/CreditUsageCard.vue';
+import QuickLinks from 'dashboard/components-next/captain/pageComponents/overview/QuickLinks.vue';
 
 const { t } = useI18n();
 
@@ -124,6 +125,8 @@ const metrics = computed(() => [
         </div>
 
         <CreditUsageCard :range="selectedRange" />
+
+        <QuickLinks />
       </div>
     </template>
   </PageLayout>

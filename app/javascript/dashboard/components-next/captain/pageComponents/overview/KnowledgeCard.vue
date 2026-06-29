@@ -1,5 +1,10 @@
 <script setup>
 import { computed } from 'vue';
+import { useRoute } from 'vue-router';
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
+const route = useRoute();
 
 // Knowledge coverage (sample data).
 const knowledge = {
@@ -12,6 +17,35 @@ const approvedPct = computed(() => {
   const total = knowledge.approved + knowledge.pending;
   return total ? Math.round((knowledge.approved / total) * 100) : 0;
 });
+
+const linkTo = routeName => ({
+  name: routeName,
+  params: {
+    accountId: route.params.accountId,
+    assistantId: route.params.assistantId,
+  },
+});
+
+const stats = computed(() => [
+  {
+    key: 'approved',
+    value: knowledge.approved,
+    label: t('CAPTAIN.OVERVIEW.KNOWLEDGE.APPROVED'),
+    to: linkTo('captain_assistants_responses_index'),
+  },
+  {
+    key: 'pending',
+    value: knowledge.pending,
+    label: t('CAPTAIN.OVERVIEW.KNOWLEDGE.PENDING'),
+    to: linkTo('captain_assistants_responses_pending'),
+  },
+  {
+    key: 'documents',
+    value: knowledge.documents,
+    label: t('CAPTAIN.OVERVIEW.KNOWLEDGE.DOCUMENTS'),
+    to: linkTo('captain_assistants_documents_index'),
+  },
+]);
 </script>
 
 <template>
@@ -33,30 +67,24 @@ const approvedPct = computed(() => {
       />
     </div>
     <div class="grid grid-cols-3 gap-3">
-      <div class="flex flex-col gap-1">
+      <RouterLink
+        v-for="stat in stats"
+        :key="stat.key"
+        :to="stat.to"
+        class="flex flex-col gap-1 group/stat"
+      >
         <span class="text-xl font-semibold tabular-nums text-n-slate-12">
-          {{ knowledge.approved }}
+          {{ stat.value }}
         </span>
-        <span class="text-xs text-n-slate-11">
-          {{ $t('CAPTAIN.OVERVIEW.KNOWLEDGE.APPROVED') }}
+        <span
+          class="inline-flex items-center gap-1 text-xs transition-colors text-n-slate-11 group-hover/stat:text-n-slate-12"
+        >
+          {{ stat.label }}
+          <span
+            class="transition-opacity opacity-0 i-lucide-arrow-up-right size-3 group-hover/stat:opacity-100"
+          />
         </span>
-      </div>
-      <div class="flex flex-col gap-1">
-        <span class="text-xl font-semibold tabular-nums text-n-slate-12">
-          {{ knowledge.pending }}
-        </span>
-        <span class="text-xs text-n-slate-11">
-          {{ $t('CAPTAIN.OVERVIEW.KNOWLEDGE.PENDING') }}
-        </span>
-      </div>
-      <div class="flex flex-col gap-1">
-        <span class="text-xl font-semibold tabular-nums text-n-slate-12">
-          {{ knowledge.documents }}
-        </span>
-        <span class="text-xs text-n-slate-11">
-          {{ $t('CAPTAIN.OVERVIEW.KNOWLEDGE.DOCUMENTS') }}
-        </span>
-      </div>
+      </RouterLink>
     </div>
   </div>
 </template>

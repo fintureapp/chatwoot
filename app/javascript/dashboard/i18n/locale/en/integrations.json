@@ -442,6 +442,20 @@
         "AXIS_START": "{count}d ago",
         "AXIS_END": "Today"
       },
+      "LINKS": {
+        "DOCS": {
+          "TITLE": "Captain docs",
+          "DESCRIPTION": "Guides and how-tos for Captain"
+        },
+        "PLAYGROUND": {
+          "TITLE": "Playground",
+          "DESCRIPTION": "Test this assistant's replies"
+        },
+        "BILLING": {
+          "TITLE": "Billing",
+          "DESCRIPTION": "Manage credits and plan"
+        }
+      },
       "FLAG_REASONS": {
         "INCORRECT": "Incorrect info",
         "INCOMPLETE": "Incomplete",
