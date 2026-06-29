@@ -2,7 +2,7 @@ class Api::V1::Accounts::Captain::AssistantsController < Api::V1::Accounts::Base
   before_action :current_account
   before_action -> { check_authorization(Captain::Assistant) }
 
-  before_action :set_assistant, only: [:show, :update, :destroy, :playground]
+  before_action :set_assistant, only: [:show, :update, :destroy, :playground, :stats, :summary]
 
   def index
     @assistants = account_assistants.ordered
@@ -43,7 +43,33 @@ class Api::V1::Accounts::Captain::AssistantsController < Api::V1::Accounts::Base
     @tools = assistant.available_agent_tools
   end
 
+  def stats
+    render json: Captain::AssistantStatsBuilder.new(@assistant, params[:range]).metrics
+  end
+
+  def summary
+    result = Rails.cache.fetch(summary_cache_key, expires_in: 1.day) do
+      stats = Captain::AssistantStatsBuilder.new(@assistant, params[:range]).metrics
+      Captain::OverviewSummaryService.new(
+        account: Current.account,
+        assistant: @assistant,
+        first_name: Current.user.name.to_s.split.first,
+        stats: stats
+      ).perform
+    end
+
+    if result[:error]
+      render json: { error: result[:error] }, status: :unprocessable_content
+    else
+      render json: { message: result[:message] }
+    end
+  end
+
   private
+
+  def summary_cache_key
+    "captain_overview_summary/#{@assistant.id}/#{params[:range]}/#{Date.current}"
+  end
 
   def set_assistant
     @assistant = account_assistants.find(params[:id])
