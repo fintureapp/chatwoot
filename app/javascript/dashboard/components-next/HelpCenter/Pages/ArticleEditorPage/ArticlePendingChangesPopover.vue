@@ -78,15 +78,28 @@ defineExpose({ open, close });
     v-on-click-outside="dismiss"
     class="absolute z-50 flex flex-col gap-4 p-4 mt-2 outline outline-1 shadow-lg w-96 end-0 top-full rounded-xl bg-n-alpha-3 backdrop-blur-[100px] outline-n-container"
   >
-    <div class="flex flex-col gap-1">
-      <h3 class="text-base font-medium text-n-slate-12">
-        {{ t('HELP_CENTER.EDIT_ARTICLE_PAGE.PENDING_CHANGES_POPOVER.TITLE') }}
-      </h3>
-      <p class="mb-0 text-sm text-n-slate-11">
-        {{
-          t('HELP_CENTER.EDIT_ARTICLE_PAGE.PENDING_CHANGES_POPOVER.DESCRIPTION')
-        }}
-      </p>
+    <div class="flex items-start justify-between gap-2">
+      <div class="flex flex-col gap-1">
+        <h3 class="text-base font-medium text-n-slate-12">
+          {{ t('HELP_CENTER.EDIT_ARTICLE_PAGE.PENDING_CHANGES_POPOVER.TITLE') }}
+        </h3>
+        <p class="mb-0 text-sm text-n-slate-11">
+          {{
+            t(
+              'HELP_CENTER.EDIT_ARTICLE_PAGE.PENDING_CHANGES_POPOVER.DESCRIPTION'
+            )
+          }}
+        </p>
+      </div>
+      <Button
+        icon="i-lucide-x"
+        variant="ghost"
+        color="slate"
+        size="xs"
+        class="shrink-0 -me-1 -mt-1"
+        :disabled="isLoading"
+        @click="close"
+      />
     </div>
     <div class="flex items-center justify-between gap-2">
       <Button

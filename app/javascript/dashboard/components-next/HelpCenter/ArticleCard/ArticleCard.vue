@@ -218,7 +218,7 @@ const handleClick = id => {
               'HELP_CENTER.ARTICLES_PAGE.ARTICLE_CARD.CARD.PENDING_EDITS_TOOLTIP'
             )
           "
-          class="text-xs font-medium inline-flex items-center gap-1 h-6 px-2 py-0.5 rounded-md text-n-slate-11 bg-n-alpha-2"
+          class="text-xs font-medium inline-flex items-center gap-1 h-6 px-2 py-0.5 rounded-md text-n-slate-11 bg-n-alpha-2 whitespace-nowrap shrink-0"
         >
           <span class="rounded-full size-1.5 bg-n-amber-9 shrink-0" />
           {{ t('HELP_CENTER.ARTICLES_PAGE.ARTICLE_CARD.CARD.PENDING_EDITS') }}
