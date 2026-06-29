@@ -48,7 +48,7 @@ class Api::V1::Accounts::Captain::AssistantsController < Api::V1::Accounts::Base
   end
 
   def summary
-    result = Rails.cache.fetch(summary_cache_key, expires_in: 1.day) do
+    result = Rails.cache.fetch(summary_cache_key, expires_in: 1.hour) do
       builder = Captain::AssistantStatsBuilder.new(@assistant, params[:range])
       Captain::OverviewSummaryService.new(
         account: Current.account,
