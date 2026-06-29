@@ -10,7 +10,7 @@ import {
 } from 'dashboard/helper/portalHelper';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 
-import { buildDiffBlocks } from 'dashboard/helper/articleDiffHelper';
+import MessageFormatter from 'shared/helpers/MessageFormatter';
 
 import ArticleEditor from 'dashboard/components-next/HelpCenter/Pages/ArticleEditorPage/ArticleEditor.vue';
 
@@ -45,10 +45,19 @@ const articleLink = computed(() => {
   );
 });
 
-// Two versions match when the diff view would show nothing between them — this
-// ignores whitespace-only differences the same way the diff does.
-const unchanged = (live, next) =>
-  buildDiffBlocks(live, next).every(block => block.type === 'equal');
+// Table column widths live in a comment the renderer strips, so compare them too.
+const COLWIDTHS_MARKER = /<!--cw-colwidths:[\d,]+-->/g;
+
+// Two versions match when they would render identically. Comparing the rendered
+// HTML is Markdown-aware, so whitespace that affects output (e.g. code-block
+// indentation) still counts, while whitespace the renderer ignores (e.g. an extra
+// blank line) does not — preventing both a phantom badge and dropped edits.
+const unchanged = (live, next) => {
+  const key = md =>
+    new MessageFormatter(md).formattedMessage +
+    (md.match(COLWIDTHS_MARKER) ?? []).join('|');
+  return key(live) === key(next);
+};
 
 // On a published article, title/content edits stage into draft_* columns (kept
 // off the live site). Anywhere else they save straight to the live record — and
