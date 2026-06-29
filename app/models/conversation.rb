@@ -21,6 +21,7 @@
 #  updated_at             :datetime         not null
 #  account_id             :integer          not null
 #  assignee_agent_bot_id  :bigint
+#  assignee_captain_assistant_id :bigint
 #  assignee_id            :integer
 #  campaign_id            :bigint
 #  contact_id             :bigint
@@ -66,7 +67,7 @@ class Conversation < ApplicationRecord
   validates :inbox_id, presence: true
   validates :contact_id, presence: true
   before_validation :validate_additional_attributes
-  before_validation :reset_agent_bot_when_assignee_present
+  before_validation :reset_ai_assignees_when_assignee_present
   validates :additional_attributes, jsonb_attributes_length: true
   validates :custom_attributes, jsonb_attributes_length: true
   validates :uuid, uniqueness: true
@@ -104,6 +105,7 @@ class Conversation < ApplicationRecord
   belongs_to :inbox
   belongs_to :assignee, class_name: 'User', optional: true, inverse_of: :assigned_conversations
   belongs_to :assignee_agent_bot, class_name: 'AgentBot', optional: true
+  belongs_to :assignee_captain_assistant, class_name: 'Captain::Assistant', optional: true
   belongs_to :contact
   belongs_to :contact_inbox
   belongs_to :team, optional: true
@@ -195,6 +197,7 @@ class Conversation < ApplicationRecord
 
   # Virtual attribute till we switch completely to polymorphic assignee
   def assignee_type
+    return 'CaptainAssistant' if assignee_captain_assistant_id.present?
     return 'AgentBot' if assignee_agent_bot_id.present?
     return 'User' if assignee_id.present?
 
@@ -202,7 +205,7 @@ class Conversation < ApplicationRecord
   end
 
   def assigned_entity
-    assignee_agent_bot || assignee
+    assignee_captain_assistant || assignee_agent_bot || assignee
   end
 
   def tweet?
@@ -271,10 +274,11 @@ class Conversation < ApplicationRecord
     self.additional_attributes = {} unless additional_attributes.is_a?(Hash)
   end
 
-  def reset_agent_bot_when_assignee_present
+  def reset_ai_assignees_when_assignee_present
     return if assignee_id.blank?
 
     self.assignee_agent_bot_id = nil
+    self.assignee_captain_assistant_id = nil
   end
 
   def determine_conversation_status
@@ -308,8 +312,8 @@ class Conversation < ApplicationRecord
   end
 
   def list_of_keys
-    %w[team_id assignee_id assignee_agent_bot_id status snoozed_until custom_attributes label_list waiting_since
-       first_reply_created_at priority]
+    %w[team_id assignee_id assignee_agent_bot_id assignee_captain_assistant_id status snoozed_until custom_attributes label_list
+       waiting_since first_reply_created_at priority]
   end
 
   def allowed_keys?
