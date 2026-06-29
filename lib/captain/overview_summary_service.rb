@@ -40,7 +40,9 @@ class Captain::OverviewSummaryService < Captain::BaseTaskService
       'handoff_trend' => trend(:handoff_rate),
       'reopen_rate' => current(:reopen_rate),
       'reopen_trend' => trend(:reopen_rate),
-      'knowledge_coverage' => stats.dig(:knowledge, :coverage).to_s
+      'knowledge_coverage' => stats.dig(:knowledge, :coverage).to_s,
+      'knowledge_approved' => stats.dig(:knowledge, :approved).to_s,
+      'knowledge_documents' => stats.dig(:knowledge, :documents).to_s
     }
   end
 
