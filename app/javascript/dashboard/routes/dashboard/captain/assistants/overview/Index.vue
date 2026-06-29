@@ -10,8 +10,6 @@ import RangeSelector from 'dashboard/components-next/captain/pageComponents/over
 import WelcomeCard from 'dashboard/components-next/captain/pageComponents/overview/WelcomeCard.vue';
 import MetricCard from 'dashboard/components-next/captain/pageComponents/overview/MetricCard.vue';
 import KnowledgeCard from 'dashboard/components-next/captain/pageComponents/overview/KnowledgeCard.vue';
-import ResponseQualityCard from 'dashboard/components-next/captain/pageComponents/overview/ResponseQualityCard.vue';
-import CreditUsageCard from 'dashboard/components-next/captain/pageComponents/overview/CreditUsageCard.vue';
 import QuickLinks from 'dashboard/components-next/captain/pageComponents/overview/QuickLinks.vue';
 import InboxBanner from 'dashboard/components-next/captain/pageComponents/overview/InboxBanner.vue';
 
@@ -127,12 +125,7 @@ const metrics = computed(() => [
           />
         </div>
 
-        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <KnowledgeCard :knowledge="stats?.knowledge" />
-          <ResponseQualityCard />
-        </div>
-
-        <CreditUsageCard />
+        <KnowledgeCard :knowledge="stats?.knowledge" />
 
         <QuickLinks />
       </div>
