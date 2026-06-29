@@ -37,13 +37,13 @@ const bars = computed(() => {
           {{ $t('CAPTAIN.OVERVIEW.CREDITS.TITLE') }}
         </h3>
         <div class="flex items-baseline gap-2">
-          <span class="text-2xl font-semibold text-n-slate-12">
+          <span class="text-2xl font-semibold tabular-nums text-n-slate-12">
             {{ creditUsage.total }}
           </span>
           <span class="text-sm text-n-slate-11">
             {{ $t('CAPTAIN.OVERVIEW.CREDITS.UNIT') }}
           </span>
-          <span class="text-sm font-medium text-n-slate-11">
+          <span class="text-sm font-medium tabular-nums text-n-slate-11">
             {{ creditUsage.trend }}
           </span>
         </div>

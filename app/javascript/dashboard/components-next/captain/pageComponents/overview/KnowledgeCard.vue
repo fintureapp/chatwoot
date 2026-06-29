@@ -22,7 +22,7 @@ const approvedPct = computed(() => {
       <span class="text-sm font-medium text-n-slate-12">
         {{ $t('CAPTAIN.OVERVIEW.KNOWLEDGE.TITLE') }}
       </span>
-      <span class="text-sm text-n-slate-11">
+      <span class="text-sm tabular-nums text-n-slate-11">
         {{ $t('CAPTAIN.OVERVIEW.KNOWLEDGE.COVERAGE', { pct: approvedPct }) }}
       </span>
     </div>
@@ -34,7 +34,7 @@ const approvedPct = computed(() => {
     </div>
     <div class="grid grid-cols-3 gap-3">
       <div class="flex flex-col gap-1">
-        <span class="text-xl font-semibold text-n-slate-12">
+        <span class="text-xl font-semibold tabular-nums text-n-slate-12">
           {{ knowledge.approved }}
         </span>
         <span class="text-xs text-n-slate-11">
@@ -42,7 +42,7 @@ const approvedPct = computed(() => {
         </span>
       </div>
       <div class="flex flex-col gap-1">
-        <span class="text-xl font-semibold text-n-slate-12">
+        <span class="text-xl font-semibold tabular-nums text-n-slate-12">
           {{ knowledge.pending }}
         </span>
         <span class="text-xs text-n-slate-11">
@@ -50,7 +50,7 @@ const approvedPct = computed(() => {
         </span>
       </div>
       <div class="flex flex-col gap-1">
-        <span class="text-xl font-semibold text-n-slate-12">
+        <span class="text-xl font-semibold tabular-nums text-n-slate-12">
           {{ knowledge.documents }}
         </span>
         <span class="text-xs text-n-slate-11">

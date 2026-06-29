@@ -46,7 +46,7 @@ const rate = '1.3%';
       <span class="text-sm font-medium text-n-slate-12">
         {{ $t('CAPTAIN.OVERVIEW.FLAGGED.TITLE') }}
       </span>
-      <span class="text-sm text-n-slate-11">
+      <span class="text-sm tabular-nums text-n-slate-11">
         {{ $t('CAPTAIN.OVERVIEW.FLAGGED.TOTAL', { count: total, rate }) }}
       </span>
     </div>
@@ -65,7 +65,9 @@ const rate = '1.3%';
             :style="{ width: `${Math.round((reason.count / total) * 100)}%` }"
           />
         </div>
-        <span class="w-6 text-xs font-medium text-right text-n-slate-12">
+        <span
+          class="w-6 text-xs font-medium text-right tabular-nums text-n-slate-12"
+        >
           {{ reason.count }}
         </span>
       </div>

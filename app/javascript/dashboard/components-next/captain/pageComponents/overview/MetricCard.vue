@@ -27,10 +27,14 @@ const trendClass = computed(() => {
       />
     </div>
     <div class="flex items-end justify-between gap-2">
-      <span class="text-3xl font-semibold tracking-tight text-n-slate-12">
+      <span
+        class="text-3xl font-semibold tracking-tight tabular-nums text-n-slate-12"
+      >
         {{ value }}
       </span>
-      <span class="text-sm font-medium" :class="trendClass">{{ trend }}</span>
+      <span class="text-sm font-medium tabular-nums" :class="trendClass">
+        {{ trend }}
+      </span>
     </div>
   </div>
 </template>
