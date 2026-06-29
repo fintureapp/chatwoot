@@ -6,6 +6,7 @@ import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import CaptainAssistant from 'dashboard/api/captain/assistant';
 
 import PageLayout from 'dashboard/components-next/captain/PageLayout.vue';
+import RangeSelector from 'dashboard/components-next/captain/pageComponents/overview/RangeSelector.vue';
 import WelcomeCard from 'dashboard/components-next/captain/pageComponents/overview/WelcomeCard.vue';
 import MetricCard from 'dashboard/components-next/captain/pageComponents/overview/MetricCard.vue';
 import KnowledgeCard from 'dashboard/components-next/captain/pageComponents/overview/KnowledgeCard.vue';
@@ -17,8 +18,7 @@ import InboxBanner from 'dashboard/components-next/captain/pageComponents/overvi
 const { t } = useI18n();
 const route = useRoute();
 
-const ranges = ['7', '30', '90'];
-const selectedRange = ref('30');
+const selectedRange = ref('this_month');
 
 const assistantId = computed(() => route.params.assistantId);
 const stats = ref(null);
@@ -105,22 +105,7 @@ const metrics = computed(() => [
     :feature-flag="FEATURE_FLAGS.CAPTAIN"
   >
     <template #headerActions>
-      <div class="flex items-center gap-1 p-1 rounded-lg bg-n-alpha-1 shrink-0">
-        <button
-          v-for="range in ranges"
-          :key="range"
-          type="button"
-          class="px-3 py-1 text-sm font-medium rounded-md transition-colors"
-          :class="
-            selectedRange === range
-              ? 'bg-n-solid-active text-n-slate-12 shadow-sm'
-              : 'text-n-slate-11 hover:text-n-slate-12'
-          "
-          @click="selectedRange = range"
-        >
-          {{ $t('CAPTAIN.OVERVIEW.RANGES.DAYS', { count: range }) }}
-        </button>
-      </div>
+      <RangeSelector v-model="selectedRange" />
     </template>
     <template #body>
       <div class="flex flex-col gap-6">
@@ -147,7 +132,7 @@ const metrics = computed(() => [
           <ResponseQualityCard />
         </div>
 
-        <CreditUsageCard :range="selectedRange" />
+        <CreditUsageCard />
 
         <QuickLinks />
       </div>

@@ -404,7 +404,9 @@
         "DISMISS": "Dismiss"
       },
       "RANGES": {
-        "DAYS": "{count}d"
+        "LAST_DAYS": "Last {count} days",
+        "THIS_MONTH": "This month",
+        "LAST_MONTH": "Last month"
       },
       "METRICS": {
         "HANDLED": {

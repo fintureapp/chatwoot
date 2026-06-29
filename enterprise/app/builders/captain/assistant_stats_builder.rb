@@ -5,14 +5,17 @@
 class Captain::AssistantStatsBuilder
   RESOLVED_EVENT_NAMES = %w[conversation_captain_inference_resolved conversation_bot_resolved].freeze
   HANDOFF_EVENT_NAMES = %w[conversation_captain_inference_handoff conversation_bot_handoff].freeze
-  DEFAULT_RANGE_DAYS = 30
+  DEFAULT_RANGE = '30'.freeze
 
-  attr_reader :assistant, :account, :range_days
+  attr_reader :assistant, :account, :range
 
-  def initialize(assistant, range_days = DEFAULT_RANGE_DAYS)
+  # `range` is either a day count ('7', '30', '90') or a named period
+  # ('this_month', 'last_month'). The previous window mirrors the current one:
+  # the preceding N days for day ranges, or the preceding month for month ranges.
+  def initialize(assistant, range = DEFAULT_RANGE)
     @assistant = assistant
     @account = assistant.account
-    @range_days = range_days.to_i.positive? ? range_days.to_i : DEFAULT_RANGE_DAYS
+    @range = range.presence || DEFAULT_RANGE
   end
 
   def metrics
@@ -33,11 +36,37 @@ class Captain::AssistantStatsBuilder
   private
 
   def current_range
-    @current_range ||= (range_days.days.ago)..Time.current
+    resolved_ranges[:current]
   end
 
   def previous_range
-    @previous_range ||= ((2 * range_days).days.ago)..range_days.days.ago
+    resolved_ranges[:previous]
+  end
+
+  def resolved_ranges
+    @resolved_ranges ||= case range.to_s
+                         when 'this_month' then this_month_ranges
+                         when 'last_month' then last_month_ranges
+                         else day_ranges
+                         end
+  end
+
+  def this_month_ranges
+    start = Time.current.beginning_of_month
+    elapsed = Time.current - start
+    previous_start = start - 1.month
+    { current: start..Time.current, previous: previous_start..(previous_start + elapsed) }
+  end
+
+  def last_month_ranges
+    start = 1.month.ago.beginning_of_month
+    previous_start = start - 1.month
+    { current: start..start.end_of_month, previous: previous_start..previous_start.end_of_month }
+  end
+
+  def day_ranges
+    days = range.to_i.positive? ? range.to_i : 30
+    { current: days.days.ago..Time.current, previous: (2 * days).days.ago..days.days.ago }
   end
 
   # Raw metric values for a single window.
