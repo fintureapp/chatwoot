@@ -394,7 +394,15 @@
     "HEADER_KNOW_MORE": "Know more",
     "OVERVIEW": {
       "HEADER": "Overview",
-      "SAMPLE_NOTICE": "Showing sample data. Live analytics are coming soon.",
+      "INBOX_BANNER": {
+        "TEXT": "This assistant isn't connected to any inbox yet, so it won't respond to conversations.",
+        "ACTION": "Connect inbox",
+        "DISMISS": "Dismiss"
+      },
+      "PERFORMANCE": {
+        "TITLE": "Performance",
+        "SUBTITLE": "How this assistant is doing"
+      },
       "RANGES": {
         "DAYS": "{count}d"
       },
