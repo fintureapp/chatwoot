@@ -181,6 +181,40 @@ WHERE account_id = :account_id
   AND created_at BETWEEN :start AND :end;
 ```
 
+## Hours Saved
+
+Definition: A headline "what did Captain save us" number for execs: the volume of replies Captain
+sent multiplied by the team's average response time. Reads as agent time deflected.
+
+Caveat (important): the multiplier here is the team's average *response time* (`first_response` /
+`reply_time`), which is how long a customer *waited*, not how long an agent actually *worked* on a
+reply. Wait time is typically much larger than handling time, so this number overstates true labor
+saved by a wide margin and should be presented as a directional/estimate figure, not measured
+labor. Counting every Captain message (including ones in conversations later handed off to a human)
+also inflates it. See the conversation that produced this file for the more conservative
+"deflected conversations × handling time" alternative if a defensible number is needed.
+
+```sql
+SELECT
+  (
+    SELECT COUNT(*)
+    FROM messages m
+    WHERE m.account_id = :account_id
+      AND m.sender_type = 'Captain::Assistant'
+      AND m.sender_id   = :assistant_id
+      AND m.message_type = 1
+      AND m.private = false
+      AND m.created_at BETWEEN :start AND :end
+  )
+  * (
+    SELECT AVG(re.value)
+    FROM reporting_events re
+    WHERE re.account_id = :account_id
+      AND re.name = 'reply_time'
+      AND re.created_at BETWEEN :start AND :end
+  ) / 3600.0 AS hours_saved;
+```
+
 ## Knowledge Base Coverage
 
 Definition: How much knowledge backs this assistant — approved vs. still-pending FAQ responses,

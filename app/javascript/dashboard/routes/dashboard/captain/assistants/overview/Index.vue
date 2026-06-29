@@ -44,11 +44,11 @@ const metrics = computed(() => [
     trendGood: true,
   },
   {
-    key: 'flagged',
-    label: t('CAPTAIN.OVERVIEW.METRICS.FLAGGED.LABEL'),
-    hint: t('CAPTAIN.OVERVIEW.METRICS.FLAGGED.HINT'),
-    value: '1.9%',
-    trend: '-0.4%',
+    key: 'hoursSaved',
+    label: t('CAPTAIN.OVERVIEW.METRICS.HOURS_SAVED.LABEL'),
+    hint: t('CAPTAIN.OVERVIEW.METRICS.HOURS_SAVED.HINT'),
+    value: '612h',
+    trend: '+22.1%',
     trendGood: true,
   },
   {
