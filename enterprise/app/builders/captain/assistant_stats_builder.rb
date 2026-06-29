@@ -33,7 +33,25 @@ class Captain::AssistantStatsBuilder
     }
   end
 
+  # Human-readable description of the period the metrics cover, for grounding the
+  # LLM summary in real dates.
+  def period
+    {
+      label: period_label,
+      starts_on: current_range.first.to_date,
+      ends_on: current_range.last.to_date
+    }
+  end
+
   private
+
+  def period_label
+    case range.to_s
+    when 'this_month' then 'this month'
+    when 'last_month' then 'last month'
+    else "the last #{day_count} days"
+    end
+  end
 
   def current_range
     resolved_ranges[:current]
@@ -65,8 +83,12 @@ class Captain::AssistantStatsBuilder
   end
 
   def day_ranges
-    days = range.to_i.positive? ? range.to_i : 30
+    days = day_count
     { current: days.days.ago..Time.current, previous: (2 * days).days.ago..days.days.ago }
+  end
+
+  def day_count
+    range.to_i.positive? ? range.to_i : 30
   end
 
   # Raw metric values for a single window.

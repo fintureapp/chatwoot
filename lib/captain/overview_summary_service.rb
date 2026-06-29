@@ -2,7 +2,7 @@
 # assistant's stats hash (see Captain::AssistantStatsBuilder). Renders the
 # captain_overview_summary.liquid prompt and returns markdown.
 class Captain::OverviewSummaryService < Captain::BaseTaskService
-  pattr_initialize [:account!, :assistant!, :first_name!, :stats!]
+  pattr_initialize [:account!, :assistant!, :first_name!, :stats!, :period!]
 
   def perform
     api_response = make_api_call(
@@ -25,6 +25,10 @@ class Captain::OverviewSummaryService < Captain::BaseTaskService
   end
 
   def prompt_variables
+    stat_variables.merge(period_variables)
+  end
+
+  def stat_variables
     {
       'first_name' => first_name.to_s,
       'assistant_name' => assistant.name.to_s,
@@ -38,6 +42,19 @@ class Captain::OverviewSummaryService < Captain::BaseTaskService
       'reopen_trend' => trend(:reopen_rate),
       'knowledge_coverage' => stats.dig(:knowledge, :coverage).to_s
     }
+  end
+
+  def period_variables
+    {
+      'today' => formatted_date(Time.zone.today),
+      'period_label' => period[:label].to_s,
+      'period_start' => formatted_date(period[:starts_on]),
+      'period_end' => formatted_date(period[:ends_on])
+    }
+  end
+
+  def formatted_date(date)
+    date.strftime('%B %-d, %Y')
   end
 
   def current(key)

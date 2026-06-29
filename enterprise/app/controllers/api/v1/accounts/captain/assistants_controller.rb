@@ -49,12 +49,13 @@ class Api::V1::Accounts::Captain::AssistantsController < Api::V1::Accounts::Base
 
   def summary
     result = Rails.cache.fetch(summary_cache_key, expires_in: 1.day) do
-      stats = Captain::AssistantStatsBuilder.new(@assistant, params[:range]).metrics
+      builder = Captain::AssistantStatsBuilder.new(@assistant, params[:range])
       Captain::OverviewSummaryService.new(
         account: Current.account,
         assistant: @assistant,
         first_name: Current.user.name.to_s.split.first,
-        stats: stats
+        stats: builder.metrics,
+        period: builder.period
       ).perform
     end
 
