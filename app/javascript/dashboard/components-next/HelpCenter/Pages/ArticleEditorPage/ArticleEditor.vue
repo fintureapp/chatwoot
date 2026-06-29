@@ -57,11 +57,15 @@ const isDiffPanelOpen = ref(false);
 
 // Autosave on a delay. `start` restarts the timer with the latest value, `stop`
 // cancels a queued save so reseeding can't let it resurrect a resolved draft.
-const { start: debouncedSave, stop: cancelSave } = useTimeoutFn(
-  value => emit('saveArticle', value),
-  500,
-  { immediate: false }
-);
+// `isPending` (a queued save) is surfaced to the header so it can hold off a
+// publish until the latest edits have been written.
+const {
+  isPending: isSaving,
+  start: debouncedSave,
+  stop: cancelSave,
+} = useTimeoutFn(value => emit('saveArticle', value), 500, {
+  immediate: false,
+});
 
 const syncLocalState = () => {
   cancelSave();
@@ -134,6 +138,7 @@ const handleCreateArticle = event => {
         :status="article.status"
         :article-id="article.id"
         :pending-changes="hasPendingChanges"
+        :is-saving="isSaving"
         @go-back="onClickGoBack"
         @preview-article="previewArticle"
         @show-diff="isDiffPanelOpen = !isDiffPanelOpen"
