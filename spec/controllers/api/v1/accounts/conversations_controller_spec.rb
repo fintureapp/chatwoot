@@ -159,6 +159,24 @@ RSpec.describe 'Conversations API', type: :request do
           expect(response).to have_http_status(:success)
           expect(response.parsed_body['payload']['teams']).to eq(team.id.to_s => 1)
         end
+
+        it 'returns filtered unread counts when the filtered count feature is enabled' do
+          account.enable_features!(:unread_count_for_filters)
+          mentioned = create_unread_conversation(account: account, inbox: visible_inbox)
+          create(:mention, account: account, conversation: mentioned, user: agent)
+
+          get "/api/v1/accounts/#{account.id}/conversations/unread_counts",
+              headers: agent.create_new_auth_token,
+              as: :json
+
+          expect(response).to have_http_status(:success)
+          expect(response.parsed_body['payload']).to include(
+            'mentions_count' => 1,
+            'participating_count' => 0,
+            'unattended_count' => 1,
+            'folders' => {}
+          )
+        end
       end
 
       it 'returns forbidden when conversation unread counts feature is disabled' do
