@@ -4,7 +4,6 @@ import { useStore } from 'vuex';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import { useI18n } from 'vue-i18n';
-import wootConstants from 'dashboard/constants/globals';
 
 import Banner from 'dashboard/components/ui/Banner.vue';
 
@@ -34,6 +33,7 @@ const assignedAgent = computed({
     store.dispatch('setCurrentChatAssignee', {
       conversationId: currentChat.value?.id,
       assignee: agent,
+      assigneeType: agent ? 'User' : null,
     });
     store.dispatch('assignAgent', {
       conversationId: currentChat.value?.id,
@@ -56,11 +56,11 @@ const showSelfAssignBanner = computed(() => {
   );
 });
 
-const showBotHandoffBanner = computed(
-  () =>
-    isUserTyping.value &&
-    currentChat.value?.status === wootConstants.STATUS_TYPE.PENDING
-);
+const showBotHandoffBanner = computed(() => {
+  return (
+    isUserTyping.value && currentChat.value?.meta?.assignee_type === 'AgentBot'
+  );
+});
 
 const botHandoffActionLabel = computed(() => {
   return assignedAgent.value?.id === currentUser.value?.id
@@ -89,7 +89,7 @@ const onClickSelfAssign = async () => {
 const reopenConversation = async () => {
   await store.dispatch('toggleStatus', {
     conversationId: currentChat.value?.id,
-    status: wootConstants.STATUS_TYPE.OPEN,
+    status: 'open',
   });
 };
 

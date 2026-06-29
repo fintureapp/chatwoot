@@ -223,8 +223,11 @@ const actions = {
     }
   },
 
-  setCurrentChatAssignee({ commit }, { conversationId, assignee }) {
-    commit(types.ASSIGN_AGENT, { conversationId, assignee });
+  setCurrentChatAssignee(
+    { commit },
+    { conversationId, assignee, assigneeType }
+  ) {
+    commit(types.ASSIGN_AGENT, { conversationId, assignee, assigneeType });
   },
 
   assignTeam: async ({ dispatch }, { conversationId, teamId }) => {

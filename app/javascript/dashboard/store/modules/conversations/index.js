@@ -108,10 +108,13 @@ export const mutations = {
     }
   },
 
-  [types.ASSIGN_AGENT](_state, { conversationId, assignee }) {
+  [types.ASSIGN_AGENT](_state, { conversationId, assignee, assigneeType }) {
     const chat = getConversationById(_state)(conversationId);
     if (chat) {
       chat.meta.assignee = assignee;
+      if (assigneeType !== undefined) {
+        chat.meta.assignee_type = assigneeType;
+      }
     }
   },
 

@@ -171,6 +171,9 @@ export default {
       return this.isATwilioWhatsAppChannel && !this.isPrivate;
     },
     isPrivate() {
+      if (this.isAgentBotOwned) {
+        return true;
+      }
       if (
         this.currentChat.can_reply ||
         this.isAWhatsAppChannel ||
@@ -197,9 +200,13 @@ export default {
     },
     isReplyRestricted() {
       return (
-        !this.currentChat?.can_reply &&
-        !(this.isAWhatsAppChannel || this.isAPIInbox)
+        this.isAgentBotOwned ||
+        (!this.currentChat?.can_reply &&
+          !(this.isAWhatsAppChannel || this.isAPIInbox))
       );
+    },
+    isAgentBotOwned() {
+      return this.currentChat?.meta?.assignee_type === 'AgentBot';
     },
     inboxId() {
       return this.currentChat.inbox_id;
@@ -462,6 +469,11 @@ export default {
         return;
       }
 
+      if (this.isAgentBotOwned) {
+        this.replyType = REPLY_EDITOR_MODES.NOTE;
+        return;
+      }
+
       if (canReply || this.isAWhatsAppChannel || this.isAPIInbox) {
         this.replyType = REPLY_EDITOR_MODES.REPLY;
       } else {
@@ -501,6 +513,9 @@ export default {
 
   mounted() {
     this.getFromDraft();
+    if (this.isAgentBotOwned) {
+      this.replyType = REPLY_EDITOR_MODES.NOTE;
+    }
     // Don't use the keyboard listener mixin here as the events here are supposed to be
     // working even if the editor is focussed.
     document.addEventListener('paste', this.onPaste);
@@ -921,6 +936,9 @@ export default {
       this.hideContentTemplatesModal();
     },
     setReplyMode(mode = REPLY_EDITOR_MODES.REPLY) {
+      if (this.isAgentBotOwned && mode === REPLY_EDITOR_MODES.REPLY) {
+        return;
+      }
       // Clear attachments when switching between private note and reply modes
       // This is to prevent from breaking the upload rules
       if (this.attachedFiles.length > 0) this.attachedFiles = [];
