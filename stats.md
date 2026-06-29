@@ -87,32 +87,6 @@ WHERE re.account_id = :account_id
                   'conversation_bot_handoff');
 ```
 
-## Median First-Response Time
-
-Definition: How fast Captain gives the customer its first real (public, outgoing) reply after
-the conversation starts. Usually near-instant — a strong UX selling point and a good way to
-spot a misconfigured/slow assistant.
-
-```sql
-SELECT
-  percentile_cont(0.5) WITHIN GROUP (ORDER BY first_resp_secs) AS median_secs,
-  AVG(first_resp_secs)                                          AS avg_secs
-FROM (
-  SELECT c.id,
-         EXTRACT(EPOCH FROM (MIN(m.created_at) - c.created_at)) AS first_resp_secs
-  FROM conversations c
-  JOIN messages m
-    ON m.conversation_id = c.id
-   AND m.sender_type = 'Captain::Assistant'
-   AND m.sender_id   = :assistant_id
-   AND m.message_type = 1        -- outgoing
-   AND m.private = false
-  WHERE c.account_id = :account_id
-    AND c.created_at BETWEEN :start AND :end
-  GROUP BY c.id, c.created_at
-) t;
-```
-
 ## Reopen-After-Auto-Resolve Rate (premature closures)
 
 Definition: Of the conversations Captain auto-resolved, the share that got reopened afterwards.
