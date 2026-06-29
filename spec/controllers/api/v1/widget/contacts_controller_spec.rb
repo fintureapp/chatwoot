@@ -142,6 +142,16 @@ RSpec.describe '/api/v1/widget/contacts', type: :request do
         expect(victim.reload.name).to eq('Victim')
       end
 
+      it 'rejects when identifier_hash is null' do
+        patch '/api/v1/widget/contact',
+              params: { website_token: web_widget.website_token, identifier: 'victim-identifier', identifier_hash: nil, name: 'Attacker' },
+              headers: { 'X-Auth-Token' => token },
+              as: :json
+
+        expect(response).to have_http_status(:unauthorized)
+        expect(victim.reload.name).to eq('Victim')
+      end
+
       it 'rejects when identifier_hash is invalid' do
         patch '/api/v1/widget/contact',
               params: { website_token: web_widget.website_token, identifier: 'victim-identifier',
