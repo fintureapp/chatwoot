@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { useStore, useMapGetter } from 'dashboard/composables/store.js';
@@ -58,10 +58,9 @@ const { ARTICLE_STATUS_TYPES } = wootConstants;
 
 const showArticleActionMenu = ref(false);
 
-const pendingChangesPopoverRef = ref(null);
-const requestedStatus = ref(null);
+const pendingChangesPopoverRef = useTemplateRef('pendingChangesPopoverRef');
 
-// Per-article update flag the store already maintains, used to drive the popover loader.
+// Per-article update flag the store already maintains.
 const articleUiFlags = useMapGetter('articles/uiFlags');
 const isUpdatingArticle = computed(
   () => articleUiFlags.value(props.articleId).isUpdating
@@ -159,10 +158,11 @@ const performStatusUpdate = async (value, draftAction) => {
 
 const updateArticleStatus = ({ value }) => {
   showArticleActionMenu.value = false;
-  // Leaving published with unsaved draft edits — ask whether to apply or discard first.
+  if (blockedWhileSaving()) return;
+  // Leaving published with unsaved draft edits — ask whether to apply or discard
+  // first; the popover applies the status itself once resolved.
   if (hasPendingChanges.value) {
-    requestedStatus.value = value;
-    pendingChangesPopoverRef.value?.open();
+    pendingChangesPopoverRef.value?.open(getArticleStatus(value));
     return;
   }
   performStatusUpdate(value);
@@ -225,16 +225,21 @@ const onMenuAction = event => {
   }
 };
 
-// Popover actions: resolve the draft and change status in one update, then close.
-const applyChangesAndUpdateStatus = async () => {
-  if (blockedWhileSaving()) return;
-  await performStatusUpdate(requestedStatus.value, 'publishDraft');
-  pendingChangesPopoverRef.value?.close();
+// The popover applies the draft + status itself; we just surface the outcome.
+const onDraftResolved = status => {
+  useAlert(getStatusMessage(status, true));
+  if (status === ARTICLE_STATUS_TYPES.ARCHIVE) {
+    useTrack(PORTALS_EVENTS.ARCHIVE_ARTICLE, { uiFrom: 'header' });
+  } else if (status === ARTICLE_STATUS_TYPES.PUBLISH) {
+    useTrack(PORTALS_EVENTS.PUBLISH_ARTICLE);
+  }
 };
 
-const discardChangesAndUpdateStatus = async () => {
-  await performStatusUpdate(requestedStatus.value, 'discardDraft');
-  pendingChangesPopoverRef.value?.close();
+const onDraftFailed = error => {
+  useAlert(
+    error?.message ??
+      t('HELP_CENTER.EDIT_ARTICLE_PAGE.HEADER.PUBLISH_CHANGES_ERROR')
+  );
 };
 </script>
 
@@ -313,9 +318,9 @@ const discardChangesAndUpdateStatus = async () => {
         </ButtonGroup>
         <ArticlePendingChangesPopover
           ref="pendingChangesPopoverRef"
-          :is-loading="isUpdatingArticle"
-          @apply="applyChangesAndUpdateStatus"
-          @discard="discardChangesAndUpdateStatus"
+          :article-id="articleId"
+          @resolved="onDraftResolved"
+          @failed="onDraftFailed"
         />
       </div>
     </div>

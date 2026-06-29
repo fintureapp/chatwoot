@@ -145,6 +145,24 @@ const updateArticlesMeta = () => {
   });
 };
 
+const refreshArticleMeta = async () => {
+  await updateArticlesMeta();
+  await updatePortalMeta();
+};
+
+// The card's pending-changes popover applies the status itself; surface the result.
+const onDraftResolved = status => {
+  useAlert(getStatusMessage(status, true));
+  refreshArticleMeta();
+};
+
+const onDraftFailed = error => {
+  useAlert(
+    error?.message ||
+      t('HELP_CENTER.EDIT_ARTICLE_PAGE.HEADER.PUBLISH_CHANGES_ERROR')
+  );
+};
+
 const handleArticleAction = async (action, { status, id }) => {
   const { portalSlug } = route.params;
   try {
@@ -154,6 +172,14 @@ const handleArticleAction = async (action, { status, id }) => {
         articleId: id,
       });
       useAlert(t('HELP_CENTER.DELETE_ARTICLE.API.SUCCESS_MESSAGE'));
+    } else if (action === 'discard-draft') {
+      await store.dispatch('articles/discardDraft', {
+        portalSlug,
+        articleId: id,
+      });
+      useAlert(
+        t('HELP_CENTER.EDIT_ARTICLE_PAGE.HEADER.DISCARD_CHANGES_SUCCESS')
+      );
     } else {
       await store.dispatch('articles/update', {
         portalSlug,
@@ -168,15 +194,16 @@ const handleArticleAction = async (action, { status, id }) => {
         useTrack(PORTALS_EVENTS.PUBLISH_ARTICLE);
       }
     }
-    await updateArticlesMeta();
-    await updatePortalMeta();
+    await refreshArticleMeta();
   } catch (error) {
-    const errorMessage =
-      error?.message ||
-      (action === 'delete'
-        ? t('HELP_CENTER.DELETE_ARTICLE.API.ERROR_MESSAGE')
-        : getStatusMessage(status, false));
-    useAlert(errorMessage);
+    const fallbackMessage =
+      {
+        delete: t('HELP_CENTER.DELETE_ARTICLE.API.ERROR_MESSAGE'),
+        'discard-draft': t(
+          'HELP_CENTER.EDIT_ARTICLE_PAGE.HEADER.DISCARD_CHANGES_ERROR'
+        ),
+      }[action] ?? getStatusMessage(status, false);
+    useAlert(error?.message || fallbackMessage);
   }
 };
 
@@ -230,6 +257,8 @@ watch(
           :class="{ 'cursor-grab': dragEnabled }"
           @open-article="openArticle"
           @article-action="updateArticle"
+          @draft-resolved="onDraftResolved"
+          @draft-failed="onDraftFailed"
           @toggle-select="emit('toggleSelect', $event)"
           @hover="isHovered => handleCardHover(isHovered, element.id)"
         />
