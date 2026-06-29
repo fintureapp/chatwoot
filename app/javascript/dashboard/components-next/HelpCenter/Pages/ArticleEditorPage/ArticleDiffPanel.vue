@@ -11,17 +11,13 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import TeleportWithDirection from 'dashboard/components-next/TeleportWithDirection.vue';
 
 const props = defineProps({
-  modelValue: {
-    type: Boolean,
-    default: false,
-  },
   article: {
     type: Object,
     default: () => ({}),
   },
 });
 
-const emit = defineEmits(['update:modelValue']);
+const isOpen = defineModel({ type: Boolean, default: false });
 
 const { t } = useI18n();
 
@@ -88,7 +84,9 @@ const blockClass = type => {
   return 'border-transparent';
 };
 
-const close = () => emit('update:modelValue', false);
+const close = () => {
+  isOpen.value = false;
+};
 </script>
 
 <template>
@@ -102,7 +100,7 @@ const close = () => emit('update:modelValue', false);
       leave-to-class="ltr:translate-x-full rtl:-translate-x-full"
     >
       <aside
-        v-if="modelValue"
+        v-if="isOpen"
         class="fixed inset-y-0 z-40 flex flex-col w-full shadow-2xl end-0 max-w-lg bg-n-solid-2 ltr:border-l rtl:border-r border-n-weak"
       >
         <header

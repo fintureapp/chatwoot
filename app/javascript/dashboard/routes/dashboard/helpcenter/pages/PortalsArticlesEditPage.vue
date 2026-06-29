@@ -10,6 +10,8 @@ import {
 } from 'dashboard/helper/portalHelper';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 
+import { buildDiffBlocks } from 'dashboard/helper/articleDiffHelper';
+
 import ArticleEditor from 'dashboard/components-next/HelpCenter/Pages/ArticleEditorPage/ArticleEditor.vue';
 
 const route = useRoute();
@@ -43,6 +45,11 @@ const articleLink = computed(() => {
   );
 });
 
+// Two versions match when the diff view would show nothing between them — this
+// ignores whitespace-only differences the same way the diff does.
+const unchanged = (live, next) =>
+  buildDiffBlocks(live, next).every(block => block.type === 'equal');
+
 // On a published article, title/content edits stage into draft_* columns (kept
 // off the live site). Anywhere else they save straight to the live record — and
 // we drop any leftover draft (e.g. left behind when the card/bulk menu moved a
@@ -64,14 +71,15 @@ const stageDraftFields = values => {
     }
   });
 
-  // Reverting a draft back to the live value clears it, so "pending changes"
-  // doesn't linger over an identical copy.
+  // Clear the draft when it has no visible difference from the live version, so
+  // a revert — or a whitespace-only edit the diff ignores (e.g. an extra blank
+  // line) — doesn't leave a "pending changes" badge with nothing to compare.
   const liveTitle = article.value.title ?? '';
   const liveContent = article.value.content ?? '';
   const nextTitle = staged.draft_title ?? article.value.draftTitle ?? liveTitle;
   const nextContent =
     staged.draft_content ?? article.value.draftContent ?? liveContent;
-  if (nextTitle === liveTitle && nextContent === liveContent) {
+  if (unchanged(liveTitle, nextTitle) && unchanged(liveContent, nextContent)) {
     staged.draft_title = null;
     staged.draft_content = null;
   }
