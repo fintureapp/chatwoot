@@ -74,18 +74,16 @@ const stageDraftFields = values => {
     }
   });
 
-  // Clear the draft when it would render identically to the live version — a
-  // revert, or a whitespace-only edit (blank line/empty paragraph) — so it
-  // doesn't leave a "pending changes" badge with nothing to compare.
+  // Clear the draft when it matches the live version (a revert, or a body edit
+  // the renderer ignores like a blank line) so it doesn't leave a "pending
+  // changes" badge with nothing to compare. The title is shown as raw escaped
+  // text, so compare it exactly; only the body is Markdown, so compare its render.
   const liveTitle = article.value.title ?? '';
   const liveContent = article.value.content ?? '';
   const nextTitle = staged.draft_title ?? article.value.draftTitle ?? liveTitle;
   const nextContent =
     staged.draft_content ?? article.value.draftContent ?? liveContent;
-  if (
-    rendersIdentically(liveTitle, nextTitle) &&
-    rendersIdentically(liveContent, nextContent)
-  ) {
+  if (nextTitle === liveTitle && rendersIdentically(liveContent, nextContent)) {
     staged.draft_title = null;
     staged.draft_content = null;
   }
