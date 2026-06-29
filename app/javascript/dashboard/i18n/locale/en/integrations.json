@@ -392,6 +392,64 @@
   "CAPTAIN": {
     "NAME": "Captain",
     "HEADER_KNOW_MORE": "Know more",
+    "OVERVIEW": {
+      "HEADER": "Overview",
+      "SAMPLE_NOTICE": "Showing sample data. Live analytics are coming soon.",
+      "RANGES": {
+        "DAYS": "{count}d"
+      },
+      "METRICS": {
+        "HANDLED": {
+          "LABEL": "Conversations handled",
+          "HINT": "Distinct conversations this assistant replied in."
+        },
+        "AUTO_RESOLUTION": {
+          "LABEL": "Auto-resolution rate",
+          "HINT": "Share of handled conversations closed without a human reply."
+        },
+        "HANDOFF": {
+          "LABEL": "Handoff rate",
+          "HINT": "Share of handled conversations escalated to a human agent."
+        },
+        "FLAGGED": {
+          "LABEL": "Flagged response rate",
+          "HINT": "Assistant replies agents reported as low quality."
+        },
+        "REOPEN": {
+          "LABEL": "Reopen rate",
+          "HINT": "Auto-resolved conversations that were reopened afterwards."
+        },
+        "DEPTH": {
+          "LABEL": "Messages / conversation",
+          "HINT": "Average replies the assistant sends per conversation."
+        }
+      },
+      "KNOWLEDGE": {
+        "TITLE": "Knowledge coverage",
+        "COVERAGE": "{pct}% approved",
+        "APPROVED": "Approved FAQs",
+        "PENDING": "Pending FAQs",
+        "DOCUMENTS": "Documents"
+      },
+      "FLAGGED": {
+        "TITLE": "Response quality",
+        "TOTAL": "{count} flagged"
+      },
+      "CREDITS": {
+        "TITLE": "Credit usage",
+        "UNIT": "credits",
+        "LEGEND": "Daily credits used",
+        "AXIS_START": "{count}d ago",
+        "AXIS_END": "Today"
+      },
+      "FLAG_REASONS": {
+        "INCORRECT": "Incorrect info",
+        "INCOMPLETE": "Incomplete",
+        "OUTDATED": "Outdated",
+        "INAPPROPRIATE": "Inappropriate",
+        "OTHER": "Other"
+      }
+    },
     "ASSISTANT_SWITCHER": {
       "ASSISTANTS": "Assistants",
       "SWITCH_ASSISTANT": "Switch between assistants",
