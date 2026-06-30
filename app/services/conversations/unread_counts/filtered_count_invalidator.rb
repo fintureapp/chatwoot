@@ -52,6 +52,16 @@ class Conversations::UnreadCounts::FilteredCountInvalidator
     true
   end
 
+  def custom_attribute_definition_changed!(custom_attribute_definition)
+    return false unless enabled? && conversation_attribute_before_or_after?(custom_attribute_definition)
+
+    affected_filters = affected_custom_attribute_filters(custom_attribute_definition)
+    return false if affected_filters.blank?
+
+    affected_filters.each { |custom_filter| bump_filter_version!(custom_filter, reason: :custom_attribute_definition_changed) }
+    true
+  end
+
   private
 
   def enabled?
@@ -85,6 +95,39 @@ class Conversations::UnreadCounts::FilteredCountInvalidator
     return CustomFilter.filter_types.key(raw_filter_type) if raw_filter_type.is_a?(Integer)
 
     CustomFilter.filter_types.key(raw_filter_type.to_i) || raw_filter_type.to_s
+  end
+
+  def conversation_attribute_before_or_after?(custom_attribute_definition)
+    custom_attribute_definition.conversation_attribute? || previous_attribute_model(custom_attribute_definition) == 'conversation_attribute'
+  end
+
+  def previous_attribute_model(custom_attribute_definition)
+    raw_attribute_model = custom_attribute_definition.previous_changes.dig('attribute_model', 0)
+    return if raw_attribute_model.blank?
+    return raw_attribute_model if CustomAttributeDefinition.attribute_models.key?(raw_attribute_model)
+    return CustomAttributeDefinition.attribute_models.key(raw_attribute_model) if raw_attribute_model.is_a?(Integer)
+
+    CustomAttributeDefinition.attribute_models.key(raw_attribute_model.to_i) || raw_attribute_model.to_s
+  end
+
+  def affected_custom_attribute_filters(custom_attribute_definition)
+    attribute_keys = custom_attribute_keys(custom_attribute_definition)
+    account.custom_filters.conversation.select do |custom_filter|
+      custom_filter_references_conversation_attribute?(custom_filter, attribute_keys)
+    end
+  end
+
+  def custom_attribute_keys(custom_attribute_definition)
+    [custom_attribute_definition.attribute_key, custom_attribute_definition.previous_changes.dig('attribute_key', 0)].compact_blank.map(&:to_s).uniq
+  end
+
+  def custom_filter_references_conversation_attribute?(custom_filter, attribute_keys)
+    payload = custom_filter.query.with_indifferent_access[:payload]
+    Array(payload).any? do |condition|
+      condition = condition.with_indifferent_access
+      condition[:attribute_key].to_s.in?(attribute_keys) &&
+        (condition[:custom_attribute_type].presence || 'conversation_attribute') == 'conversation_attribute'
+    end
   end
 
   def bump_folder_index_version!(custom_filter, reason:)

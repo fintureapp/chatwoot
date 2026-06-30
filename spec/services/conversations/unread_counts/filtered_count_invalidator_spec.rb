@@ -135,6 +135,38 @@ RSpec.describe Conversations::UnreadCounts::FilteredCountInvalidator do
     end
   end
 
+  describe '#custom_attribute_definition_changed!' do
+    it 'bumps affected conversation saved filter versions' do
+      account.enable_features!(:unread_count_for_filters)
+      definition = create(:custom_attribute_definition, account: account, attribute_key: 'plan', attribute_model: 'conversation_attribute')
+      matching_filter = create(:custom_filter, account: account, user: user, query: custom_attribute_query('plan'))
+      blank_type_filter = create(:custom_filter, account: account, user: user, query: custom_attribute_query('plan', ''))
+      contact_filter = create(:custom_filter, account: account, user: user, query: custom_attribute_query('plan', 'contact_attribute'))
+      other_filter = create(:custom_filter, account: account, user: user, query: custom_attribute_query('tier'))
+      versions = filter_versions(matching_filter, blank_type_filter, contact_filter, other_filter)
+
+      invalidator.custom_attribute_definition_changed!(definition)
+
+      expect(store.filter_version(account_id: account.id, filter_id: matching_filter.id)).to eq(versions[matching_filter.id] + 1)
+      expect(store.filter_version(account_id: account.id, filter_id: blank_type_filter.id)).to eq(versions[blank_type_filter.id] + 1)
+      expect(store.filter_version(account_id: account.id, filter_id: contact_filter.id)).to eq(versions[contact_filter.id])
+      expect(store.filter_version(account_id: account.id, filter_id: other_filter.id)).to eq(versions[other_filter.id])
+    end
+
+    it 'bumps filters referencing the previous attribute key when the key changes' do
+      definition = create(:custom_attribute_definition, account: account, attribute_key: 'plan', attribute_model: 'conversation_attribute')
+      matching_filter = create(:custom_filter, account: account, user: user, query: custom_attribute_query('plan'))
+      version = store.filter_version(account_id: account.id, filter_id: matching_filter.id)
+
+      definition.update!(attribute_key: 'new_plan')
+      account.enable_features!(:unread_count_for_filters)
+
+      expect do
+        invalidator.custom_attribute_definition_changed!(definition)
+      end.to change { store.filter_version(account_id: account.id, filter_id: matching_filter.id) }.from(version).to(version + 1)
+    end
+  end
+
   def conversation_filter(is_conversation: true, previous_changes: {})
     instance_double(
       CustomFilter,
@@ -145,7 +177,28 @@ RSpec.describe Conversations::UnreadCounts::FilteredCountInvalidator do
     )
   end
 
+  def custom_attribute_query(attribute_key, custom_attribute_type = 'conversation_attribute')
+    {
+      payload: [
+        {
+          attribute_key: attribute_key,
+          filter_operator: 'equal_to',
+          values: ['gold'],
+          custom_attribute_type: custom_attribute_type
+        }
+      ]
+    }
+  end
+
+  def filter_versions(*custom_filters)
+    custom_filters.to_h { |custom_filter| [custom_filter.id, store.filter_version(account_id: account.id, filter_id: custom_filter.id)] }
+  end
+
   def redis_keys
+    base_redis_keys + custom_filter_version_keys
+  end
+
+  def base_redis_keys
     [
       store.conversation_version_key(account.id),
       store.built_in_filter_version_key(account.id, user.id),
@@ -153,5 +206,9 @@ RSpec.describe Conversations::UnreadCounts::FilteredCountInvalidator do
       store.filter_version_key(account.id, filter_id),
       store.filter_count_key(account.id, filter_id)
     ]
+  end
+
+  def custom_filter_version_keys
+    CustomFilter.where(account_id: account.id).pluck(:id).map { |id| store.filter_version_key(account.id, id) }
   end
 end

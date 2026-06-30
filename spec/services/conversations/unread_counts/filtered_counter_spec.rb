@@ -54,6 +54,34 @@ RSpec.describe Conversations::UnreadCounts::FilteredCounter do
     expect(described_class.new(account: account, user: agent, now: now + 31.seconds).perform[:mentions_count]).to eq(2)
   end
 
+  it 'tags built-in snapshots with versions captured before the DB read' do
+    race_counter = described_class.new(account: account, user: agent, now: now)
+    allow(race_counter).to receive(:built_in_counts_from_database) do
+      store.bump_conversation_version!(account.id)
+      { mentions_count: 1, participating_count: 0, unattended_count: 0 }
+    end
+
+    race_counter.perform
+
+    snapshot = store.built_in_filter_counts(account_id: account.id, user_id: agent.id)
+    expect(snapshot[:account_version]).to eq(0)
+    expect(store.built_in_filter_counts_state(account_id: account.id, user_id: agent.id, now: now)).to be_stale
+  end
+
+  it 'tags folder indexes with versions captured before the DB read' do
+    race_counter = described_class.new(account: account, user: agent, now: now)
+    allow(race_counter).to receive(:folder_filter_ids_from_database) do
+      store.bump_folder_index_version!(account_id: account.id, user_id: agent.id)
+      []
+    end
+
+    race_counter.send(:build_folder_index!)
+
+    snapshot = store.folder_index(account_id: account.id, user_id: agent.id)
+    expect(snapshot[:folder_index_version]).to eq(0)
+    expect(store.folder_index_state(account_id: account.id, user_id: agent.id, now: now)).to be_stale
+  end
+
   it 'builds saved folder counts from unread conversations matching the saved filter query' do
     resolved = create_visible_unread_conversation(status: :resolved)
     create_visible_unread_conversation(status: :open)
@@ -70,6 +98,49 @@ RSpec.describe Conversations::UnreadCounts::FilteredCounter do
     expect(counter.perform[:folders]).to eq(custom_filter.id.to_s => 1)
     expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)[:count]).to eq(1)
     expect(resolved.reload.status).to eq('resolved')
+  end
+
+  it 'tags saved filter counts with versions captured before the DB read' do
+    custom_filter = create(
+      :custom_filter,
+      account: account,
+      user: agent,
+      filter_type: :conversation,
+      query: filter_query(attribute_key: 'status', values: ['open'])
+    )
+    race_counter = described_class.new(account: account, user: agent, now: now)
+    allow(race_counter).to receive(:filter_query_count) do
+      store.bump_filter_version!(account_id: account.id, filter_id: custom_filter.id)
+      1
+    end
+
+    race_counter.send(:build_filter_count!, custom_filter.id)
+
+    snapshot = store.filter_count(account_id: account.id, filter_id: custom_filter.id)
+    expect(snapshot[:filter_version]).to eq(0)
+    expect(store.filter_count_state(account_id: account.id, filter_id: custom_filter.id, owner_user_id: agent.id, now: now)).to be_stale
+  end
+
+  it 'tags saved filter counts with versions captured before loading the filter row' do
+    custom_filter = create(
+      :custom_filter,
+      account: account,
+      user: agent,
+      filter_type: :conversation,
+      query: filter_query(attribute_key: 'status', values: ['open'])
+    )
+    filters = account.custom_filters
+    allow(account).to receive(:custom_filters).and_return(filters)
+    allow(filters).to receive(:find_by) do
+      store.bump_filter_version!(account_id: account.id, filter_id: custom_filter.id)
+      custom_filter
+    end
+
+    counter.send(:build_filter_count!, custom_filter.id)
+
+    snapshot = store.filter_count(account_id: account.id, filter_id: custom_filter.id)
+    expect(snapshot[:filter_version]).to eq(0)
+    expect(store.filter_count_state(account_id: account.id, filter_id: custom_filter.id, owner_user_id: agent.id, now: now)).to be_stale
   end
 
   it 'omits invalid saved folders without writing a badge count' do

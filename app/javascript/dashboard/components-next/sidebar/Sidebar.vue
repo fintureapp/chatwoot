@@ -76,9 +76,12 @@ const hasConversationUnreadCounts = computed(() => {
 });
 
 const hasFilteredUnreadCounts = computed(() => {
-  return isFeatureEnabledonAccount.value(
-    accountId.value,
-    FEATURE_FLAGS.UNREAD_COUNT_FOR_FILTERS
+  return (
+    hasConversationUnreadCounts.value &&
+    isFeatureEnabledonAccount.value(
+      accountId.value,
+      FEATURE_FLAGS.UNREAD_COUNT_FOR_FILTERS
+    )
   );
 });
 
