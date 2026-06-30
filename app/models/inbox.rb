@@ -77,12 +77,12 @@ class Inbox < ApplicationRecord
 
   enum sender_name_type: { friendly: 0, professional: 1 }
 
-  before_destroy :capture_filtered_unread_count_member_ids, prepend: true
+  before_destroy :capture_filtered_unread_count_user_ids, prepend: true
   after_destroy :delete_round_robin_agents
 
   after_create_commit :dispatch_create_event
   after_update_commit :dispatch_update_event
-  after_destroy_commit :invalidate_filtered_unread_count_member_visibility
+  after_destroy_commit :invalidate_filtered_unread_count_user_visibility
 
   scope :order_by_name, -> { order('lower(name) ASC') }
 
@@ -263,13 +263,13 @@ class Inbox < ApplicationRecord
     ::AutoAssignment::InboxRoundRobinService.new(inbox: self).clear_queue
   end
 
-  def capture_filtered_unread_count_member_ids
-    @filtered_unread_count_member_ids = inbox_members.pluck(:user_id)
+  def capture_filtered_unread_count_user_ids
+    @filtered_unread_count_user_ids = (inbox_members.pluck(:user_id) + account.account_users.administrator.pluck(:user_id)).uniq
   end
 
-  def invalidate_filtered_unread_count_member_visibility
+  def invalidate_filtered_unread_count_user_visibility
     invalidator = ::Conversations::UnreadCounts::FilteredCountInvalidator.new(account)
-    Array(@filtered_unread_count_member_ids).each { |user_id| invalidator.user_visibility_changed!(user_id: user_id) }
+    Array(@filtered_unread_count_user_ids).each { |user_id| invalidator.user_visibility_changed!(user_id: user_id) }
   end
 
   def check_channel_type?

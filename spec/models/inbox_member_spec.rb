@@ -50,5 +50,14 @@ RSpec.describe InboxMember do
         perform_enqueued_jobs { inbox.destroy! }
       end.to change { store.built_in_filter_version(account_id: account.id, user_id: user.id) }.by(1)
     end
+
+    it 'invalidates administrator built-in filter versions when the parent inbox is removed' do
+      admin = create(:user)
+      create(:account_user, account: account, user: admin, role: :administrator)
+
+      expect do
+        perform_enqueued_jobs { inbox.destroy! }
+      end.to change { store.built_in_filter_version(account_id: account.id, user_id: admin.id) }.by(1)
+    end
   end
 end
