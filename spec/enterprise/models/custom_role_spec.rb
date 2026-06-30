@@ -35,5 +35,12 @@ RSpec.describe CustomRole, type: :model do
 
       expect(invalidator).not_to have_received(:user_visibility_changed!)
     end
+
+    it 'invalidates filtered counts for assigned users when the role is deleted' do
+      custom_role.destroy!
+
+      expect(invalidator).to have_received(:user_visibility_changed!).with(user_id: user.id)
+      expect(invalidator).to have_received(:user_visibility_changed!).with(user_id: other_user.id)
+    end
   end
 end
