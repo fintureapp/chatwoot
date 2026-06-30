@@ -56,7 +56,7 @@ class Captain::AssistantStatsBuilder
   end
 
   def period_label
-    { 'this_month' => 'this month', 'last_month' => 'last month' }[range.to_s] || "the last #{day_count} days"
+    { 'this_month' => 'this month', 'last_month' => 'last month' }[range.to_s] || "the last #{range.to_i} days"
   end
 
   def current_range
@@ -89,12 +89,8 @@ class Captain::AssistantStatsBuilder
   end
 
   def day_ranges
-    days = day_count
+    days = range.to_i
     { current: days.days.ago..Time.current, previous: (2 * days).days.ago..days.days.ago }
-  end
-
-  def day_count
-    range.to_i.positive? ? range.to_i : 30
   end
 
   # Combines the per-window message counts and reply time with the reporting-event metrics for one window.
@@ -150,6 +146,7 @@ class Captain::AssistantStatsBuilder
   def resolution_counts(range)
     row = account.reporting_events
                  .where(name: RESOLVED_EVENT_NAMES + HANDOFF_EVENT_NAMES,
+                        created_at: range,
                         conversation_id: handled_scope(range).select(:conversation_id))
                  .reorder(nil)
                  .pick(
