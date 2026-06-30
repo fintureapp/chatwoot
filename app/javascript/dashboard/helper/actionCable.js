@@ -212,6 +212,7 @@ class ActionCableConnector extends BaseActionCableConnector {
 
   onConversationMentioned = data => {
     this.app.$store.dispatch('addMentions', data);
+    this.throttledFetchConversationUnreadCounts();
   };
 
   clearTimer = conversationId => {

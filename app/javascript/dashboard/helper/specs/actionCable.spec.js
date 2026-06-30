@@ -89,6 +89,18 @@ describe('ActionCableConnector - Copilot Tests', () => {
       expect(mockDispatch).toHaveBeenCalledWith('conversationUnreadCounts/get');
     });
 
+    it('should refetch unread counts when a conversation is mentioned', () => {
+      const conversation = { id: 1, account_id: 1 };
+
+      actionCable.onReceived({
+        event: 'conversation.mentioned',
+        data: conversation,
+      });
+
+      expect(mockDispatch).toHaveBeenCalledWith('addMentions', conversation);
+      expect(mockDispatch).toHaveBeenCalledWith('conversationUnreadCounts/get');
+    });
+
     it('does not refetch unread counts when unread count feature is disabled', () => {
       store.$store.getters[
         'accounts/isFeatureEnabledonAccount'
