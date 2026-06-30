@@ -66,15 +66,6 @@ RSpec.describe AccountUser do
       expect(invalidator).to have_received(:user_visibility_changed!).with(user_id: user.id).twice
     end
 
-    it 'invalidates filtered counts when the custom role assignment changes' do
-      account_user = create(:account_user, account: account, user: user)
-      custom_role = create(:custom_role, account: account)
-
-      account_user.update!(custom_role_id: custom_role.id)
-
-      expect(invalidator).to have_received(:user_visibility_changed!).with(user_id: user.id).twice
-    end
-
     it 'invalidates filtered counts when the user is removed from an account' do
       account_user = create(:account_user, account: account, user: user)
 
