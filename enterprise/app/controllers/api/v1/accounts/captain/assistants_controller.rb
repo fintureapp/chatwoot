@@ -48,16 +48,7 @@ class Api::V1::Accounts::Captain::AssistantsController < Api::V1::Accounts::Base
   end
 
   def summary
-    builder = Captain::AssistantStatsBuilder.new(@assistant, params[:range])
-    result = Rails.cache.fetch(summary_cache_key(builder.range), expires_in: 1.hour) do
-      Captain::OverviewSummaryService.new(
-        account: Current.account,
-        assistant: @assistant,
-        first_name: Current.user.name.to_s.split.first,
-        stats: builder.metrics,
-        period: builder.period
-      ).perform
-    end
+    result = cached_or_generated_summary(Captain::AssistantStatsBuilder.new(@assistant, params[:range]))
 
     if result[:error]
       render json: { error: result[:error] }, status: :unprocessable_content
@@ -67,6 +58,23 @@ class Api::V1::Accounts::Captain::AssistantsController < Api::V1::Accounts::Base
   end
 
   private
+
+  def cached_or_generated_summary(builder)
+    cache_key = summary_cache_key(builder.range)
+    cached = Rails.cache.read(cache_key)
+    return cached if cached
+
+    result = Captain::OverviewSummaryService.new(
+      account: Current.account,
+      assistant: @assistant,
+      first_name: Current.user.name.to_s.split.first,
+      stats: builder.metrics,
+      period: builder.period
+    ).perform
+    # Don't cache transient LLM/config failures, otherwise every reload returns 422 for the next hour.
+    Rails.cache.write(cache_key, result, expires_in: 1.hour) unless result[:error]
+    result
+  end
 
   def summary_cache_key(range)
     "captain_overview_summary/#{@assistant.id}/#{Current.user.id}/#{range}/#{Date.current}"
