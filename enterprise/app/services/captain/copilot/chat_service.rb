@@ -29,6 +29,10 @@ class Captain::Copilot::ChatService < Llm::BaseAiService
       "#{self.class.name} Assistant: #{@assistant.id}, Incrementing response usage for account #{@account.id}"
     )
     @account.increment_response_usage
+    # Granular usage reporting. Only assistant + copilot responses are logged for now;
+    # the other increment_response_usage call sites (task services, audio transcription)
+    # map to usage_types that are intentionally not recorded yet.
+    Captain::Usage.log(account: @account, assistant: @assistant, usage_type: :copilot_response)
 
     response
   end
