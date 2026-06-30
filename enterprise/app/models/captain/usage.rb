@@ -63,9 +63,11 @@ class Captain::Usage < ApplicationRecord
     # rubocop:enable Rails/SkipsModelValidations
   end
 
-  # Floors +time+ to the start of its 15-minute UTC bucket.
+  # Floors +time+ to the start of its 15-minute UTC bucket. Subseconds are
+  # dropped so the bucket timestamp is stable across calls within the same
+  # bucket; otherwise distinct microseconds break the unique-key upsert.
   def self.bucket_for(time)
-    utc = time.utc
-    utc - (utc.to_i % BUCKET_SIZE.to_i)
+    epoch = time.to_i
+    Time.at(epoch - (epoch % BUCKET_SIZE.to_i)).utc
   end
 end
