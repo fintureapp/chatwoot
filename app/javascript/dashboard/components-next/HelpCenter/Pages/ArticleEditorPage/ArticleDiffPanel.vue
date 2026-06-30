@@ -1,6 +1,8 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { vOnClickOutside } from '@vueuse/components';
+import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 import MessageFormatter from 'shared/helpers/MessageFormatter';
 import {
   renderInlineDiff,
@@ -87,6 +89,10 @@ const blockClass = type => {
 const close = () => {
   isOpen.value = false;
 };
+
+const dismissOnClickOutside = [close, { ignore: ['[data-diff-toggle]'] }];
+
+useKeyboardEvents({ Escape: { action: close, allowOnFocusedInput: true } });
 </script>
 
 <template>
@@ -101,6 +107,7 @@ const close = () => {
     >
       <aside
         v-if="isOpen"
+        v-on-click-outside="dismissOnClickOutside"
         class="fixed inset-y-0 z-40 flex flex-col w-full shadow-2xl end-0 max-w-lg bg-n-solid-2 ltr:border-l rtl:border-r border-n-weak"
       >
         <header

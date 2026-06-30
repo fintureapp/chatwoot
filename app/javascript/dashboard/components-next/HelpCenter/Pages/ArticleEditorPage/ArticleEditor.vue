@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import { useTimeoutFn } from '@vueuse/core';
 import { useI18n } from 'vue-i18n';
 import { ARTICLE_EDITOR_MENU_OPTIONS } from 'dashboard/constants/editor';
@@ -87,6 +87,16 @@ const handleSave = value => {
   if (isNewArticle.value) return;
   debouncedSave(value);
 };
+
+// Flush a queued save on unmount so leaving the editor doesn't drop the last edit.
+onBeforeUnmount(() => {
+  if (isNewArticle.value || !isSaving.value) return;
+  cancelSave();
+  emit('saveArticle', {
+    title: localTitle.value,
+    content: localContent.value,
+  });
+});
 
 const articleTitle = computed({
   get: () => localTitle.value,
