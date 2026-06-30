@@ -28,6 +28,8 @@ class CustomRole < ApplicationRecord
   belongs_to :account
   has_many :account_users, dependent: :nullify
 
+  after_update_commit :invalidate_filtered_unread_count_visibility, if: :filtered_unread_count_permissions_changed?
+
   PERMISSIONS = %w[
     conversation_manage
     conversation_unassigned_manage
@@ -39,4 +41,15 @@ class CustomRole < ApplicationRecord
 
   validates :name, presence: true
   validates :permissions, inclusion: { in: PERMISSIONS }
+
+  private
+
+  def filtered_unread_count_permissions_changed?
+    previous_changes.key?('permissions')
+  end
+
+  def invalidate_filtered_unread_count_visibility
+    invalidator = ::Conversations::UnreadCounts::FilteredCountInvalidator.new(account)
+    account_users.find_each { |account_user| invalidator.user_visibility_changed!(user_id: account_user.user_id) }
+  end
 end
