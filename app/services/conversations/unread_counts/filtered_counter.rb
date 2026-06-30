@@ -139,12 +139,12 @@ class Conversations::UnreadCounts::FilteredCounter
 
   # rubocop:disable Metrics/AbcSize
   def build_filter_count!(filter_id)
-    custom_filter = account.custom_filters.find_by(id: filter_id, user_id: user.id, filter_type: :conversation)
-    return delete_filter_count!(filter_id) if custom_filter.blank?
-
     account_version = store.conversation_version(account.id)
     filter_version = store.filter_version(account_id: account.id, filter_id: filter_id)
     owner_built_in_filter_version = store.built_in_filter_version(account_id: account.id, user_id: user.id)
+    custom_filter = account.custom_filters.find_by(id: filter_id, user_id: user.id, filter_type: :conversation)
+    return delete_filter_count!(filter_id) if custom_filter.blank?
+
     count = filter_query_count(custom_filter)
     return delete_filter_count!(filter_id) if count.nil?
 

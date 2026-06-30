@@ -121,6 +121,28 @@ RSpec.describe Conversations::UnreadCounts::FilteredCounter do
     expect(store.filter_count_state(account_id: account.id, filter_id: custom_filter.id, owner_user_id: agent.id, now: now)).to be_stale
   end
 
+  it 'tags saved filter counts with versions captured before loading the filter row' do
+    custom_filter = create(
+      :custom_filter,
+      account: account,
+      user: agent,
+      filter_type: :conversation,
+      query: filter_query(attribute_key: 'status', values: ['open'])
+    )
+    filters = account.custom_filters
+    allow(account).to receive(:custom_filters).and_return(filters)
+    allow(filters).to receive(:find_by) do
+      store.bump_filter_version!(account_id: account.id, filter_id: custom_filter.id)
+      custom_filter
+    end
+
+    counter.send(:build_filter_count!, custom_filter.id)
+
+    snapshot = store.filter_count(account_id: account.id, filter_id: custom_filter.id)
+    expect(snapshot[:filter_version]).to eq(0)
+    expect(store.filter_count_state(account_id: account.id, filter_id: custom_filter.id, owner_user_id: agent.id, now: now)).to be_stale
+  end
+
   it 'omits invalid saved folders without writing a badge count' do
     custom_filter = create(
       :custom_filter,
