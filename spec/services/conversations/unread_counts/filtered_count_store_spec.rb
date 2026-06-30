@@ -44,6 +44,17 @@ RSpec.describe Conversations::UnreadCounts::FilteredCountStore do
       expect(described_class.bump_folder_index_version!(account_id: account_id, user_id: user_id)).to eq(1)
       expect(described_class.bump_filter_version!(account_id: account_id, filter_id: filter_id)).to eq(1)
     end
+
+    it 'expires version keys after bumping them' do
+      described_class.bump_conversation_version!(account_id)
+      described_class.bump_built_in_filter_version!(account_id: account_id, user_id: user_id)
+      described_class.bump_folder_index_version!(account_id: account_id, user_id: user_id)
+      described_class.bump_filter_version!(account_id: account_id, filter_id: filter_id)
+
+      version_keys.each do |key|
+        expect(ttl_for(key)).to be_within(5).of(Conversations::UnreadCounts::FILTERED_COUNT_VERSION_TTL)
+      end
+    end
   end
 
   describe 'built-in filter count snapshots' do

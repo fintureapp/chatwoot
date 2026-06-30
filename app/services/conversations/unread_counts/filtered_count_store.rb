@@ -138,7 +138,10 @@ class Conversations::UnreadCounts::FilteredCountStore
     end
 
     def bump_version_for!(scope, *key_args)
-      Redis::Alfred.incr(public_send(VERSION_KEY_METHODS.fetch(scope), *key_args))
+      key = public_send(VERSION_KEY_METHODS.fetch(scope), *key_args)
+      Redis::Alfred.incr(key).tap do
+        Redis::Alfred.expire(key, Conversations::UnreadCounts::FILTERED_COUNT_VERSION_TTL)
+      end
     end
 
     def claim_refresh_for!(scope, *key_args)
