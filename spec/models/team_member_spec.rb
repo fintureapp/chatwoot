@@ -1,6 +1,8 @@
 require 'rails_helper'
 
 RSpec.describe TeamMember do
+  include ActiveJob::TestHelper
+
   describe 'associations' do
     it { is_expected.to belong_to(:team) }
     it { is_expected.to belong_to(:user) }
@@ -27,6 +29,14 @@ RSpec.describe TeamMember do
 
       expect do
         team_member.destroy!
+      end.to change { store.built_in_filter_version(account_id: account.id, user_id: user.id) }.by(1)
+    end
+
+    it 'invalidates the user built-in filter version when the parent team is removed' do
+      create(:team_member, team: team, user: user)
+
+      expect do
+        perform_enqueued_jobs { team.destroy! }
       end.to change { store.built_in_filter_version(account_id: account.id, user_id: user.id) }.by(1)
     end
   end

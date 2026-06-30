@@ -25,6 +25,9 @@ class Team < ApplicationRecord
   has_many :members, through: :team_members, source: :user
   has_many :conversations, dependent: :nullify
 
+  before_destroy :capture_filtered_unread_count_member_ids, prepend: true
+  after_destroy_commit :invalidate_filtered_unread_count_member_visibility
+
   validates :name,
             presence: { message: I18n.t('errors.validations.presence') },
             uniqueness: { scope: :account_id }
@@ -68,6 +71,17 @@ class Team < ApplicationRecord
       icon: icon,
       icon_color: icon_color
     }
+  end
+
+  private
+
+  def capture_filtered_unread_count_member_ids
+    @filtered_unread_count_member_ids = team_members.pluck(:user_id)
+  end
+
+  def invalidate_filtered_unread_count_member_visibility
+    invalidator = ::Conversations::UnreadCounts::FilteredCountInvalidator.new(account)
+    Array(@filtered_unread_count_member_ids).each { |user_id| invalidator.user_visibility_changed!(user_id: user_id) }
   end
 end
 
