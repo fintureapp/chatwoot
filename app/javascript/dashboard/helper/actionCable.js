@@ -17,6 +17,8 @@ import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 const { isImpersonating } = useImpersonation();
 const UNREAD_COUNTS_REFETCH_THROTTLE_MS = 5000;
+const MENTION_UNREAD_COUNTS_REFETCH_DELAY_MS =
+  UNREAD_COUNTS_REFETCH_THROTTLE_MS;
 
 class ActionCableConnector extends BaseActionCableConnector {
   constructor(app, pubsubToken) {
@@ -25,6 +27,7 @@ class ActionCableConnector extends BaseActionCableConnector {
     this.CancelTyping = [];
     this.lastUnreadCountsFetchAt = null;
     this.unreadCountsFetchTimer = null;
+    this.mentionUnreadCountsFetchTimer = null;
     this.events = {
       'message.created': this.onMessageCreated,
       'message.updated': this.onMessageUpdated,
@@ -171,6 +174,17 @@ class ActionCableConnector extends BaseActionCableConnector {
     this.unreadCountsFetchTimer = null;
   };
 
+  scheduleMentionUnreadCountsFetch = () => {
+    if (this.mentionUnreadCountsFetchTimer) return;
+
+    // Mention invalidation runs through the async dispatcher, so wait before
+    // reading filtered-count snapshots from the unread-count API.
+    this.mentionUnreadCountsFetchTimer = setTimeout(() => {
+      this.mentionUnreadCountsFetchTimer = null;
+      this.throttledFetchConversationUnreadCounts();
+    }, MENTION_UNREAD_COUNTS_REFETCH_DELAY_MS);
+  };
+
   fetchConversationUnreadCounts = () => {
     if (!this.isConversationUnreadCountsEnabled()) return;
 
@@ -212,7 +226,7 @@ class ActionCableConnector extends BaseActionCableConnector {
 
   onConversationMentioned = data => {
     this.app.$store.dispatch('addMentions', data);
-    this.throttledFetchConversationUnreadCounts();
+    this.scheduleMentionUnreadCountsFetch();
   };
 
   clearTimer = conversationId => {

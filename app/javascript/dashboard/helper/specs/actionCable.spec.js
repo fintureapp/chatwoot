@@ -89,7 +89,10 @@ describe('ActionCableConnector - Copilot Tests', () => {
       expect(mockDispatch).toHaveBeenCalledWith('conversationUnreadCounts/get');
     });
 
-    it('should refetch unread counts when a conversation is mentioned', () => {
+    it('delays unread count refetch when a conversation is mentioned', () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
+
       const conversation = { id: 1, account_id: 1 };
 
       actionCable.onReceived({
@@ -98,6 +101,16 @@ describe('ActionCableConnector - Copilot Tests', () => {
       });
 
       expect(mockDispatch).toHaveBeenCalledWith('addMentions', conversation);
+      expect(mockDispatch).not.toHaveBeenCalledWith(
+        'conversationUnreadCounts/get'
+      );
+
+      vi.advanceTimersByTime(4999);
+      expect(mockDispatch).not.toHaveBeenCalledWith(
+        'conversationUnreadCounts/get'
+      );
+
+      vi.advanceTimersByTime(1);
       expect(mockDispatch).toHaveBeenCalledWith('conversationUnreadCounts/get');
     });
 
