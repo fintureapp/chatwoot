@@ -12,6 +12,7 @@ import MetricCard from 'dashboard/components-next/captain/pageComponents/overvie
 import KnowledgeCard from 'dashboard/components-next/captain/pageComponents/overview/KnowledgeCard.vue';
 import QuickLinks from 'dashboard/components-next/captain/pageComponents/overview/QuickLinks.vue';
 import InboxBanner from 'dashboard/components-next/captain/pageComponents/overview/InboxBanner.vue';
+import CoverageBanner from 'dashboard/components-next/captain/pageComponents/overview/CoverageBanner.vue';
 
 const { t } = useI18n();
 const route = useRoute();
@@ -108,6 +109,15 @@ const metrics = computed(() => [
     <template #body>
       <div class="flex flex-col gap-6">
         <InboxBanner />
+
+        <CoverageBanner
+          :knowledge="{
+            approved: 280,
+            pending: 142,
+            documents: 23,
+            coverage: 66,
+          }"
+        />
 
         <WelcomeCard :range="selectedRange" />
 

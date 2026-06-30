@@ -403,6 +403,11 @@
         "ACTION": "Connect inbox",
         "DISMISS": "Dismiss"
       },
+      "COVERAGE_BANNER": {
+        "TEXT": "{count} FAQs are pending review, keeping coverage at {coverage}%. Approve them so your assistant can resolve more on its own.",
+        "ACTION": "Review FAQs",
+        "DISMISS": "Dismiss"
+      },
       "RANGES": {
         "LAST_DAYS": "Last {count} days",
         "THIS_MONTH": "This month",
