@@ -1,7 +1,10 @@
 # Computes per-assistant overview metrics for the Captain Overview page.
 # Each metric is returned for the current window and the previous equal-length
-# window, plus a derived trend. See stats.md (repo root) for the metric
-# definitions and the source-of-truth queries this mirrors.
+# window, plus a derived trend.
+#
+# Queries are batched to cut round trips: the message-derived counts (handled,
+# public replies, depth) and the average reply time are each computed for both
+# windows in a single scan via conditional FILTER aggregation.
 class Captain::AssistantStatsBuilder
   RESOLVED_EVENT_NAMES = %w[conversation_captain_inference_resolved conversation_bot_resolved].freeze
   HANDOFF_EVENT_NAMES = %w[conversation_captain_inference_handoff conversation_bot_handoff].freeze
@@ -19,18 +22,12 @@ class Captain::AssistantStatsBuilder
   end
 
   def metrics
-    current = window_metrics(current_range)
-    previous = window_metrics(previous_range)
+    messages = message_window_metrics
+    reply_times = avg_reply_times
+    current = window_metrics(current_range, messages[:current], reply_times[:current])
+    previous = window_metrics(previous_range, messages[:previous], reply_times[:previous])
 
-    {
-      conversations_handled: pack(current[:handled], previous[:handled], :percent),
-      auto_resolution_rate: pack(current[:auto_resolution], previous[:auto_resolution], :point),
-      handoff_rate: pack(current[:handoff], previous[:handoff], :point),
-      hours_saved: pack(current[:hours_saved], previous[:hours_saved], :percent),
-      reopen_rate: pack(current[:reopen], previous[:reopen], :point),
-      conversation_depth: pack(current[:depth], previous[:depth], :absolute),
-      knowledge: knowledge
-    }
+    build_metrics(current, previous)
   end
 
   # Human-readable description of the period the metrics cover, for grounding the
@@ -45,12 +42,20 @@ class Captain::AssistantStatsBuilder
 
   private
 
+  def build_metrics(current, previous)
+    {
+      conversations_handled: pack(current[:handled], previous[:handled], :percent),
+      auto_resolution_rate: pack(current[:auto_resolution], previous[:auto_resolution], :point),
+      handoff_rate: pack(current[:handoff], previous[:handoff], :point),
+      hours_saved: pack(current[:hours_saved], previous[:hours_saved], :percent),
+      reopen_rate: pack(current[:reopen], previous[:reopen], :point),
+      conversation_depth: pack(current[:depth], previous[:depth], :absolute),
+      knowledge: knowledge
+    }
+  end
+
   def period_label
-    case range.to_s
-    when 'this_month' then 'this month'
-    when 'last_month' then 'last month'
-    else "the last #{day_count} days"
-    end
+    { 'this_month' => 'this month', 'last_month' => 'last month' }[range.to_s] || "the last #{day_count} days"
   end
 
   def current_range
@@ -91,21 +96,67 @@ class Captain::AssistantStatsBuilder
     range.to_i.positive? ? range.to_i : 30
   end
 
-  # Raw metric values for a single window.
-  def window_metrics(range)
-    handled = handled_scope(range).distinct.count(:conversation_id)
-    public_messages = public_outgoing_scope(range)
-    public_count = public_messages.count
-    depth_conversations = public_messages.distinct.count(:conversation_id)
+  # Combines the per-window message counts and reply time (batched, passed in)
+  # with the reporting-event metrics (resolution and reopen) for one window.
+  def window_metrics(range, message_counts, avg_reply)
+    handled = message_counts[:handled]
+    public_count = message_counts[:public_count]
+    depth_conversations = message_counts[:depth_conversations]
+    resolution = resolution_counts(range)
 
     {
       handled: handled,
-      auto_resolution: rate(resolved_count(range), handled),
-      handoff: rate(handoff_count(range), handled),
-      hours_saved: (public_count * avg_reply_time(range) / 3600.0).round,
+      auto_resolution: rate(resolution[:resolved], handled),
+      handoff: rate(resolution[:handoff], handled),
+      hours_saved: (public_count * avg_reply / 3600.0).round,
       reopen: reopen_rate(range),
       depth: depth_conversations.zero? ? 0 : (public_count.to_f / depth_conversations).round(1)
     }
+  end
+
+  # One scan over the assistant's messages computes handled, public-reply count,
+  # and depth-conversation count for both windows via conditional aggregation.
+  def message_window_metrics
+    public_clause = "message_type = #{Message.message_types[:outgoing]} AND private = false"
+    cur = window_clause(current_range)
+    prev = window_clause(previous_range)
+
+    row = handled_scope(full_span).reorder(nil).pick(
+      Arel.sql("COUNT(DISTINCT conversation_id) FILTER (WHERE #{cur})"),
+      Arel.sql("COUNT(DISTINCT conversation_id) FILTER (WHERE #{prev})"),
+      Arel.sql("COUNT(*) FILTER (WHERE #{cur} AND #{public_clause})"),
+      Arel.sql("COUNT(*) FILTER (WHERE #{prev} AND #{public_clause})"),
+      Arel.sql("COUNT(DISTINCT conversation_id) FILTER (WHERE #{cur} AND #{public_clause})"),
+      Arel.sql("COUNT(DISTINCT conversation_id) FILTER (WHERE #{prev} AND #{public_clause})")
+    )
+
+    {
+      current: { handled: row[0], public_count: row[2], depth_conversations: row[4] },
+      previous: { handled: row[1], public_count: row[3], depth_conversations: row[5] }
+    }
+  end
+
+  # Average reply time (seconds) for both windows in one scan.
+  def avg_reply_times
+    row = account.reporting_events.where(name: 'reply_time', created_at: full_span).reorder(nil).pick(
+      Arel.sql("AVG(value) FILTER (WHERE #{window_clause(current_range)})"),
+      Arel.sql("AVG(value) FILTER (WHERE #{window_clause(previous_range)})")
+    )
+    { current: row[0].to_f, previous: row[1].to_f }
+  end
+
+  # Resolved and handed-off conversation counts for one window, in a single scan
+  # of the handled set's reporting events.
+  def resolution_counts(range)
+    row = account.reporting_events
+                 .where(name: RESOLVED_EVENT_NAMES + HANDOFF_EVENT_NAMES,
+                        conversation_id: handled_scope(range).select(:conversation_id))
+                 .reorder(nil)
+                 .pick(
+                   Arel.sql("COUNT(DISTINCT conversation_id) FILTER (WHERE name IN (#{quoted(RESOLVED_EVENT_NAMES)}))"),
+                   Arel.sql("COUNT(DISTINCT conversation_id) FILTER (WHERE name IN (#{quoted(HANDOFF_EVENT_NAMES)}))")
+                 )
+    { resolved: row[0], handoff: row[1] }
   end
 
   # Conversations the assistant participated in (authored any message).
@@ -113,59 +164,52 @@ class Captain::AssistantStatsBuilder
     account.messages.where(sender_type: 'Captain::Assistant', sender_id: assistant.id, created_at: range)
   end
 
-  # Public outgoing replies the assistant sent (excludes private notes / handoff activity).
-  def public_outgoing_scope(range)
-    handled_scope(range).where(message_type: :outgoing, private: false)
+  # Span covering both windows so a single scan can split them with FILTER.
+  def full_span
+    [current_range.first, previous_range.first].min..current_range.last
   end
 
-  def resolved_count(range)
-    distinct_event_conversations(RESOLVED_EVENT_NAMES, handled_scope(range))
+  def window_clause(range)
+    "created_at >= #{quote(range.first)} AND created_at <= #{quote(range.last)}"
   end
 
-  def handoff_count(range)
-    distinct_event_conversations(HANDOFF_EVENT_NAMES, handled_scope(range))
+  def quote(value)
+    account.class.connection.quote(value)
   end
 
-  def distinct_event_conversations(names, handled)
-    account.reporting_events
-           .where(name: names, conversation_id: handled.select(:conversation_id))
-           .distinct.count(:conversation_id)
+  def quoted(values)
+    values.map { |value| quote(value) }.join(', ')
   end
 
   # Of the conversations Captain auto-resolved (inbox-based), the share reopened afterwards.
   def reopen_rate(range)
-    resolved_conversation_ids = account.reporting_events
-                                       .where(name: 'conversation_captain_inference_resolved',
-                                              inbox_id: assistant_inbox_ids, created_at: range)
-                                       .select(:conversation_id)
-    resolved = account.reporting_events.where(name: 'conversation_captain_inference_resolved',
-                                              inbox_id: assistant_inbox_ids, created_at: range)
-                      .distinct.count(:conversation_id)
+    resolved_scope = account.reporting_events.where(name: 'conversation_captain_inference_resolved',
+                                                    inbox_id: assistant_inbox_ids, created_at: range)
+    resolved = resolved_scope.distinct.count(:conversation_id)
     reopened = account.reporting_events
-                      .where(name: 'conversation_opened', conversation_id: resolved_conversation_ids)
+                      .where(name: 'conversation_opened', conversation_id: resolved_scope.select(:conversation_id))
                       .where('reporting_events.value > 0')
                       .distinct.count(:conversation_id)
     rate(reopened, resolved)
-  end
-
-  def avg_reply_time(range)
-    account.reporting_events.where(name: 'reply_time', created_at: range).average(:value).to_f
   end
 
   def assistant_inbox_ids
     @assistant_inbox_ids ||= assistant.inboxes.ids
   end
 
+  # Approved/pending FAQ counts and the document total in a single round trip.
   def knowledge
-    responses = Captain::AssistantResponse.by_assistant(assistant.id)
-    approved = responses.approved.count
-    pending = responses.pending.count
+    approved, pending, documents = Captain::AssistantResponse.by_assistant(assistant.id).reorder(nil).pick(
+      Arel.sql("COUNT(*) FILTER (WHERE status = #{Captain::AssistantResponse.statuses['approved']})"),
+      Arel.sql("COUNT(*) FILTER (WHERE status = #{Captain::AssistantResponse.statuses['pending']})"),
+      Arel.sql("(SELECT COUNT(*) FROM captain_documents WHERE assistant_id = #{assistant.id.to_i})")
+    )
     total = approved + pending
 
     {
       approved: approved,
       pending: pending,
-      documents: Captain::Document.for_assistant(assistant.id).count,
+      documents: documents,
       coverage: total.zero? ? 0 : (approved.to_f / total * 100).round
     }
   end
