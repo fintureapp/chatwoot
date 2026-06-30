@@ -114,6 +114,30 @@ describe('ActionCableConnector - Copilot Tests', () => {
       expect(mockDispatch).toHaveBeenCalledWith('conversationUnreadCounts/get');
     });
 
+    it('retries mentioned unread counts after the backend refresh window', () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
+
+      actionCable.onReceived({
+        event: 'conversation.mentioned',
+        data: { id: 1, account_id: 1 },
+      });
+
+      const unreadCountFetches = () =>
+        mockDispatch.mock.calls.filter(
+          ([action]) => action === 'conversationUnreadCounts/get'
+        );
+
+      vi.advanceTimersByTime(5000);
+      expect(unreadCountFetches()).toHaveLength(1);
+
+      vi.advanceTimersByTime(24999);
+      expect(unreadCountFetches()).toHaveLength(1);
+
+      vi.advanceTimersByTime(1);
+      expect(unreadCountFetches()).toHaveLength(2);
+    });
+
     it('does not refetch unread counts when unread count feature is disabled', () => {
       store.$store.getters[
         'accounts/isFeatureEnabledonAccount'

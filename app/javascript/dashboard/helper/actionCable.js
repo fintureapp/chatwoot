@@ -17,6 +17,7 @@ import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 const { isImpersonating } = useImpersonation();
 const UNREAD_COUNTS_REFETCH_THROTTLE_MS = 5000;
+const FILTERED_UNREAD_COUNTS_REFRESH_RETRY_MS = 30000;
 const MENTION_UNREAD_COUNTS_REFETCH_DELAY_MS =
   UNREAD_COUNTS_REFETCH_THROTTLE_MS;
 
@@ -28,6 +29,7 @@ class ActionCableConnector extends BaseActionCableConnector {
     this.lastUnreadCountsFetchAt = null;
     this.unreadCountsFetchTimer = null;
     this.mentionUnreadCountsFetchTimer = null;
+    this.mentionUnreadCountsRetryTimer = null;
     this.events = {
       'message.created': this.onMessageCreated,
       'message.updated': this.onMessageUpdated,
@@ -175,14 +177,25 @@ class ActionCableConnector extends BaseActionCableConnector {
   };
 
   scheduleMentionUnreadCountsFetch = () => {
-    if (this.mentionUnreadCountsFetchTimer) return;
+    // Mention invalidation runs through the async dispatcher, and stale snapshots
+    // can be served until the filtered-count backend refresh window opens.
+    this.scheduleUnreadCountsFetchAfter(
+      'mentionUnreadCountsFetchTimer',
+      MENTION_UNREAD_COUNTS_REFETCH_DELAY_MS
+    );
+    this.scheduleUnreadCountsFetchAfter(
+      'mentionUnreadCountsRetryTimer',
+      FILTERED_UNREAD_COUNTS_REFRESH_RETRY_MS
+    );
+  };
 
-    // Mention invalidation runs through the async dispatcher, so wait before
-    // reading filtered-count snapshots from the unread-count API.
-    this.mentionUnreadCountsFetchTimer = setTimeout(() => {
-      this.mentionUnreadCountsFetchTimer = null;
+  scheduleUnreadCountsFetchAfter = (timerName, delay) => {
+    if (this[timerName]) return;
+
+    this[timerName] = setTimeout(() => {
+      this[timerName] = null;
       this.throttledFetchConversationUnreadCounts();
-    }, MENTION_UNREAD_COUNTS_REFETCH_DELAY_MS);
+    }, delay);
   };
 
   fetchConversationUnreadCounts = () => {
