@@ -79,7 +79,10 @@ class Captain::AssistantStatsBuilder
     start = Time.current.beginning_of_month
     elapsed = Time.current - start
     previous_start = start - 1.month
-    { current: start..Time.current, previous: previous_start..(previous_start + elapsed) }
+    # Clamp to the previous month's end so a longer current month can't pull the
+    # comparison window into the current month and double-count its rows.
+    previous_end = [previous_start + elapsed, previous_start.end_of_month].min
+    { current: start..Time.current, previous: previous_start..previous_end }
   end
 
   def last_month_ranges
