@@ -8,14 +8,14 @@ class AddSenderCreatedIndexToMessages < ActiveRecord::Migration[7.1]
   # to keep write amplification on `messages` neutral.
   def up
     add_index :messages, [:sender_type, :sender_id, :created_at],
-              name: 'index_messages_on_sender_and_created', algorithm: :concurrently
+              name: 'index_messages_on_sender_and_created', algorithm: :concurrently, if_not_exists: true
     remove_index :messages, name: 'index_messages_on_sender_type_and_sender_id',
                             algorithm: :concurrently, if_exists: true
   end
 
   def down
     add_index :messages, [:sender_type, :sender_id],
-              name: 'index_messages_on_sender_type_and_sender_id', algorithm: :concurrently
+              name: 'index_messages_on_sender_type_and_sender_id', algorithm: :concurrently, if_not_exists: true
     remove_index :messages, name: 'index_messages_on_sender_and_created',
                             algorithm: :concurrently, if_exists: true
   end
