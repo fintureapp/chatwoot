@@ -85,6 +85,34 @@ RSpec.describe Conversations::UnreadCounts::FilteredCounter do
     expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)).to be_nil
   end
 
+  it 'records snapshot lifecycle instrumentation while calculating counts' do
+    allow(Conversations::UnreadCounts::FilteredCountInstrumentation).to receive(:observe) do |_operation, _attributes, &block|
+      block.call
+    end
+    allow(Conversations::UnreadCounts::FilteredCountInstrumentation).to receive(:increment)
+
+    counter.perform
+
+    expect(Conversations::UnreadCounts::FilteredCountInstrumentation).to have_received(:observe).with(:counter_perform, account_id: account.id)
+    expect(Conversations::UnreadCounts::FilteredCountInstrumentation).to have_received(:observe).with(
+      :snapshot_build,
+      account_id: account.id,
+      snapshot_scope: :built_in_filter
+    )
+    expect(Conversations::UnreadCounts::FilteredCountInstrumentation).to have_received(:increment).with(
+      :snapshot_state,
+      account_id: account.id,
+      snapshot_scope: :built_in_filter,
+      snapshot_status: :missing
+    )
+    expect(Conversations::UnreadCounts::FilteredCountInstrumentation).to have_received(:increment).with(
+      :refresh_claim,
+      account_id: account.id,
+      snapshot_scope: :built_in_filter,
+      claimed: true
+    )
+  end
+
   def create_visible_unread_conversation(status: :open, agent_last_seen_at: 1.hour.ago, unattended: false)
     conversation = create_unread_conversation(account: account, inbox: visible_inbox)
     conversation.update!(
