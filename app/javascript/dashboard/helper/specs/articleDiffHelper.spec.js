@@ -76,7 +76,6 @@ describe('articleDiffHelper', () => {
     });
 
     it('keeps a fenced code block whole when it contains blank lines', () => {
-      // A blank line inside the fence must not split the block (regression).
       const code = '```\nline one\n\nline two\n```';
       const blocks = buildDiffBlocks(code, code);
       expect(blocks).toEqual([{ type: 'equal', md: code }]);
@@ -88,6 +87,24 @@ describe('articleDiffHelper', () => {
       const blocks = buildDiffBlocks(live, draft);
       expect(blocks).toContainEqual({ type: 'removed', md: live });
       expect(blocks).toContainEqual({ type: 'added', md: draft });
+    });
+
+    it('surfaces whitespace edits that change the rendered output', () => {
+      expect(
+        buildDiffBlocks('```\nx\n```', '```\n  x\n```').some(
+          block => block.type !== 'equal'
+        )
+      ).toBe(true);
+      expect(
+        buildDiffBlocks('line one\nline two', 'line one  \nline two').some(
+          block => block.type !== 'equal'
+        )
+      ).toBe(true);
+    });
+
+    it('keeps spacing the renderer ignores as equal', () => {
+      const blocks = buildDiffBlocks('a\nb', 'a \nb');
+      expect(blocks.every(block => block.type === 'equal')).toBe(true);
     });
   });
 

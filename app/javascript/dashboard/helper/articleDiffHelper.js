@@ -136,15 +136,13 @@ const splitBlocks = text => {
   return blocks;
 };
 
-const normalize = text => text.replace(/\s+/g, ' ').trim();
-
 const BLOCK_TYPE = { equal: 'equal', del: 'removed', ins: 'added' };
 
-// Compares the body block by block; an edited paragraph shows as old-removed
-// then new-added. `key` ignores spacing so whitespace-only changes still match.
+// Diffs the body block by block. Blocks match when they render to the same HTML
+// (the check staging uses), so only edits that change the page show as a diff.
 export const buildDiffBlocks = (oldText, newText) => {
   const toBlocks = text =>
-    splitBlocks(text).map(md => ({ md, key: normalize(md) }));
+    splitBlocks(text).map(md => ({ md, key: commonmark.render(md) }));
   const ops = diffSequence(toBlocks(oldText), toBlocks(newText), b => b.key);
   return ops.map(op => ({ type: BLOCK_TYPE[op.type], md: op.item.md }));
 };
