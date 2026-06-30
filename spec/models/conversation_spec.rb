@@ -148,6 +148,16 @@ RSpec.describe Conversation do
                                                                     changed_attributes: changed_attributes, performed_by: nil)
     end
 
+    it 'sends conversation updated event if campaign assignment is updated' do
+      campaign = create(:campaign, account: account, inbox: conversation.inbox)
+      conversation.update!(campaign: campaign)
+      changed_attributes = conversation.previous_changes
+
+      expect(Rails.configuration.dispatcher).to have_received(:dispatch)
+        .with(described_class::CONVERSATION_UPDATED, kind_of(Time), conversation: conversation, notifiable_assignee_change: false,
+                                                                    changed_attributes: changed_attributes, performed_by: nil)
+    end
+
     it 'runs after_update callbacks' do
       conversation.update(
         status: :resolved,
