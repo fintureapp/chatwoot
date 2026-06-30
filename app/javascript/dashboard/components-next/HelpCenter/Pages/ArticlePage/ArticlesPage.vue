@@ -3,7 +3,7 @@ import { ref, computed, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { OnClickOutside } from '@vueuse/components';
-import { useMapGetter } from 'dashboard/composables/store.js';
+import { useStore, useMapGetter } from 'dashboard/composables/store.js';
 import { useConfig } from 'dashboard/composables/useConfig';
 import { debounce } from '@chatwoot/utils';
 import {
@@ -65,6 +65,7 @@ const emit = defineEmits([
 
 const router = useRouter();
 const route = useRoute();
+const store = useStore();
 const { t } = useI18n();
 
 const isSwitchingPortal = useMapGetter('portals/isSwitchingPortal');
@@ -229,32 +230,38 @@ const onBulkActionSuccess = message => {
 };
 
 const bulkUpdateStatus = async status => {
-  // Articles with unpublished edits need an explicit publish/discard decision the
-  // bulk action can't make, so skip them and point the user to resolve each one.
   const selectedIds = [...selectedArticleIds.value];
-  const pendingIds = new Set(
-    props.articles
-      .filter(
-        article =>
-          article.status === ARTICLE_STATUSES.PUBLISHED &&
-          hasPendingChanges(article)
-      )
-      .map(article => article.id)
-  );
-  const articleIds = selectedIds.filter(id => !pendingIds.has(id));
-  const skippedCount = selectedIds.length - articleIds.length;
+  const { portalSlug } = route.params;
 
-  if (!articleIds.length) {
+  const pendingIds = props.articles
+    .filter(
+      article =>
+        selectedIds.includes(article.id) &&
+        article.status === ARTICLE_STATUSES.PUBLISHED &&
+        hasPendingChanges(article)
+    )
+    .map(article => article.id);
+
+  // Publish promotes each pending draft; other status changes skip them.
+  const isPublishing = status === ARTICLE_STATUSES.PUBLISHED;
+  const draftIds = isPublishing ? pendingIds : [];
+  const skippedCount = isPublishing ? 0 : pendingIds.length;
+  const articleIds = selectedIds.filter(id => !pendingIds.includes(id));
+
+  if (!articleIds.length && !draftIds.length) {
     useAlert(t('HELP_CENTER.ARTICLES_PAGE.BULK_ACTIONS.STATUS_SKIPPED_ALL'));
     return;
   }
 
   try {
-    await articlesAPI.bulkUpdateStatus({
-      portalSlug: route.params.portalSlug,
-      articleIds,
-      status,
-    });
+    if (articleIds.length) {
+      await articlesAPI.bulkUpdateStatus({ portalSlug, articleIds, status });
+    }
+    await Promise.all(
+      draftIds.map(articleId =>
+        store.dispatch('articles/publishDraft', { portalSlug, articleId })
+      )
+    );
     onBulkActionSuccess(
       t('HELP_CENTER.ARTICLES_PAGE.BULK_ACTIONS.STATUS_SUCCESS')
     );

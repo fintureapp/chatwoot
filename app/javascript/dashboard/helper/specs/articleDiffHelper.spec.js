@@ -106,6 +106,13 @@ describe('articleDiffHelper', () => {
       const blocks = buildDiffBlocks('a\nb', 'a \nb');
       expect(blocks.every(block => block.type === 'equal')).toBe(true);
     });
+
+    it('keeps a loose list with item descriptions as one block', () => {
+      const list =
+        '1. **One**\n\n   First item.\n\n2. **Two**\n\n   Second item.';
+      const blocks = buildDiffBlocks(list, list);
+      expect(blocks).toEqual([{ type: 'equal', md: list }]);
+    });
   });
 
   describe('rendersIdentically', () => {

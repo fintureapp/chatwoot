@@ -105,33 +105,54 @@ export const renderInlineDiff = (oldValue, newValue) => {
 
 // A fenced code block opener: ``` or ~~~, indented up to 3 spaces (CommonMark).
 const FENCE_RE = /^ {0,3}(```|~~~)/;
+// A list item marker: -, *, + or "1." / "1)", indented up to 3 spaces.
+const LIST_ITEM_RE = /^ {0,3}(?:[-*+]|\d{1,9}[.)])(?:\s|$)/;
 
 // Split on blank lines so each paragraph, heading or list compares as one piece.
-// Blank lines inside a fenced code block are content, so we never split there —
-// otherwise a blank line in code would tear the block into broken pieces.
+// Blank lines inside a fenced code block, or between items of the same list, are
+// content — splitting there would tear a code block or list apart and render it
+// with broken structure (orphaned <li>/<p>), so we keep those together.
 const splitBlocks = text => {
+  const lines = (text || '').split('\n');
   const blocks = [];
   let buffer = [];
   let fence = null;
+  let inList = false;
+
   const flush = () => {
     const block = buffer.join('\n').trim();
     if (block) blocks.push(block);
     buffer = [];
+    inList = false;
   };
 
-  (text || '').split('\n').forEach(line => {
+  lines.forEach((line, index) => {
     const marker = line.match(FENCE_RE)?.[1];
-    if (marker && !fence) {
-      fence = marker;
-    } else if (fence && line.trimStart().startsWith(fence)) {
-      fence = null;
-    }
-    if (!fence && line.trim() === '') {
-      flush();
-    } else {
+    if (marker && !fence) fence = marker;
+    else if (fence && line.trimStart().startsWith(fence)) fence = null;
+
+    if (fence) {
       buffer.push(line);
+      return;
+    }
+
+    if (LIST_ITEM_RE.test(line)) inList = true;
+
+    if (line.trim() !== '') {
+      buffer.push(line);
+      return;
+    }
+
+    // Blank line: keep it when the current list continues on the next non-blank
+    // line (another item or an indented continuation); otherwise end the block.
+    const next = lines.slice(index + 1).find(other => other.trim() !== '');
+    if (inList && next && (LIST_ITEM_RE.test(next) || /^\s/.test(next))) {
+      buffer.push(line);
+    } else {
+      flush();
     }
   });
+
   flush();
   return blocks;
 };
