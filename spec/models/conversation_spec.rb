@@ -139,6 +139,15 @@ RSpec.describe Conversation do
         )
     end
 
+    it 'sends conversation updated event if last activity time is updated' do
+      conversation.update(last_activity_at: 1.hour.from_now)
+      changed_attributes = conversation.previous_changes
+
+      expect(Rails.configuration.dispatcher).to have_received(:dispatch)
+        .with(described_class::CONVERSATION_UPDATED, kind_of(Time), conversation: conversation, notifiable_assignee_change: false,
+                                                                    changed_attributes: changed_attributes, performed_by: nil)
+    end
+
     it 'runs after_update callbacks' do
       conversation.update(
         status: :resolved,
