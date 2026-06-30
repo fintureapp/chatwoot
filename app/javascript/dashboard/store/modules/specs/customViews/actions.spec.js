@@ -22,6 +22,11 @@ const conversationUnreadCountsEnabledRootGetters = {
   ),
 };
 
+afterEach(() => {
+  vi.clearAllTimers();
+  vi.useRealTimers();
+});
+
 describe('#actions', () => {
   describe('#get', () => {
     it('sends correct actions if API is success', async () => {
@@ -62,6 +67,7 @@ describe('#actions', () => {
     });
 
     it('refetches unread counts after creating a conversation folder', async () => {
+      vi.useFakeTimers();
       const dispatch = vi.fn();
       const firstItem = customViewList[0];
       axios.post.mockResolvedValue({ data: firstItem });
@@ -80,6 +86,12 @@ describe('#actions', () => {
         {},
         { root: true }
       );
+
+      vi.advanceTimersByTime(29999);
+      expect(dispatch).toHaveBeenCalledTimes(1);
+
+      vi.advanceTimersByTime(1);
+      expect(dispatch).toHaveBeenCalledTimes(2);
     });
 
     it('sends correct actions if API is error', async () => {
@@ -104,6 +116,7 @@ describe('#actions', () => {
     });
 
     it('refetches unread counts after deleting a conversation folder', async () => {
+      vi.useFakeTimers();
       const dispatch = vi.fn();
       axios.delete.mockResolvedValue({ data: customViewList[0] });
 
@@ -165,6 +178,7 @@ describe('#actions', () => {
     });
 
     it('refetches unread counts after updating a conversation folder', async () => {
+      vi.useFakeTimers();
       const dispatch = vi.fn();
       const item = updateCustomViewList[0];
       axios.patch.mockResolvedValue({ data: item });

@@ -7,6 +7,7 @@ const VIEW_TYPES = {
   CONVERSATION: 'conversation',
   CONTACT: 'contact',
 };
+const FILTERED_UNREAD_COUNTS_REFRESH_RETRY_MS = 30000;
 
 // use to normalize the filter type
 const FILTER_KEYS = {
@@ -37,13 +38,21 @@ const shouldRefreshConversationUnreadCounts = (filterType, rootGetters) => {
   );
 };
 
+const dispatchConversationUnreadCounts = dispatch => {
+  dispatch('conversationUnreadCounts/get', {}, { root: true });
+};
+
 const refreshConversationUnreadCounts = (
   { dispatch, rootGetters },
   filterType
 ) => {
   if (!shouldRefreshConversationUnreadCounts(filterType, rootGetters)) return;
 
-  dispatch('conversationUnreadCounts/get', {}, { root: true });
+  dispatchConversationUnreadCounts(dispatch);
+  setTimeout(
+    () => dispatchConversationUnreadCounts(dispatch),
+    FILTERED_UNREAD_COUNTS_REFRESH_RETRY_MS
+  );
 };
 
 export const state = {
