@@ -9,6 +9,7 @@ class Captain::AssistantStatsBuilder
   RESOLVED_EVENT_NAMES = %w[conversation_captain_inference_resolved conversation_bot_resolved].freeze
   HANDOFF_EVENT_NAMES = %w[conversation_captain_inference_handoff conversation_bot_handoff].freeze
   DEFAULT_RANGE = '30'.freeze
+  ALLOWED_RANGES = %w[7 30 90 this_month last_month].freeze
 
   attr_reader :assistant, :account, :range
 
@@ -18,7 +19,7 @@ class Captain::AssistantStatsBuilder
   def initialize(assistant, range = DEFAULT_RANGE)
     @assistant = assistant
     @account = assistant.account
-    @range = range.presence || DEFAULT_RANGE
+    @range = ALLOWED_RANGES.include?(range.to_s) ? range.to_s : DEFAULT_RANGE
   end
 
   def metrics
@@ -96,8 +97,7 @@ class Captain::AssistantStatsBuilder
     range.to_i.positive? ? range.to_i : 30
   end
 
-  # Combines the per-window message counts and reply time (batched, passed in)
-  # with the reporting-event metrics (resolution and reopen) for one window.
+  # Combines the per-window message counts and reply time with the reporting-event metrics for one window.
   def window_metrics(range, message_counts, avg_reply)
     handled = message_counts[:handled]
     public_count = message_counts[:public_count]
