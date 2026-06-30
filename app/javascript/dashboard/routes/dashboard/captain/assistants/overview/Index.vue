@@ -110,14 +110,7 @@ const metrics = computed(() => [
       <div class="flex flex-col gap-6">
         <InboxBanner />
 
-        <CoverageBanner
-          :knowledge="{
-            approved: 280,
-            pending: 142,
-            documents: 23,
-            coverage: 66,
-          }"
-        />
+        <CoverageBanner :knowledge="stats?.knowledge" />
 
         <WelcomeCard :range="selectedRange" />
 
