@@ -89,12 +89,15 @@ class Conversations::UnreadCounts::FilteredCounter
   end
 
   def built_in_count_snapshot_payload
+    account_version = store.conversation_version(account.id)
+    built_in_filter_version = store.built_in_filter_version(account_id: account.id, user_id: user.id)
+
     {
       account_id: account.id,
       user_id: user.id,
       counts: built_in_counts_from_database,
-      account_version: store.conversation_version(account.id),
-      built_in_filter_version: store.built_in_filter_version(account_id: account.id, user_id: user.id),
+      account_version: account_version,
+      built_in_filter_version: built_in_filter_version,
       built_at: now
     }
   end
@@ -120,25 +123,32 @@ class Conversations::UnreadCounts::FilteredCounter
   end
 
   def build_folder_index!
-    filter_ids = account.custom_filters.where(user_id: user.id, filter_type: :conversation).pluck(:id)
+    folder_index_version = store.folder_index_version(account_id: account.id, user_id: user.id)
+    filter_ids = folder_filter_ids_from_database
     store.write_folder_index!(
       account_id: account.id,
       user_id: user.id,
       filter_ids: filter_ids,
-      folder_index_version: store.folder_index_version(account_id: account.id, user_id: user.id),
+      folder_index_version: folder_index_version,
       built_at: now
     )
     store.folder_index(account_id: account.id, user_id: user.id)
   end
 
+  def folder_filter_ids_from_database = account.custom_filters.where(user_id: user.id, filter_type: :conversation).pluck(:id)
+
+  # rubocop:disable Metrics/AbcSize
   def build_filter_count!(filter_id)
     custom_filter = account.custom_filters.find_by(id: filter_id, user_id: user.id, filter_type: :conversation)
     return delete_filter_count!(filter_id) if custom_filter.blank?
 
+    account_version = store.conversation_version(account.id)
+    filter_version = store.filter_version(account_id: account.id, filter_id: filter_id)
+    owner_built_in_filter_version = store.built_in_filter_version(account_id: account.id, user_id: user.id)
     count = filter_query_count(custom_filter)
     return delete_filter_count!(filter_id) if count.nil?
 
-    write_filter_count!(filter_id, count)
+    write_filter_count!(filter_id, count, account_version, filter_version, owner_built_in_filter_version)
     store.filter_count(account_id: account.id, filter_id: filter_id)
   rescue CustomExceptions::CustomFilter::InvalidAttribute,
          CustomExceptions::CustomFilter::InvalidOperator,
@@ -146,6 +156,7 @@ class Conversations::UnreadCounts::FilteredCounter
          CustomExceptions::CustomFilter::InvalidValue
     delete_filter_count!(filter_id)
   end
+  # rubocop:enable Metrics/AbcSize
 
   def filter_query_count(custom_filter)
     ::Conversations::UnreadCounts::FilterQueryCounter.new(
@@ -155,15 +166,15 @@ class Conversations::UnreadCounts::FilteredCounter
     ).perform
   end
 
-  def write_filter_count!(filter_id, count)
+  def write_filter_count!(filter_id, count, account_version, filter_version, owner_built_in_filter_version)
     store.write_filter_count!(
       account_id: account.id,
       filter_id: filter_id,
       user_id: user.id,
       count: count,
-      account_version: store.conversation_version(account.id),
-      filter_version: store.filter_version(account_id: account.id, filter_id: filter_id),
-      owner_built_in_filter_version: store.built_in_filter_version(account_id: account.id, user_id: user.id),
+      account_version: account_version,
+      filter_version: filter_version,
+      owner_built_in_filter_version: owner_built_in_filter_version,
       built_at: now
     )
   end
@@ -197,15 +208,9 @@ class Conversations::UnreadCounts::FilteredCounter
     conversations[:agent_last_seen_at].eq(nil).or(messages[:created_at].gt(conversations[:agent_last_seen_at]))
   end
 
-  def count_relation(relation)
-    relation.unscope(:order).count
-  end
+  def count_relation(relation) = relation.unscope(:order).count
 
-  def lock_manager
-    @lock_manager ||= Redis::LockManager.new
-  end
+  def lock_manager = @lock_manager ||= Redis::LockManager.new
 
-  def store
-    ::Conversations::UnreadCounts::FilteredCountStore
-  end
+  def store = ::Conversations::UnreadCounts::FilteredCountStore
 end
