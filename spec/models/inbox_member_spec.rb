@@ -42,5 +42,13 @@ RSpec.describe InboxMember do
         inbox_member.destroy!
       end.to change { store.built_in_filter_version(account_id: account.id, user_id: user.id) }.by(1)
     end
+
+    it 'invalidates the user built-in filter version when the parent inbox is removed' do
+      create(:inbox_member, inbox: inbox, user: user)
+
+      expect do
+        perform_enqueued_jobs { inbox.destroy! }
+      end.to change { store.built_in_filter_version(account_id: account.id, user_id: user.id) }.by(1)
+    end
   end
 end
