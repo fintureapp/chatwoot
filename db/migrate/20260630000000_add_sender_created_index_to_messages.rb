@@ -1,0 +1,22 @@
+class AddSenderCreatedIndexToMessages < ActiveRecord::Migration[7.1]
+  disable_ddl_transaction!
+
+  # Adds created_at to the (sender_type, sender_id) index so per-assistant
+  # windowed lookups (Captain Overview stats) can range-scan the time slice
+  # instead of reading every lifetime row and filtering at the heap. The new
+  # index is a left-prefix superset of the old one, so the old one is dropped
+  # to keep write amplification on `messages` neutral.
+  def up
+    add_index :messages, [:sender_type, :sender_id, :created_at],
+              name: 'index_messages_on_sender_and_created', algorithm: :concurrently
+    remove_index :messages, name: 'index_messages_on_sender_type_and_sender_id',
+                            algorithm: :concurrently, if_exists: true
+  end
+
+  def down
+    add_index :messages, [:sender_type, :sender_id],
+              name: 'index_messages_on_sender_type_and_sender_id', algorithm: :concurrently
+    remove_index :messages, name: 'index_messages_on_sender_and_created',
+                            algorithm: :concurrently, if_exists: true
+  end
+end
