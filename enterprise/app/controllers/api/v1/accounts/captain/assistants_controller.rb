@@ -69,7 +69,7 @@ class Api::V1::Accounts::Captain::AssistantsController < Api::V1::Accounts::Base
   private
 
   def summary_cache_key(range)
-    "captain_overview_summary/#{@assistant.id}/#{range}/#{Date.current}"
+    "captain_overview_summary/#{@assistant.id}/#{Current.user.id}/#{range}/#{Date.current}"
   end
 
   def set_assistant
