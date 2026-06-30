@@ -24,6 +24,7 @@ const showBanner = computed(
 watch(
   assistantId,
   id => {
+    dismissed.value = false;
     if (id) store.dispatch('captainInboxes/get', { assistantId: id });
   },
   { immediate: true }
