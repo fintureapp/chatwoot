@@ -187,12 +187,15 @@ class Captain::AssistantStatsBuilder
   def reopen_rate(range)
     resolved_scope = account.reporting_events.where(name: RESOLVED_EVENT_NAMES,
                                                     inbox_id: assistant_inbox_ids, created_at: range)
-    resolved = resolved_scope.distinct.count(:conversation_id)
+    # event_start_time on a reopen is the preceding resolve's timestamp, so requiring it
+    # within the window keeps only reopens that followed the in-window resolve, not an
+    # earlier resolve/reopen cycle on the same conversation.
     reopened = account.reporting_events
                       .where(name: 'conversation_opened', conversation_id: resolved_scope.select(:conversation_id))
                       .where('reporting_events.value > 0')
+                      .where('reporting_events.event_start_time >= ?', range.first)
                       .distinct.count(:conversation_id)
-    rate(reopened, resolved)
+    rate(reopened, resolved_scope.distinct.count(:conversation_id))
   end
 
   def assistant_inbox_ids
