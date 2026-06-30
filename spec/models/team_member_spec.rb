@@ -39,5 +39,13 @@ RSpec.describe TeamMember do
         perform_enqueued_jobs { team.destroy! }
       end.to change { store.built_in_filter_version(account_id: account.id, user_id: user.id) }.by(1)
     end
+
+    it 'invalidates saved filter snapshots when the parent team is removed' do
+      create(:conversation, account: account, team: team)
+
+      expect do
+        perform_enqueued_jobs { team.destroy! }
+      end.to change { store.conversation_version(account.id) }.by(1)
+    end
   end
 end
