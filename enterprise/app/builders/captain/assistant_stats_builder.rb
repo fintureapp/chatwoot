@@ -182,8 +182,10 @@ class Captain::AssistantStatsBuilder
   end
 
   # Of the conversations Captain auto-resolved (inbox-based), the share reopened afterwards.
+  # Covers both the evaluated (inference) and time-based (bot) resolve paths so the
+  # denominator matches auto_resolution_rate.
   def reopen_rate(range)
-    resolved_scope = account.reporting_events.where(name: 'conversation_captain_inference_resolved',
+    resolved_scope = account.reporting_events.where(name: RESOLVED_EVENT_NAMES,
                                                     inbox_id: assistant_inbox_ids, created_at: range)
     resolved = resolved_scope.distinct.count(:conversation_id)
     reopened = account.reporting_events
