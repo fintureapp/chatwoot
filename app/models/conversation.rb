@@ -62,6 +62,9 @@ class Conversation < ApplicationRecord
   include PushDataHelper
   include ConversationMuteHelpers
 
+  FILTERABLE_ADDITIONAL_ATTRIBUTE_KEYS = %w[browser_language conversation_language mail_subject referer].freeze
+  private_constant :FILTERABLE_ADDITIONAL_ATTRIBUTE_KEYS
+
   validates :account_id, presence: true
   validates :inbox_id, presence: true
   validates :contact_id, presence: true
@@ -315,7 +318,8 @@ class Conversation < ApplicationRecord
   def allowed_keys?
     (
       previous_changes.keys.intersect?(list_of_keys) ||
-      (previous_changes['additional_attributes'].present? && previous_changes['additional_attributes'][1].keys.intersect?(%w[conversation_language]))
+      (previous_changes['additional_attributes'].present? &&
+        previous_changes['additional_attributes'][1].keys.intersect?(FILTERABLE_ADDITIONAL_ATTRIBUTE_KEYS))
     )
   end
 
