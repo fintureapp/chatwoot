@@ -1,4 +1,4 @@
-# Proposal: Actor Attribution for Captain Reporting
+# Proposal: Captain Reporting Attribution and Fact Table
 
 ## Context
 
@@ -13,7 +13,10 @@ Captain reporting needs to answer customer-facing questions about the value Capt
 - Can we estimate cost or time saved from conversations handled or deflected by Captain?
 - How are Captain resolution, handoff, CSAT, and estimated time-saved metrics trending?
 
-The existing reporting pipeline gets part of the way there, but it was built around generic conversation metrics. Captain reporting needs stronger attribution: for each reporting event, we need to know who performed or caused the event.
+The existing reporting pipeline gets part of the way there, but it was built around generic conversation metrics. Captain reporting needs two lightweight improvements:
+
+- Stronger attribution: for each reporting event, we need to know who performed or caused the event.
+- A small Captain-specific fact table: for each Captain-involved conversation, we need durable milestone timestamps and CSAT fields that are annoying or expensive to recompute repeatedly.
 
 ## Current System
 
@@ -56,7 +59,7 @@ This creates several problems:
 
 The current system can support directional Captain reporting, but it is not ideal for defensible customer-facing value metrics.
 
-## Proposed Change
+## Proposed Change 1: Reporting Event Actor Attribution
 
 Add actor attribution columns to `reporting_events`:
 
@@ -105,30 +108,85 @@ The result is cleaner reporting:
 - AgentBot and Captain metrics no longer collide under generic bot event names.
 - Time-series trends can group by event name and actor instead of inferred cohorts.
 
+## Proposed Change 2: Small Captain Conversation Fact Table
+
+Add a small fact table for Captain-involved conversations:
+
+```ruby
+captain_conversation_facts
+
+account_id
+conversation_id
+assistant_id
+inbox_id
+
+first_captain_message_at
+last_captain_message_at
+
+captain_resolved_at
+captain_handed_off_at
+first_human_reply_after_captain_at
+reopened_after_captain_resolution_at
+
+csat_response_id
+csat_rating
+csat_submitted_at
+
+created_at
+updated_at
+```
+
+This table should be intentionally sparse. It should not become a full aggregate table, and it should not duplicate every message count or reporting event. Its job is to make the Captain conversation cohort and key lifecycle milestones cheap, stable, and explainable.
+
+Recommended constraints and indexes:
+
+```ruby
+unique index on conversation_id
+index on [account_id, assistant_id, first_captain_message_at]
+index on [account_id, captain_resolved_at]
+index on [account_id, captain_handed_off_at]
+index on [account_id, csat_submitted_at]
+```
+
+`csat_response_id` should point back to `csat_survey_responses`. The fact table should store `csat_rating` and `csat_submitted_at` for dashboard queries, but the free-text feedback should remain in `csat_survey_responses`.
+
+## Why The Fact Table Should Stay Small
+
+A larger fact table with reply counters, duration counters, cost estimates, and many derived fields would be expensive to maintain and easy to make inconsistent.
+
+The useful middle ground is a sparse milestone table:
+
+- Most fields are set once.
+- Repeated updates are limited to `last_captain_message_at`.
+- Counts can still be derived from `messages`, `reporting_events`, and `csat_survey_responses` when needed.
+- The Captain cohort becomes a simple table lookup instead of repeated message/event inference.
+
+This keeps write complexity low while making read paths much cleaner.
+
 ## Metrics Enabled By This Change
 
 ### Captain-Handled Conversations
 
 Primary definition:
 
-- Conversations with at least one public outgoing message from `Captain::Assistant`.
+- Rows in `captain_conversation_facts`.
 
-This still comes from messages because participation is message-level behavior, not only an outcome event.
+The fact row is created when Captain first sends a public message in the conversation. `first_captain_message_at` and `last_captain_message_at` define the participation window.
 
 ### Captain-Resolved Conversations
 
 Definition:
 
-- Conversations with a resolution reporting event caused by `Captain::Assistant`.
+- Rows where `captain_resolved_at` is present.
 
-This should include Captain resolution paths that currently produce generic resolve events.
+This field is populated from resolution reporting events where `actor_type = 'Captain::Assistant'`.
 
 ### Resolved Without Human Help
 
 Definition:
 
 - Captain-involved conversation.
-- Resolved by `Captain::Assistant`.
+- `captain_resolved_at` is present.
 - No public outgoing `User` message before the Captain resolution event.
 
 This answers whether Captain deflected the conversation without human participation.
@@ -137,30 +195,24 @@ This answers whether Captain deflected the conversation without human participat
 
 Definition:
 
-- Captain handoff events divided by Captain-handled conversations.
+- Rows where `captain_handed_off_at` is present divided by total Captain fact rows.
 
-With actor attribution:
-
-```ruby
-conversation_bot_handoff where actor_type = 'Captain::Assistant'
-```
-
-This avoids mixing Captain handoffs with AgentBot or other bot handoffs.
+`captain_handed_off_at` is populated from handoff reporting events where `actor_type = 'Captain::Assistant'`, avoiding collisions with AgentBot or other bot handoffs.
 
 ### CSAT For Captain-Involved Conversations
 
 Definition:
 
-- `csat_survey_responses` joined to conversations where Captain participated.
+- Captain fact rows where `csat_rating` is present.
 
-CSAT still belongs in the CSAT table. Actor attribution does not replace CSAT storage, but it makes the Captain cohort cleaner.
+CSAT still belongs in `csat_survey_responses`, but copying `csat_response_id`, `csat_rating`, and `csat_submitted_at` into the fact table makes Captain CSAT reporting simple.
 
 ### CSAT: Captain-Involved vs Human-Only
 
 Definitions:
 
-- Captain-involved: conversations with Captain participation or Captain actor events.
-- Human-only: conversations with no Captain participation and no Captain actor events.
+- Captain-involved: conversations with a row in `captain_conversation_facts`.
+- Human-only: conversations without a Captain fact row.
 
 This allows customer-facing comparison between conversations where Captain helped and conversations handled only by humans.
 
@@ -184,6 +236,8 @@ Captain-resolved-without-human conversations * average human handling time
 
 The actor model does not define the estimation formula by itself, but it gives the formula better inputs by identifying which resolutions and handoffs were actually caused by Captain.
 
+The fact table provides the reusable Captain cohort for these estimates. Reply counts and average human reply time can still be queried from source tables.
+
 ### Estimated Cost Saved
 
 Definition:
@@ -204,9 +258,9 @@ Metrics can be trended over time by grouping `reporting_events` by date and filt
 - Captain deflection trend
 - Human-only comparison trend
 
-CSAT trends continue to come from `csat_survey_responses`, using the Captain-involved cohort.
+CSAT trends can come directly from fact rows with `csat_submitted_at`.
 
-## Implementation Notes
+## Implementation Notes: Actor Attribution
 
 When dispatching events, Chatwoot already passes `performed_by` in several paths. Reporting event creation should use that object to populate:
 
@@ -226,6 +280,27 @@ Backfill can be partial:
 - Existing generic bot events can sometimes be attributed to Captain when the conversation has Captain messages.
 - Events without clear historical actor evidence should remain null rather than guessed.
 
+## Implementation Notes: Captain Fact Table
+
+The fact table should be updated from existing lifecycle points:
+
+- Captain public message created:
+  - Find or create the fact row.
+  - Set `first_captain_message_at` if blank.
+  - Update `last_captain_message_at`.
+- Captain resolves conversation:
+  - Set `captain_resolved_at` if blank.
+- Captain hands off conversation:
+  - Set `captain_handed_off_at` if blank.
+- Human public reply after Captain participation:
+  - Set `first_human_reply_after_captain_at` if blank.
+- Conversation opens after Captain resolution:
+  - Set `reopened_after_captain_resolution_at` if blank.
+- CSAT response created or updated:
+  - If a fact row exists for the conversation, set `csat_response_id`, `csat_rating`, and `csat_submitted_at`.
+
+The fact updater should be idempotent. It should prefer setting first-occurrence fields only when blank, except for `last_captain_message_at` and CSAT fields, which can be updated.
+
 ## Expected Outcome
 
 Adding `actor_type` and `actor_id` gives Captain reporting a durable attribution layer while preserving the generic reporting pipeline.
@@ -236,4 +311,6 @@ It does not require turning `reporting_events` into a Captain-only analytics tab
 Who caused this?
 ```
 
-That is the key missing piece for reliable Captain value reporting.
+Adding `captain_conversation_facts` then gives dashboards a small, stable Captain conversation cohort with the most important milestone and CSAT fields.
+
+Together, these changes keep the raw event pipeline generic while giving Captain reporting enough structure to answer customer-facing value questions without repeated fragile inference.
