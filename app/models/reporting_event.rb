@@ -3,6 +3,7 @@
 # Table name: reporting_events
 #
 #  id                      :bigint           not null, primary key
+#  actor_type              :string
 #  event_end_time          :datetime
 #  event_start_time        :datetime
 #  name                    :string
@@ -11,20 +12,22 @@
 #  created_at              :datetime         not null
 #  updated_at              :datetime         not null
 #  account_id              :integer
+#  actor_id                :bigint
 #  conversation_id         :integer
 #  inbox_id                :integer
 #  user_id                 :integer
 #
 # Indexes
 #
-#  index_reporting_events_for_response_distribution  (account_id,name,inbox_id,created_at)
-#  index_reporting_events_on_account_id              (account_id)
-#  index_reporting_events_on_conversation_id         (conversation_id)
-#  index_reporting_events_on_created_at              (created_at)
-#  index_reporting_events_on_inbox_id                (inbox_id)
-#  index_reporting_events_on_name                    (name)
-#  index_reporting_events_on_user_id                 (user_id)
-#  reporting_events__account_id__name__created_at    (account_id,name,created_at)
+#  idx_reporting_events_on_account_actor_name_created  (account_id,actor_type,actor_id,name,created_at)
+#  index_reporting_events_for_response_distribution    (account_id,name,inbox_id,created_at)
+#  index_reporting_events_on_account_id                (account_id)
+#  index_reporting_events_on_conversation_id           (conversation_id)
+#  index_reporting_events_on_created_at                (created_at)
+#  index_reporting_events_on_inbox_id                  (inbox_id)
+#  index_reporting_events_on_name                      (name)
+#  index_reporting_events_on_user_id                   (user_id)
+#  reporting_events__account_id__name__created_at      (account_id,name,created_at)
 #
 
 class ReportingEvent < ApplicationRecord
@@ -36,6 +39,7 @@ class ReportingEvent < ApplicationRecord
   belongs_to :user, optional: true
   belongs_to :inbox, optional: true
   belongs_to :conversation, optional: true
+  belongs_to :actor, polymorphic: true, optional: true
 
   # Scopes for filtering
   scope :filter_by_date_range, lambda { |range|

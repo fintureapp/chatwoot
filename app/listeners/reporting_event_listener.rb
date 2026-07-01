@@ -16,7 +16,8 @@ class ReportingEventListener < BaseListener
       user_id: conversation.assignee_id,
       conversation_id: conversation.id,
       event_start_time: conversation.created_at,
-      event_end_time: event_end_time
+      event_end_time: event_end_time,
+      **actor_attributes(actor_from_event(event))
     )
 
     create_bot_resolved_event(conversation, reporting_event)
@@ -39,7 +40,8 @@ class ReportingEventListener < BaseListener
       user_id: message.sender_id,
       conversation_id: conversation.id,
       event_start_time: last_non_human_activity(conversation),
-      event_end_time: message.created_at
+      event_end_time: message.created_at,
+      **actor_attributes(actor_from_event(event) || message.sender)
     )
 
     reporting_event.save!
@@ -65,7 +67,8 @@ class ReportingEventListener < BaseListener
       user_id: conversation.assignee_id,
       conversation_id: conversation.id,
       event_start_time: waiting_since,
-      event_end_time: message.created_at
+      event_end_time: message.created_at,
+      **actor_attributes(actor_from_event(event) || message.sender)
     )
     reporting_event.save!
     safe_rollup(reporting_event)
@@ -92,7 +95,8 @@ class ReportingEventListener < BaseListener
       user_id: conversation.assignee_id,
       conversation_id: conversation.id,
       event_start_time: conversation.created_at,
-      event_end_time: event_end_time
+      event_end_time: event_end_time,
+      **actor_attributes(actor_from_event(event))
     )
     reporting_event.save!
     safe_rollup(reporting_event)
@@ -116,34 +120,44 @@ class ReportingEventListener < BaseListener
       name: 'conversation_resolved'
     ).where('event_end_time <= ?', event_end_time).order(event_end_time: :desc).first
 
-    # For first-time openings, value is 0
-    # For reopenings, calculate time since resolution
-    if last_resolved_event
-      time_since_resolved = event_end_time.to_i - last_resolved_event.event_end_time.to_i
-      business_hours_value = business_hours(conversation.inbox, last_resolved_event.event_end_time, event_end_time)
-      start_time = last_resolved_event.event_end_time
-    else
-      time_since_resolved = 0
-      business_hours_value = 0
-      start_time = conversation.created_at
-    end
-
-    create_conversation_opened_event(conversation, time_since_resolved, business_hours_value, start_time, event_end_time)
+    create_conversation_opened_event(
+      conversation,
+      conversation_opened_event_attributes(conversation, last_resolved_event, event_end_time),
+      actor_from_event(event)
+    )
   end
 
   private
 
-  def create_conversation_opened_event(conversation, time_since_resolved, business_hours_value, start_time, event_end_time)
+  def conversation_opened_event_attributes(conversation, last_resolved_event, event_end_time)
+    return first_conversation_opened_event_attributes(conversation, event_end_time) if last_resolved_event.blank?
+
+    {
+      value: event_end_time.to_i - last_resolved_event.event_end_time.to_i,
+      value_in_business_hours: business_hours(conversation.inbox, last_resolved_event.event_end_time, event_end_time),
+      event_start_time: last_resolved_event.event_end_time,
+      event_end_time: event_end_time
+    }
+  end
+
+  def first_conversation_opened_event_attributes(conversation, event_end_time)
+    {
+      value: 0,
+      value_in_business_hours: 0,
+      event_start_time: conversation.created_at,
+      event_end_time: event_end_time
+    }
+  end
+
+  def create_conversation_opened_event(conversation, event_attributes, actor)
     reporting_event = ReportingEvent.new(
       name: 'conversation_opened',
-      value: time_since_resolved,
-      value_in_business_hours: business_hours_value,
       account_id: conversation.account_id,
       inbox_id: conversation.inbox_id,
       user_id: conversation.assignee_id,
       conversation_id: conversation.id,
-      event_start_time: start_time,
-      event_end_time: event_end_time
+      **event_attributes,
+      **actor_attributes(actor)
     )
     reporting_event.save!
   end
@@ -160,7 +174,8 @@ class ReportingEventListener < BaseListener
       user_id: conversation.assignee_id,
       conversation_id: conversation.id,
       event_start_time: conversation.created_at,
-      event_end_time: event.timestamp
+      event_end_time: event.timestamp,
+      **actor_attributes(actor_from_event(event))
     )
   end
 
@@ -173,6 +188,16 @@ class ReportingEventListener < BaseListener
     bot_resolved_event.name = 'conversation_bot_resolved'
     bot_resolved_event.save!
     safe_rollup(bot_resolved_event)
+  end
+
+  def actor_from_event(event)
+    event.data[:performed_by]
+  end
+
+  def actor_attributes(actor)
+    return {} if actor.blank? || actor.id.blank?
+
+    { actor_type: actor.class.name, actor_id: actor.id }
   end
 
   def safe_rollup(reporting_event)

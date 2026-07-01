@@ -40,6 +40,16 @@ properties:
       - number
       - 'null'
     description: ID of the user/agent
+  actor_type:
+    type:
+      - string
+      - 'null'
+    description: Type of the actor that caused the reporting event
+  actor_id:
+    type:
+      - number
+      - 'null'
+    description: ID of the actor that caused the reporting event
   created_at:
     type: string
     format: date-time

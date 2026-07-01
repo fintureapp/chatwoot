@@ -7,6 +7,8 @@ json.event_end_time reporting_event.event_end_time
 json.account_id reporting_event.account_id
 json.inbox_id reporting_event.inbox_id
 json.user_id reporting_event.user_id
+json.actor_type reporting_event.actor_type
+json.actor_id reporting_event.actor_id
 json.conversation_id reporting_event.conversation_id
 json.created_at reporting_event.created_at
 json.updated_at reporting_event.updated_at
