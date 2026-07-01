@@ -64,6 +64,16 @@ class CustomRole < ApplicationRecord
 
   def invalidate_filtered_unread_count_visibility(user_ids)
     invalidator = ::Conversations::UnreadCounts::FilteredCountInvalidator.new(account)
-    Array(user_ids).each { |user_id| invalidator.user_visibility_changed!(user_id: user_id) }
+    visibility_changed = false
+
+    Array(user_ids).each do |user_id|
+      visibility_changed = invalidator.user_visibility_changed!(user_id: user_id) || visibility_changed
+    end
+
+    dispatch_account_cache_invalidated if visibility_changed
+  end
+
+  def dispatch_account_cache_invalidated
+    Rails.configuration.dispatcher.dispatch(ACCOUNT_CACHE_INVALIDATED, Time.zone.now, account: account, cache_keys: account.cache_keys)
   end
 end
