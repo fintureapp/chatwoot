@@ -60,7 +60,9 @@ export function useAgentsList(
    */
   const agentsList = computed(() => {
     const agents = includeAgentBots
-      ? owners.value.filter(owner => owner.assignee_type === 'User')
+      ? owners.value.filter(
+          owner => owner.assignee_type === 'User' && owner.confirmed
+        )
       : assignableAgents.value || [];
     const bots = owners.value.filter(
       owner => owner.assignee_type === 'AgentBot'

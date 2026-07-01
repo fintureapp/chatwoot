@@ -249,13 +249,12 @@ RSpec.describe 'Inboxes API', type: :request do
         expect(response_data.pluck(:role)).to include('agent', 'administrator')
       end
 
-      context 'when include_agent_bots is true' do
+      context 'with Agent Bots' do
         let!(:account_bot) { create(:agent_bot, account: account, name: 'Account bot') }
         let!(:global_bot) { create(:agent_bot, account: nil, name: 'Global bot') }
 
         it 'returns assignable agents and accessible agent bots' do
           get "/api/v1/accounts/#{account.id}/inboxes/#{inbox.id}/assignable_agents",
-              params: { include_agent_bots: true },
               headers: admin.create_new_auth_token,
               as: :json
 

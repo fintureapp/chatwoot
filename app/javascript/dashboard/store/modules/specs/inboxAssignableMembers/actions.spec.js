@@ -48,9 +48,7 @@ describe('#actions', () => {
 
       await actions.fetchAssignableOwners({ commit }, 1);
 
-      expect(InboxesAPI.getAssignableAgents).toHaveBeenCalledWith(1, {
-        includeAgentBots: true,
-      });
+      expect(InboxesAPI.getAssignableAgents).toHaveBeenCalledWith(1);
       expect(commit).toHaveBeenCalledWith(types.SET_INBOX_ASSIGNABLE_OWNERS, {
         inboxId: 1,
         owners: agentsData,

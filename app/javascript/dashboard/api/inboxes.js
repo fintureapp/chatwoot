@@ -15,10 +15,8 @@ class Inboxes extends CacheEnabledApiClient {
     return axios.get(`${this.url}/${inboxId}/campaigns`);
   }
 
-  getAssignableAgents(inboxId, { includeAgentBots = false } = {}) {
-    return axios.get(`${this.url}/${inboxId}/assignable_agents`, {
-      params: includeAgentBots ? { include_agent_bots: true } : {},
-    });
+  getAssignableAgents(inboxId) {
+    return axios.get(`${this.url}/${inboxId}/assignable_agents`);
   }
 
   deleteInboxAvatar(inboxId) {
