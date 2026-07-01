@@ -59,6 +59,7 @@ class Conversations::UnreadCounts::FilterQueryCounter < Conversations::FilterSer
     attribute_key = query_hash[:attribute_key]
     data_type = filter_data_type(query_hash)
 
+    return nil if text_search_on_display_id?(query_hash)
     return 'number' if NUMERIC_ATTRIBUTE_KEYS.include?(attribute_key)
     return data_type if TYPED_DATA_TYPES.include?(data_type)
 

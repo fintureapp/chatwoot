@@ -210,6 +210,21 @@ RSpec.describe Conversations::UnreadCounts::FilteredCounter do
     expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)[:count]).to eq(1)
   end
 
+  it 'counts saved folders with display_id text fragment filters' do
+    create_visible_unread_conversation
+    create_visible_unread_conversation
+    custom_filter = create(
+      :custom_filter,
+      account: account,
+      user: agent,
+      filter_type: :conversation,
+      query: filter_query(attribute_key: 'display_id', filter_operator: 'does_not_contain', values: ['abc'])
+    )
+
+    expect(counter.perform[:folders]).to eq(custom_filter.id.to_s => 2)
+    expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)[:count]).to eq(2)
+  end
+
   it 'omits saved folders with invalid typed custom attribute values' do
     create(
       :custom_attribute_definition,
