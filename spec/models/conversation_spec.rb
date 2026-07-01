@@ -208,6 +208,16 @@ RSpec.describe Conversation do
       end
     end
 
+    it 'will run conversation_updated event when filterable additional_attributes are removed' do
+      conversation.update!(additional_attributes: { 'referer' => 'https://www.chatwoot.com/' })
+      conversation.update!(additional_attributes: {})
+      changed_attributes = conversation.previous_changes
+
+      expect(Rails.configuration.dispatcher).to have_received(:dispatch)
+        .with(described_class::CONVERSATION_UPDATED, kind_of(Time), conversation: conversation, notifiable_assignee_change: false,
+                                                                    changed_attributes: changed_attributes, performed_by: nil)
+    end
+
     it 'will not run conversation_updated event for non-filterable additional_attributes' do
       conversation.additional_attributes[:source_id] = 'es'
       conversation.save!

@@ -316,11 +316,9 @@ class Conversation < ApplicationRecord
   end
 
   def allowed_keys?
-    (
-      previous_changes.keys.intersect?(list_of_keys) ||
-      (previous_changes['additional_attributes'].present? &&
-        previous_changes['additional_attributes'][1].keys.intersect?(FILTERABLE_ADDITIONAL_ATTRIBUTE_KEYS))
-    )
+    additional_attributes_change = previous_changes['additional_attributes']
+    previous_changes.keys.intersect?(list_of_keys) ||
+      Array(additional_attributes_change).compact.any? { |attributes| attributes.keys.intersect?(FILTERABLE_ADDITIONAL_ATTRIBUTE_KEYS) }
   end
 
   def load_attributes_created_by_db_triggers
