@@ -113,7 +113,7 @@ describe Whatsapp::IncomingCallService do
       expect(contact_inbox.contact.name).to eq('Ada Lovelace')
     end
 
-    it 'reuses the phone-keyed ContactInbox messaging created for a phone caller' do
+    it 'reuses the phone-keyed ContactInbox messaging created for a phone caller and backfills the BSUID alias' do
       allow(ActionCable.server).to receive(:broadcast)
       contact = create(:contact, account: account)
       existing = create(:contact_inbox, inbox: inbox, contact: contact, source_id: from_number)
@@ -123,11 +123,13 @@ describe Whatsapp::IncomingCallService do
                   session: { sdp: sdp_offer, sdp_type: 'offer' } }],
         contacts: [{ wa_id: from_number, user_id: bsuid }]
       }
+      # The conversation reuses the existing phone thread; the BSUID alias is backfilled onto the same contact.
       expect { described_class.new(inbox: inbox, params: params).perform }
-        .to change(Call, :count).by(1).and not_change(ContactInbox, :count)
+        .to change(Call, :count).by(1).and change(ContactInbox, :count).by(1)
 
       expect(Call.last.contact).to eq(contact)
       expect(Call.last.conversation.contact_inbox).to eq(existing)
+      expect(inbox.contact_inboxes.find_by(source_id: bsuid).contact).to eq(contact)
     end
 
     it 'reuses a phone ContactInbox via the same wa_id normalization messaging uses' do
@@ -166,7 +168,7 @@ describe Whatsapp::IncomingCallService do
     # The gap: messaging created the contact username-only (BSUID-keyed), and the call now
     # also exposes a phone. Matching across every source_id reuses the BSUID thread instead
     # of forking a new phone-keyed contact.
-    it 'reuses a BSUID-keyed ContactInbox even when the call also carries a phone' do
+    it 'reuses a BSUID-keyed ContactInbox even when the call also carries a phone and backfills the phone alias' do
       allow(ActionCable.server).to receive(:broadcast)
       contact = create(:contact, account: account)
       existing = create(:contact_inbox, inbox: inbox, contact: contact, source_id: bsuid)
@@ -176,11 +178,13 @@ describe Whatsapp::IncomingCallService do
                   session: { sdp: sdp_offer, sdp_type: 'offer' } }],
         contacts: [{ wa_id: from_number, user_id: bsuid }]
       }
+      # The conversation reuses the existing BSUID thread; the phone alias is backfilled onto the same contact.
       expect { described_class.new(inbox: inbox, params: params).perform }
-        .to change(Call, :count).by(1).and not_change(ContactInbox, :count)
+        .to change(Call, :count).by(1).and change(ContactInbox, :count).by(1)
 
       expect(Call.last.contact).to eq(contact)
       expect(Call.last.conversation.contact_inbox).to eq(existing)
+      expect(inbox.contact_inboxes.find_by(source_id: from_number).contact).to eq(contact)
     end
   end
 
