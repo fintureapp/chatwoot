@@ -28,7 +28,10 @@ class Conversations::UnreadCounts::Listener < BaseListener
 
   def conversation_updated(event)
     conversation, = extract_conversation_and_account(event)
-    invalidate_filtered_conversation(conversation) if filtered_conversation_update_changed?(event.data[:changed_attributes])
+    if filtered_conversation_update_changed?(event.data[:changed_attributes])
+      invalidate_filtered_conversation(conversation)
+      notify_filtered_count_change(conversation)
+    end
     return unless label_changed?(event.data[:changed_attributes])
 
     refresh(conversation, event.data[:changed_attributes])
@@ -125,6 +128,13 @@ class Conversations::UnreadCounts::Listener < BaseListener
 
   def invalidate_filtered_conversation(conversation)
     filtered_count_invalidator(conversation.account).conversation_changed!
+  end
+
+  def notify_filtered_count_change(conversation)
+    return unless conversation.account.feature_enabled?('conversation_unread_counts')
+    return unless conversation.account.feature_enabled?(filtered_count_feature_flag)
+
+    Rails.configuration.dispatcher.dispatch(CONVERSATION_UNREAD_COUNT_CHANGED, Time.zone.now, conversation: conversation)
   end
 
   def filtered_count_invalidator(account)

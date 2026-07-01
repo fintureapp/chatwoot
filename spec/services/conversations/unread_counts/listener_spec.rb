@@ -93,6 +93,20 @@ RSpec.describe Conversations::UnreadCounts::Listener do
     expect(Conversations::UnreadCounts::Notifier).not_to have_received(:new)
   end
 
+  it 'notifies clients when filtered conversation fields change' do
+    account.enable_features!(:conversation_unread_counts, :unread_count_for_filters)
+    allow(Rails.configuration.dispatcher).to receive(:dispatch)
+    event = Events::Base.new('conversation.updated', Time.zone.now, conversation: conversation, changed_attributes: { priority: [nil, 'high'] })
+
+    listener.conversation_updated(event)
+
+    expect(Rails.configuration.dispatcher).to have_received(:dispatch).with(
+      'conversation.unread_count_changed',
+      kind_of(Time),
+      conversation: conversation
+    )
+  end
+
   it 'invalidates filtered counts when last activity time changes' do
     account.enable_features!(:unread_count_for_filters)
     event = Events::Base.new(
