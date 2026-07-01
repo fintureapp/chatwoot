@@ -30,6 +30,7 @@ class ActionCableConnector extends BaseActionCableConnector {
     this.unreadCountsFetchTimer = null;
     this.mentionUnreadCountsFetchTimer = null;
     this.mentionUnreadCountsRetryTimer = null;
+    this.filteredUnreadCountsRetryTimer = null;
     this.events = {
       'message.created': this.onMessageCreated,
       'message.updated': this.onMessageUpdated,
@@ -146,6 +147,7 @@ class ActionCableConnector extends BaseActionCableConnector {
 
   onConversationUnreadCountChanged = () => {
     this.throttledFetchConversationUnreadCounts();
+    this.scheduleFilteredUnreadCountsRetry();
   };
 
   throttledFetchConversationUnreadCounts = () => {
@@ -189,6 +191,17 @@ class ActionCableConnector extends BaseActionCableConnector {
     );
   };
 
+  scheduleFilteredUnreadCountsRetry = () => {
+    if (!this.isFilteredUnreadCountsEnabled()) return;
+
+    // Filtered snapshots can intentionally stay stale until the backend
+    // refresh window opens.
+    this.scheduleUnreadCountsFetchAfter(
+      'filteredUnreadCountsRetryTimer',
+      FILTERED_UNREAD_COUNTS_REFRESH_RETRY_MS
+    );
+  };
+
   scheduleUnreadCountsFetchAfter = (timerName, delay) => {
     if (this[timerName]) return;
 
@@ -213,6 +226,17 @@ class ActionCableConnector extends BaseActionCableConnector {
     return isFeatureEnabled?.(
       accountId,
       FEATURE_FLAGS.CONVERSATION_UNREAD_COUNTS
+    );
+  };
+
+  isFilteredUnreadCountsEnabled = () => {
+    const accountId = this.app.$store.getters.getCurrentAccountId;
+    const isFeatureEnabled =
+      this.app.$store.getters['accounts/isFeatureEnabledonAccount'];
+
+    return (
+      isFeatureEnabled?.(accountId, FEATURE_FLAGS.CONVERSATION_UNREAD_COUNTS) &&
+      isFeatureEnabled?.(accountId, FEATURE_FLAGS.UNREAD_COUNT_FOR_FILTERS)
     );
   };
 

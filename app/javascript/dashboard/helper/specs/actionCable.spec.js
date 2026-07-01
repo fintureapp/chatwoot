@@ -1,5 +1,6 @@
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
 import ActionCableConnector from '../actionCable';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 vi.mock('shared/helpers/mitt', () => ({
   emitter: {
@@ -81,12 +82,45 @@ describe('ActionCableConnector - Copilot Tests', () => {
     });
 
     it('should refetch unread counts when unread count changes', () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
+
       actionCable.onReceived({
         event: 'conversation.unread_count_changed',
         data: { account_id: 1 },
       });
 
       expect(mockDispatch).toHaveBeenCalledWith('conversationUnreadCounts/get');
+
+      vi.advanceTimersByTime(29999);
+      expect(mockDispatch).toHaveBeenCalledTimes(1);
+
+      vi.advanceTimersByTime(1);
+      expect(mockDispatch).toHaveBeenCalledTimes(2);
+      expect(mockDispatch).toHaveBeenLastCalledWith(
+        'conversationUnreadCounts/get'
+      );
+    });
+
+    it('does not retry unread count changes when filtered counts are disabled', () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
+      store.$store.getters[
+        'accounts/isFeatureEnabledonAccount'
+      ].mockImplementation(
+        (_, featureFlag) =>
+          featureFlag === FEATURE_FLAGS.CONVERSATION_UNREAD_COUNTS
+      );
+
+      actionCable.onReceived({
+        event: 'conversation.unread_count_changed',
+        data: { account_id: 1 },
+      });
+
+      expect(mockDispatch).toHaveBeenCalledTimes(1);
+
+      vi.advanceTimersByTime(30000);
+      expect(mockDispatch).toHaveBeenCalledTimes(1);
     });
 
     it('delays unread count refetch when a conversation is mentioned', () => {
