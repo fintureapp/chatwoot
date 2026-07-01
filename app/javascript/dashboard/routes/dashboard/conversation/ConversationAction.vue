@@ -82,12 +82,12 @@ export default {
     assignedAgent: {
       get() {
         const assignee = this.currentChat.meta.assignee;
-        if (!assignee) return assignee;
-
-        return {
-          ...assignee,
-          assignee_type: this.currentChat.meta.assignee_type || 'User',
-        };
+        return (
+          assignee && {
+            ...assignee,
+            assignee_type: this.currentChat.meta.assignee_type || 'User',
+          }
+        );
       },
       set(agent) {
         const agentId = agent ? agent.id : null;
@@ -189,7 +189,6 @@ export default {
         account_id,
         availability_status,
         available_name,
-        assignee_type: 'User',
         email,
         id,
         name,
@@ -199,13 +198,10 @@ export default {
       this.assignedAgent = selfAssign;
     },
     onClickAssignAgent(selectedItem) {
-      const currentAssigneeType = this.assignedAgent?.assignee_type || 'User';
-      const selectedAssigneeType = selectedItem.assignee_type || 'User';
-
       if (
-        this.assignedAgent &&
-        this.assignedAgent.id === selectedItem.id &&
-        currentAssigneeType === selectedAssigneeType
+        this.assignedAgent?.id === selectedItem.id &&
+        (this.assignedAgent?.assignee_type || 'User') ===
+          (selectedItem.assignee_type || 'User')
       ) {
         this.assignedAgent = null;
       } else {
