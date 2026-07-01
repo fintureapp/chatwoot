@@ -169,6 +169,21 @@ RSpec.describe Conversations::UnreadCounts::FilteredCounter do
     expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)).to be_nil
   end
 
+  it 'omits saved folders with trailing query operators' do
+    query = filter_query(attribute_key: 'status', values: ['open'])
+    query[:payload].first[:query_operator] = 'AND'
+    custom_filter = create(
+      :custom_filter,
+      account: account,
+      user: agent,
+      filter_type: :conversation,
+      query: query
+    )
+
+    expect(counter.perform[:folders]).to eq({})
+    expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)).to be_nil
+  end
+
   it 'omits saved folders with invalid typed values' do
     custom_filter = create(
       :custom_filter,
@@ -210,6 +225,21 @@ RSpec.describe Conversations::UnreadCounts::FilteredCounter do
     expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)[:count]).to eq(1)
   end
 
+  it 'counts saved folders with display_id text fragment filters' do
+    create_visible_unread_conversation
+    create_visible_unread_conversation
+    custom_filter = create(
+      :custom_filter,
+      account: account,
+      user: agent,
+      filter_type: :conversation,
+      query: filter_query(attribute_key: 'display_id', filter_operator: 'does_not_contain', values: ['abc'])
+    )
+
+    expect(counter.perform[:folders]).to eq(custom_filter.id.to_s => 2)
+    expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)[:count]).to eq(2)
+  end
+
   it 'omits saved folders with invalid typed custom attribute values' do
     create(
       :custom_attribute_definition,
@@ -224,6 +254,52 @@ RSpec.describe Conversations::UnreadCounts::FilteredCounter do
       user: agent,
       filter_type: :conversation,
       query: filter_query(attribute_key: 'budget', values: ['abc'])
+    )
+
+    expect(counter.perform[:folders]).to eq({})
+    expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)).to be_nil
+  end
+
+  it 'omits saved folders with text operators on typed custom attributes' do
+    create(
+      :custom_attribute_definition,
+      account: account,
+      attribute_model: :conversation_attribute,
+      attribute_key: 'budget',
+      attribute_display_type: :number
+    )
+    custom_filter = create(
+      :custom_filter,
+      account: account,
+      user: agent,
+      filter_type: :conversation,
+      query: filter_query(attribute_key: 'budget', filter_operator: 'contains', values: ['123'])
+    )
+
+    expect(counter.perform[:folders]).to eq({})
+    expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)).to be_nil
+  end
+
+  it 'omits saved folders with invalid label values' do
+    custom_filter = create(
+      :custom_filter,
+      account: account,
+      user: agent,
+      filter_type: :conversation,
+      query: filter_query(attribute_key: 'labels', values: [1])
+    )
+
+    expect(counter.perform[:folders]).to eq({})
+    expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)).to be_nil
+  end
+
+  it 'omits saved folders with invalid text values' do
+    custom_filter = create(
+      :custom_filter,
+      account: account,
+      user: agent,
+      filter_type: :conversation,
+      query: filter_query(attribute_key: 'mail_subject', values: [1])
     )
 
     expect(counter.perform[:folders]).to eq({})
