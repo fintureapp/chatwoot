@@ -16,22 +16,28 @@ export const types = {
 export const getters = {
   getAssignableAgents: $state => inboxId => {
     const allAgents = $state.records[inboxId] || [];
-    const verifiedAgents = allAgents.filter(record => record.confirmed);
+    const verifiedAgents = allAgents.filter(
+      record => record.confirmed || record.assignee_type === 'AgentBot'
+    );
     return verifiedAgents;
   },
-  getAssignableOwners: $state => inboxId => $state.records[inboxId] || [],
   getUIFlags($state) {
     return $state.uiFlags;
   },
 };
 
 export const actions = {
-  async fetch({ commit }, inboxIds) {
+  async fetch({ commit }, request) {
+    const inboxIds = Array.isArray(request) ? request : request.inboxIds;
     commit(types.SET_INBOX_ASSIGNABLE_AGENTS_UI_FLAG, { isFetching: true });
     try {
       const {
         data: { payload },
-      } = await AssignableAgentsAPI.get(inboxIds);
+      } = Array.isArray(request)
+        ? await AssignableAgentsAPI.get(inboxIds)
+        : await InboxesAPI.getAssignableAgents(inboxIds[0], {
+            includeAgentBots: true,
+          });
       commit(types.SET_INBOX_ASSIGNABLE_AGENTS, {
         inboxId: inboxIds.join(','),
         members: payload,
@@ -41,17 +47,6 @@ export const actions = {
     } finally {
       commit(types.SET_INBOX_ASSIGNABLE_AGENTS_UI_FLAG, { isFetching: false });
     }
-  },
-  async fetchAssignableOwners({ commit }, inboxId) {
-    const {
-      data: { payload },
-    } = await InboxesAPI.getAssignableAgents(inboxId, {
-      includeAgentBots: true,
-    });
-    commit(types.SET_INBOX_ASSIGNABLE_AGENTS, {
-      inboxId,
-      members: payload,
-    });
   },
 };
 

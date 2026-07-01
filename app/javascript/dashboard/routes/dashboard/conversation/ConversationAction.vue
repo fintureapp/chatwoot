@@ -25,7 +25,7 @@ export default {
     },
   },
   setup() {
-    const { agentsList } = useAgentsList(true, true);
+    const { agentsList } = useAgentsList();
     return {
       agentsList,
     };
@@ -168,10 +168,10 @@ export default {
     },
   },
   mounted() {
-    this.$store.dispatch(
-      'inboxAssignableAgents/fetchAssignableOwners',
-      this.currentChat.inbox_id
-    );
+    this.$store.dispatch('inboxAssignableAgents/fetch', {
+      inboxIds: [this.currentChat.inbox_id],
+      includeAgentBots: true,
+    });
   },
   methods: {
     onSelfAssign() {

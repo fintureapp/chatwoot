@@ -10,21 +10,14 @@ import {
  * A composable function that provides a list of agents for assignment.
  *
  * @param {boolean} [includeNoneAgent=true] - Whether to include a 'None' agent option.
- * @param {boolean} [includeAgentBots=false] - Whether to include agent bots as assignment options.
  * @returns {Object} An object containing the agents list and assignable agents.
  */
-export function useAgentsList(
-  includeNoneAgent = true,
-  includeAgentBots = false
-) {
+export function useAgentsList(includeNoneAgent = true) {
   const { t } = useI18n();
   const currentUser = useMapGetter('getCurrentUser');
   const currentChat = useMapGetter('getSelectedChat');
   const currentAccountId = useMapGetter('getCurrentAccountId');
   const assignable = useMapGetter('inboxAssignableAgents/getAssignableAgents');
-  const assignableOwners = useMapGetter(
-    'inboxAssignableAgents/getAssignableOwners'
-  );
 
   const inboxId = computed(() => currentChat.value?.inbox_id);
   const isAgentSelected = computed(() => currentChat.value?.meta?.assignee);
@@ -49,20 +42,11 @@ export function useAgentsList(
     return inboxId.value ? assignable.value(inboxId.value) : [];
   });
 
-  const owners = computed(() => {
-    return includeAgentBots && inboxId.value
-      ? assignableOwners.value(inboxId.value)
-      : [];
-  });
-
   /**
    * @type {import('vue').ComputedRef<Array>}
    */
   const agentsList = computed(() => {
     const agents = assignableAgents.value || [];
-    const bots = includeAgentBots
-      ? owners.value.filter(owner => owner.assignee_type === 'AgentBot')
-      : [];
     const agentsByUpdatedPresence = getAgentsByUpdatedPresence(
       agents,
       currentUser.value,
@@ -76,7 +60,6 @@ export function useAgentsList(
     return [
       ...(includeNoneAgent && isAgentSelected.value ? [createNoneAgent()] : []),
       ...filteredAgentsByAvailability,
-      ...bots,
     ];
   });
 

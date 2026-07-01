@@ -38,21 +38,21 @@ describe('#actions', () => {
         [types.SET_INBOX_ASSIGNABLE_AGENTS_UI_FLAG, { isFetching: false }],
       ]);
     });
-  });
-
-  describe('#fetchAssignableOwners', () => {
-    it('stores assignable owners for the inbox', async () => {
+    it('can include Agent Bots for a single inbox', async () => {
       InboxesAPI.getAssignableAgents.mockResolvedValue({
         data: { payload: agentsData },
       });
 
-      await actions.fetchAssignableOwners({ commit }, 1);
+      await actions.fetch(
+        { commit },
+        { inboxIds: [1], includeAgentBots: true }
+      );
 
       expect(InboxesAPI.getAssignableAgents).toHaveBeenCalledWith(1, {
         includeAgentBots: true,
       });
       expect(commit).toHaveBeenCalledWith(types.SET_INBOX_ASSIGNABLE_AGENTS, {
-        inboxId: 1,
+        inboxId: '1',
         members: agentsData,
       });
     });

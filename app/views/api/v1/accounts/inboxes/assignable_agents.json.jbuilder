@@ -10,6 +10,7 @@ json.payload do
       json.partial! 'api/v1/models/agent_bot_slim', formats: [:json], resource: owner[:resource]
       json.assignee_type 'AgentBot'
       json.icon 'i-lucide-bot'
+      json.availability_status 'offline'
     end
   end
 end
