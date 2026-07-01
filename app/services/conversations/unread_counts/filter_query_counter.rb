@@ -11,6 +11,7 @@ class Conversations::UnreadCounts::FilterQueryCounter < Conversations::FilterSer
   NUMERIC_ATTRIBUTE_KEYS = %w[assignee_id inbox_id].freeze
   TEXT_FILTER_OPERATORS = %w[contains does_not_contain].freeze
   TYPED_DATA_TYPES = %w[boolean date number numeric].freeze
+  VALID_QUERY_OPERATORS = %w[AND OR].freeze
   VALUELESS_FILTER_OPERATORS = %w[is_present is_not_present].freeze
 
   def initialize(account:, user:, query:)
@@ -38,11 +39,27 @@ class Conversations::UnreadCounts::FilterQueryCounter < Conversations::FilterSer
   private
 
   def valid_query?
-    @params[:payload].is_a?(Array)
+    @params[:payload].is_a?(Array) && valid_query_operator_positions?
   end
 
   def database_cast_error?(error)
     DATABASE_CAST_ERROR_CLASS_NAMES.include?(error.cause&.class&.name)
+  end
+
+  def valid_query_operator_positions?
+    @params[:payload].each_with_index.all? do |query_hash, index|
+      query_operator_position_valid?(query_hash[:query_operator], last_query?(index))
+    end
+  end
+
+  def query_operator_position_valid?(query_operator, last_query)
+    return query_operator.blank? if last_query
+
+    VALID_QUERY_OPERATORS.include?(query_operator.to_s.upcase)
+  end
+
+  def last_query?(index)
+    index == @params[:payload].length - 1
   end
 
   def valid_typed_values?

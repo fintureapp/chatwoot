@@ -169,6 +169,21 @@ RSpec.describe Conversations::UnreadCounts::FilteredCounter do
     expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)).to be_nil
   end
 
+  it 'omits saved folders with trailing query operators' do
+    query = filter_query(attribute_key: 'status', values: ['open'])
+    query[:payload].first[:query_operator] = 'AND'
+    custom_filter = create(
+      :custom_filter,
+      account: account,
+      user: agent,
+      filter_type: :conversation,
+      query: query
+    )
+
+    expect(counter.perform[:folders]).to eq({})
+    expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)).to be_nil
+  end
+
   it 'omits saved folders with invalid typed values' do
     custom_filter = create(
       :custom_filter,
