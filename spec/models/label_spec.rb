@@ -96,6 +96,15 @@ RSpec.describe Label do
       expect(invalidator).to have_received(:user_visibility_changed!).with(user_id: other_user.id)
     end
 
+    it 'skips invalidation when a sidebar label is destroyed after its account has been deleted' do
+      label = create(:label, account: account, show_on_sidebar: true)
+      account.delete
+
+      orphaned_label = described_class.find(label.id)
+
+      expect { orphaned_label.destroy! }.not_to raise_error
+    end
+
     it 'does not invalidate filtered counts when sidebar visibility is unchanged' do
       label = create(:label, account: account, show_on_sidebar: false)
       allow(Conversations::UnreadCounts::FilteredCountInvalidator).to receive(:new).with(account).and_return(invalidator)

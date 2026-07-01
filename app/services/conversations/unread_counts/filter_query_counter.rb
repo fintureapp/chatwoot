@@ -1,4 +1,6 @@
 class Conversations::UnreadCounts::FilterQueryCounter < Conversations::FilterService
+  MALFORMED_QUERY_ERRORS = [NoMethodError, TypeError].freeze
+
   def initialize(account:, user:, query:)
     super(query.with_indifferent_access, user, account)
   end
@@ -8,6 +10,8 @@ class Conversations::UnreadCounts::FilterQueryCounter < Conversations::FilterSer
 
     validate_query_operator
     query_builder(@filters['conversations']).count
+  rescue *MALFORMED_QUERY_ERRORS
+    nil
   end
 
   def base_relation
