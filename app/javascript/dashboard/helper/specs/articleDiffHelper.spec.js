@@ -102,6 +102,18 @@ describe('articleDiffHelper', () => {
       ).toBe(true);
     });
 
+    it('surfaces an indented code block turning into a paragraph', () => {
+      const blocks = buildDiffBlocks(
+        '    curl example.com',
+        'curl example.com'
+      );
+      expect(blocks).toContainEqual({
+        type: 'removed',
+        md: '    curl example.com',
+      });
+      expect(blocks).toContainEqual({ type: 'added', md: 'curl example.com' });
+    });
+
     it('keeps spacing the renderer ignores as equal', () => {
       const blocks = buildDiffBlocks('a\nb', 'a \nb');
       expect(blocks.every(block => block.type === 'equal')).toBe(true);

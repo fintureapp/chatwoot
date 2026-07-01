@@ -116,11 +116,11 @@ useKeyboardEvents({ Escape: { action: close, allowOnFocusedInput: true } });
           <div class="flex flex-col gap-1 min-w-0">
             <div class="flex items-center gap-2">
               <span class="size-2 rounded-full bg-n-amber-9 shrink-0" />
-              <h3 class="text-lg font-semibold tracking-tight text-n-slate-12">
+              <h3 class="text-base font-medium leading-6 text-n-slate-12">
                 {{ t('HELP_CENTER.EDIT_ARTICLE_PAGE.DIFF_DIALOG.TITLE') }}
               </h3>
             </div>
-            <p class="text-sm leading-relaxed text-n-slate-11">
+            <p class="text-sm text-n-slate-11">
               {{ t('HELP_CENTER.EDIT_ARTICLE_PAGE.DIFF_DIALOG.DESCRIPTION') }}
             </p>
           </div>
@@ -128,8 +128,8 @@ useKeyboardEvents({ Escape: { action: close, allowOnFocusedInput: true } });
             icon="i-lucide-x"
             variant="ghost"
             color="slate"
-            size="xs"
-            class="shrink-0"
+            size="sm"
+            class="shrink-0 hover:text-n-slate-11"
             @click="close"
           />
         </header>

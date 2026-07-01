@@ -120,8 +120,8 @@ const splitBlocks = text => {
   let inList = false;
 
   const flush = () => {
-    const block = buffer.join('\n').trim();
-    if (block) blocks.push(block);
+    const block = buffer.join('\n');
+    if (block.trim()) blocks.push(block);
     buffer = [];
     inList = false;
   };
