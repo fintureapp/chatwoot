@@ -1,5 +1,11 @@
 class Conversations::UnreadCounts::FilterQueryCounter < Conversations::FilterService
   BOOLEAN_VALUES = %w[0 1 false f n no off on t true y yes].freeze
+  DATABASE_CAST_ERROR_CLASS_NAMES = %w[
+    PG::DatetimeFieldOverflow
+    PG::InvalidDatetimeFormat
+    PG::InvalidTextRepresentation
+    PG::NumericValueOutOfRange
+  ].freeze
   DAYS_BEFORE_FILTER_OPERATOR = 'days_before'.freeze
   MALFORMED_QUERY_ERRORS = [NoMethodError, TypeError].freeze
   NUMERIC_ATTRIBUTE_KEYS = %w[assignee_id inbox_id].freeze
@@ -18,6 +24,10 @@ class Conversations::UnreadCounts::FilterQueryCounter < Conversations::FilterSer
     query_builder(@filters['conversations']).count
   rescue *MALFORMED_QUERY_ERRORS
     nil
+  rescue ActiveRecord::StatementInvalid => e
+    raise unless database_cast_error?(e)
+
+    nil
   end
 
   def base_relation
@@ -28,6 +38,10 @@ class Conversations::UnreadCounts::FilterQueryCounter < Conversations::FilterSer
 
   def valid_query?
     @params[:payload].is_a?(Array)
+  end
+
+  def database_cast_error?(error)
+    DATABASE_CAST_ERROR_CLASS_NAMES.include?(error.cause&.class&.name)
   end
 
   def valid_typed_values?
