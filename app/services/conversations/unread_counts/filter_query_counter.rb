@@ -9,6 +9,7 @@ class Conversations::UnreadCounts::FilterQueryCounter < Conversations::FilterSer
   DAYS_BEFORE_FILTER_OPERATOR = 'days_before'.freeze
   MALFORMED_QUERY_ERRORS = [NoMethodError, TypeError].freeze
   NUMERIC_ATTRIBUTE_KEYS = %w[assignee_id inbox_id].freeze
+  TEXT_FILTER_OPERATORS = %w[contains does_not_contain].freeze
   TYPED_DATA_TYPES = %w[boolean date number numeric].freeze
   VALUELESS_FILTER_OPERATORS = %w[is_present is_not_present].freeze
 
@@ -50,6 +51,7 @@ class Conversations::UnreadCounts::FilterQueryCounter < Conversations::FilterSer
 
       data_type = validation_data_type(query_hash)
       next true if data_type.blank?
+      next false if text_filter_operator?(query_hash)
 
       valid_typed_values_for?(query_hash[:values], data_type, query_hash[:filter_operator])
     end
@@ -87,6 +89,10 @@ class Conversations::UnreadCounts::FilterQueryCounter < Conversations::FilterSer
     Array.wrap(values).all? do |value|
       valid_typed_value?(value, data_type, filter_operator)
     end
+  end
+
+  def text_filter_operator?(query_hash)
+    TEXT_FILTER_OPERATORS.include?(query_hash[:filter_operator])
   end
 
   def valid_typed_value?(value, data_type, filter_operator)

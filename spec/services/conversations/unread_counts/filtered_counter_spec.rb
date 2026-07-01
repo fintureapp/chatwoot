@@ -245,6 +245,26 @@ RSpec.describe Conversations::UnreadCounts::FilteredCounter do
     expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)).to be_nil
   end
 
+  it 'omits saved folders with text operators on typed custom attributes' do
+    create(
+      :custom_attribute_definition,
+      account: account,
+      attribute_model: :conversation_attribute,
+      attribute_key: 'budget',
+      attribute_display_type: :number
+    )
+    custom_filter = create(
+      :custom_filter,
+      account: account,
+      user: agent,
+      filter_type: :conversation,
+      query: filter_query(attribute_key: 'budget', filter_operator: 'contains', values: ['123'])
+    )
+
+    expect(counter.perform[:folders]).to eq({})
+    expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)).to be_nil
+  end
+
   it 'omits saved folders with invalid date custom attribute values' do
     create(
       :custom_attribute_definition,
