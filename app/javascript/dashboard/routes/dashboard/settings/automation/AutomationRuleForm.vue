@@ -3,6 +3,7 @@ import { ref, computed, h, useTemplateRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useOperators } from 'dashboard/components-next/filter/operators';
+import { getAttributeIcon } from 'dashboard/components-next/filter/helper/filterAttributeIcons';
 import ConditionRow from 'dashboard/components-next/filter/ConditionRow.vue';
 import AutomationActionInput from 'dashboard/components/widgets/AutomationActionInput.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
@@ -137,6 +138,7 @@ const filterTypes = computed(() => {
       };
     });
 
+    const attributeModel = attr.customAttributeType || 'standard';
     return {
       attributeKey: attr.key,
       value: attr.key,
@@ -146,7 +148,8 @@ const filterTypes = computed(() => {
       options,
       filterOperators,
       dataType: 'text',
-      attributeModel: attr.customAttributeType || 'standard',
+      attributeModel,
+      icon: getAttributeIcon({ attributeKey: attr.key, attributeModel }),
     };
   });
 });
@@ -315,6 +318,7 @@ defineExpose({ open, close });
               v-model:values="automation.conditions[i].values"
               :filter-types="filterTypes"
               :show-query-operator="false"
+              searchable-attributes
               @remove="removeFilter(i)"
             />
             <ConditionRow
@@ -328,6 +332,7 @@ defineExpose({ open, close });
               v-model:values="automation.conditions[i].values"
               :filter-types="filterTypes"
               show-query-operator
+              searchable-attributes
               @remove="removeFilter(i)"
             />
           </template>

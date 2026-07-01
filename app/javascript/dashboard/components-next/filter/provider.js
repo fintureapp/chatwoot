@@ -8,6 +8,7 @@ import {
   buildAttributesFilterTypes,
   CONVERSATION_ATTRIBUTES,
 } from './helper/filterHelper';
+import { groupFilterTypes } from './helper/filterAttributeIcons';
 import languages from 'dashboard/components/widgets/conversation/advancedFilterItems/languages.js';
 
 /**
@@ -287,5 +288,10 @@ export function useConversationFilterContext() {
     ...customFilterTypes.value,
   ]);
 
-  return { filterTypes };
+  // Same attributes, but grouped into sections with leading icons for the attribute picker.
+  const attributeFilterTypes = computed(() =>
+    groupFilterTypes(filterTypes.value, t)
+  );
+
+  return { filterTypes, attributeFilterTypes };
 }

@@ -78,6 +78,7 @@ export const buildAttributesFilterTypes = (
       attributeName: attr.attributeDisplayName,
       label: attr.attributeDisplayName,
       inputType: getCustomAttributeInputType(attr.attributeDisplayType),
+      attributeDisplayType: attr.attributeDisplayType,
       filterOperators: getOperatorTypes(attr.attributeDisplayType),
       options:
         attr.attributeDisplayType === 'list'
