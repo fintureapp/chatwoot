@@ -12,12 +12,13 @@ class Conversations::UnreadCounts::Listener < BaseListener
     account = message.account
     return unless account.feature_enabled?('conversation_unread_counts') || account.feature_enabled?(filtered_count_feature_flag)
 
-    invalidate_filtered_conversation(message.conversation)
+    conversation = message.conversation
+    invalidate_filtered_conversation(conversation)
 
-    return unless message.incoming?
-    return unless account.feature_enabled?('conversation_unread_counts')
+    return notify_filtered_count_change(conversation) unless message.incoming?
+    return notify_filtered_count_change(conversation) unless account.feature_enabled?('conversation_unread_counts')
 
-    refresh(message.conversation)
+    notify_filtered_count_change(conversation) unless refresh(conversation)
   end
 
   def conversation_status_changed(event)
