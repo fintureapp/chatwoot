@@ -188,6 +188,22 @@ RSpec.describe Conversations::UnreadCounts::Listener do
     expect(notifier).to have_received(:perform)
   end
 
+  it 'notifies clients when an assignee change only affects filtered counts' do
+    account.enable_features!(:conversation_unread_counts, :unread_count_for_filters)
+    allow(notifier).to receive(:perform).and_return(false)
+    allow(Rails.configuration.dispatcher).to receive(:dispatch)
+    changed_attributes = { assignee_id: [nil, 1] }
+    event = Events::Base.new('assignee.changed', Time.zone.now, conversation: conversation, changed_attributes: changed_attributes)
+
+    listener.assignee_changed(event)
+
+    expect(Rails.configuration.dispatcher).to have_received(:dispatch).with(
+      'conversation.unread_count_changed',
+      kind_of(Time),
+      conversation: conversation
+    )
+  end
+
   it 'invalidates filtered counts when a user is mentioned' do
     account.enable_features!(:unread_count_for_filters)
     user = create(:user, account: account)

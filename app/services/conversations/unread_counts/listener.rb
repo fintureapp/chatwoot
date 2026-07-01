@@ -47,7 +47,7 @@ class Conversations::UnreadCounts::Listener < BaseListener
   def assignee_changed(event)
     conversation, = extract_conversation_and_account(event)
     invalidate_filtered_conversation(conversation)
-    refresh(conversation, event.data[:changed_attributes])
+    notify_filtered_count_change(conversation) unless refresh(conversation, event.data[:changed_attributes])
   end
 
   def team_changed(event)
