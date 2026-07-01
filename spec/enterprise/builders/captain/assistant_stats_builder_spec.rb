@@ -120,6 +120,19 @@ RSpec.describe Captain::AssistantStatsBuilder do
       expect(described_class.new(assistant, '30').metrics[:reopen_rate][:current]).to eq(0.0)
     end
 
+    it 'counts an evaluated-path reopen when bot_resolved is skipped and the inference event is newer' do
+      # Prior human reply => create_bot_resolved_event skips conversation_bot_resolved, so the cohort
+      # only holds the inference event, which is dispatched a moment after the generic conversation_resolved
+      # that seeds the reopen's event_start_time. The match must use the reopen's actual reopen time.
+      create(:reporting_event, account: account, inbox: inbox, conversation: conversation,
+                               name: 'conversation_captain_inference_resolved',
+                               event_start_time: 6.days.ago, event_end_time: 6.days.ago + 1.second)
+      create(:reporting_event, account: account, inbox: inbox, conversation: conversation,
+                               name: 'conversation_opened', value: 120, event_start_time: 6.days.ago, event_end_time: 3.days.ago)
+
+      expect(described_class.new(assistant, '30').metrics[:reopen_rate][:current]).to eq(100.0)
+    end
+
     it 'counts both inference and time-based bot resolves in the denominator' do
       # conversation: inference-resolved and reopened
       create(:reporting_event, account: account, inbox: inbox, conversation: conversation,

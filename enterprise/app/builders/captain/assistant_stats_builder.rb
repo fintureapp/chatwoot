@@ -188,15 +188,17 @@ class Captain::AssistantStatsBuilder
   def reopen_rate(range)
     resolved_scope = account.reporting_events.where(name: RESOLVED_EVENT_NAMES, created_at: range,
                                                     conversation_id: handled_scope(range).select(:conversation_id))
-    # event_start_time on a reopen is the preceding resolve's timestamp. Join it to the conversation's
-    # own Captain resolves and keep only reopens at/after one of them, so a human resolve/reopen
-    # earlier in the same window isn't mistaken for a reopen-after-Captain-resolve.
+    # event_end_time on a reopen is when it actually reopened. Join it to the conversation's own
+    # Captain resolves and keep only reopens at/after one of them, so a human resolve/reopen earlier
+    # in the same window isn't mistaken for a reopen-after-Captain-resolve. (Comparing the reopen's
+    # start time instead would misfire: the inference event is dispatched just after the generic
+    # conversation_resolved that seeds event_start_time, so it can land after the reopen's start.)
     reopened = account.reporting_events
                       .where(name: 'conversation_opened')
                       .where('reporting_events.value > 0')
                       .joins("INNER JOIN (#{resolved_scope.to_sql}) resolves " \
                              'ON resolves.conversation_id = reporting_events.conversation_id ' \
-                             'AND reporting_events.event_start_time >= resolves.event_end_time')
+                             'AND reporting_events.event_end_time >= resolves.event_end_time')
                       .distinct.count('reporting_events.conversation_id')
     rate(reopened, resolved_scope.distinct.count(:conversation_id))
   end
