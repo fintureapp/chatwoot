@@ -205,6 +205,71 @@ describe('ActionCableConnector - Copilot Tests', () => {
       expect(unreadCountFetches()).toHaveLength(3);
     });
 
+    it('refetches filtered unread counts after account cache invalidation', () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
+
+      const cacheKeys = {
+        label: 'label-key',
+        inbox: 'inbox-key',
+        team: 'team-key',
+      };
+      const unreadCountFetches = () =>
+        mockDispatch.mock.calls.filter(
+          ([action]) => action === 'conversationUnreadCounts/get'
+        );
+
+      actionCable.onReceived({
+        event: 'account.cache_invalidated',
+        data: { account_id: 1, cache_keys: cacheKeys },
+      });
+
+      expect(mockDispatch).toHaveBeenCalledWith('labels/revalidate', {
+        newKey: cacheKeys.label,
+      });
+      expect(mockDispatch).toHaveBeenCalledWith('inboxes/revalidate', {
+        newKey: cacheKeys.inbox,
+      });
+      expect(mockDispatch).toHaveBeenCalledWith('teams/revalidate', {
+        newKey: cacheKeys.team,
+      });
+      expect(unreadCountFetches()).toHaveLength(1);
+
+      vi.advanceTimersByTime(30000);
+      expect(unreadCountFetches()).toHaveLength(2);
+    });
+
+    it('does not refetch unread counts after cache invalidation when filtered counts are disabled', () => {
+      vi.useFakeTimers();
+      store.$store.getters[
+        'accounts/isFeatureEnabledonAccount'
+      ].mockImplementation(
+        (_, featureFlag) =>
+          featureFlag === FEATURE_FLAGS.CONVERSATION_UNREAD_COUNTS
+      );
+
+      actionCable.onReceived({
+        event: 'account.cache_invalidated',
+        data: {
+          account_id: 1,
+          cache_keys: {
+            label: 'label-key',
+            inbox: 'inbox-key',
+            team: 'team-key',
+          },
+        },
+      });
+
+      expect(mockDispatch).not.toHaveBeenCalledWith(
+        'conversationUnreadCounts/get'
+      );
+
+      vi.advanceTimersByTime(30000);
+      expect(mockDispatch).not.toHaveBeenCalledWith(
+        'conversationUnreadCounts/get'
+      );
+    });
+
     it('does not refetch unread counts when unread count feature is disabled', () => {
       store.$store.getters[
         'accounts/isFeatureEnabledonAccount'

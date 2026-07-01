@@ -146,6 +146,10 @@ class ActionCableConnector extends BaseActionCableConnector {
   };
 
   onConversationUnreadCountChanged = () => {
+    this.refreshConversationUnreadCountsWithFilteredRetry();
+  };
+
+  refreshConversationUnreadCountsWithFilteredRetry = () => {
     this.throttledFetchConversationUnreadCounts();
     this.scheduleFilteredUnreadCountsRetry();
   };
@@ -335,6 +339,12 @@ class ActionCableConnector extends BaseActionCableConnector {
     this.app.$store.dispatch('labels/revalidate', { newKey: keys.label });
     this.app.$store.dispatch('inboxes/revalidate', { newKey: keys.inbox });
     this.app.$store.dispatch('teams/revalidate', { newKey: keys.team });
+
+    if (this.isFilteredUnreadCountsEnabled()) {
+      // Inbox/team/label visibility changes can change the accessible set used
+      // by filtered unread counts even when no conversation row changes.
+      this.refreshConversationUnreadCountsWithFilteredRetry();
+    }
   };
 
   onVoiceCallIncoming = data => {

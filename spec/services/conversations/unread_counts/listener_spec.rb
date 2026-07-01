@@ -88,6 +88,22 @@ RSpec.describe Conversations::UnreadCounts::Listener do
     end.to change { filtered_store.conversation_version(account.id) }.by(1)
   end
 
+  it 'notifies clients when a status change only affects filtered counts' do
+    account.enable_features!(:conversation_unread_counts, :unread_count_for_filters)
+    allow(notifier).to receive(:perform).and_return(false)
+    allow(Rails.configuration.dispatcher).to receive(:dispatch)
+    changed_attributes = { 'status' => %w[pending resolved] }
+    event = Events::Base.new('conversation.status_changed', Time.zone.now, conversation: conversation, changed_attributes: changed_attributes)
+
+    listener.conversation_status_changed(event)
+
+    expect(Rails.configuration.dispatcher).to have_received(:dispatch).with(
+      'conversation.unread_count_changed',
+      kind_of(Time),
+      conversation: conversation
+    )
+  end
+
   it 'refreshes unread counts when labels change' do
     changed_attributes = { label_list: [%w[old], %w[new]] }
     event = Events::Base.new('conversation.updated', Time.zone.now, conversation: conversation, changed_attributes: changed_attributes)
@@ -188,6 +204,22 @@ RSpec.describe Conversations::UnreadCounts::Listener do
     expect(notifier).to have_received(:perform)
   end
 
+  it 'notifies clients when an assignee change only affects filtered counts' do
+    account.enable_features!(:conversation_unread_counts, :unread_count_for_filters)
+    allow(notifier).to receive(:perform).and_return(false)
+    allow(Rails.configuration.dispatcher).to receive(:dispatch)
+    changed_attributes = { assignee_id: [nil, 1] }
+    event = Events::Base.new('assignee.changed', Time.zone.now, conversation: conversation, changed_attributes: changed_attributes)
+
+    listener.assignee_changed(event)
+
+    expect(Rails.configuration.dispatcher).to have_received(:dispatch).with(
+      'conversation.unread_count_changed',
+      kind_of(Time),
+      conversation: conversation
+    )
+  end
+
   it 'invalidates filtered counts when a user is mentioned' do
     account.enable_features!(:unread_count_for_filters)
     user = create(:user, account: account)
@@ -206,6 +238,22 @@ RSpec.describe Conversations::UnreadCounts::Listener do
 
     expect(Conversations::UnreadCounts::Notifier).to have_received(:new).with(conversation, changed_attributes: changed_attributes)
     expect(notifier).to have_received(:perform)
+  end
+
+  it 'notifies clients when a team change only affects filtered counts' do
+    account.enable_features!(:conversation_unread_counts, :unread_count_for_filters)
+    allow(notifier).to receive(:perform).and_return(false)
+    allow(Rails.configuration.dispatcher).to receive(:dispatch)
+    changed_attributes = { team_id: [nil, 1] }
+    event = Events::Base.new('team.changed', Time.zone.now, conversation: conversation, changed_attributes: changed_attributes)
+
+    listener.team_changed(event)
+
+    expect(Rails.configuration.dispatcher).to have_received(:dispatch).with(
+      'conversation.unread_count_changed',
+      kind_of(Time),
+      conversation: conversation
+    )
   end
 
   it 'invalidates filtered counts when a conversation is deleted' do

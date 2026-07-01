@@ -228,6 +228,125 @@ RSpec.describe Conversations::UnreadCounts::FilteredCounter do
     expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)).to be_nil
   end
 
+  it 'omits saved folders with invalid typed values' do
+    custom_filter = create(
+      :custom_filter,
+      account: account,
+      user: agent,
+      filter_type: :conversation,
+      query: filter_query(attribute_key: 'team_id', values: ['abc'])
+    )
+
+    expect(counter.perform[:folders]).to eq({})
+    expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)).to be_nil
+  end
+
+  it 'omits saved folders with invalid ID values' do
+    custom_filter = create(
+      :custom_filter,
+      account: account,
+      user: agent,
+      filter_type: :conversation,
+      query: filter_query(attribute_key: 'assignee_id', values: ['abc'])
+    )
+
+    expect(counter.perform[:folders]).to eq({})
+    expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)).to be_nil
+  end
+
+  it 'counts saved folders with display_id substring filters' do
+    conversation = create_visible_unread_conversation
+    create_visible_unread_conversation
+    custom_filter = create(
+      :custom_filter,
+      account: account,
+      user: agent,
+      filter_type: :conversation,
+      query: filter_query(attribute_key: 'display_id', filter_operator: 'contains', values: [conversation.display_id.to_s])
+    )
+
+    expect(counter.perform[:folders]).to eq(custom_filter.id.to_s => 1)
+    expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)[:count]).to eq(1)
+  end
+
+  it 'omits saved folders with invalid typed custom attribute values' do
+    create(
+      :custom_attribute_definition,
+      account: account,
+      attribute_model: :conversation_attribute,
+      attribute_key: 'budget',
+      attribute_display_type: :number
+    )
+    custom_filter = create(
+      :custom_filter,
+      account: account,
+      user: agent,
+      filter_type: :conversation,
+      query: filter_query(attribute_key: 'budget', values: ['abc'])
+    )
+
+    expect(counter.perform[:folders]).to eq({})
+    expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)).to be_nil
+  end
+
+  it 'omits saved folders with invalid date custom attribute values' do
+    create(
+      :custom_attribute_definition,
+      account: account,
+      attribute_model: :conversation_attribute,
+      attribute_key: 'renewal_on',
+      attribute_display_type: :date
+    )
+    custom_filter = create(
+      :custom_filter,
+      account: account,
+      user: agent,
+      filter_type: :conversation,
+      query: filter_query(attribute_key: 'renewal_on', values: ['not-a-date'])
+    )
+
+    expect(counter.perform[:folders]).to eq({})
+    expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)).to be_nil
+  end
+
+  it 'omits saved folders when stored custom attribute values cannot be cast' do
+    create(
+      :custom_attribute_definition,
+      account: account,
+      attribute_model: :conversation_attribute,
+      attribute_key: 'budget',
+      attribute_display_type: :number
+    )
+    query_counter = Conversations::UnreadCounts::FilterQueryCounter.new(
+      account: account,
+      user: agent,
+      query: filter_query(attribute_key: 'budget', filter_operator: 'is_present', values: [])
+    )
+    relation = instance_double(ActiveRecord::Relation)
+    cast_error = ActiveRecord::StatementInvalid.new('PG::InvalidTextRepresentation: invalid input syntax for type numeric')
+    allow(cast_error).to receive(:cause).and_return(PG::InvalidTextRepresentation.new('invalid input syntax for type numeric'))
+    allow(query_counter).to receive(:query_builder).and_return(relation)
+    allow(relation).to receive(:count).and_raise(cast_error)
+
+    expect(query_counter.perform).to be_nil
+  end
+
+  it 'counts saved folders with days_before date filters' do
+    old_conversation = create_visible_unread_conversation
+    old_conversation.update!(created_at: 8.days.ago)
+    create_visible_unread_conversation
+    custom_filter = create(
+      :custom_filter,
+      account: account,
+      user: agent,
+      filter_type: :conversation,
+      query: filter_query(attribute_key: 'created_at', filter_operator: 'days_before', values: [7])
+    )
+
+    expect(counter.perform[:folders]).to eq(custom_filter.id.to_s => 1)
+    expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)[:count]).to eq(1)
+  end
+
   def create_visible_unread_conversation(status: :open, agent_last_seen_at: 1.hour.ago, unattended: false)
     conversation = create_unread_conversation(account: account, inbox: visible_inbox)
     conversation.update!(
@@ -239,12 +358,12 @@ RSpec.describe Conversations::UnreadCounts::FilteredCounter do
     conversation
   end
 
-  def filter_query(attribute_key:, values:)
+  def filter_query(attribute_key:, values:, filter_operator: 'equal_to')
     {
       payload: [{
         attribute_key: attribute_key,
         attribute_model: 'standard',
-        filter_operator: 'equal_to',
+        filter_operator: filter_operator,
         values: values
       }]
     }
