@@ -43,14 +43,19 @@ const resolveTrendGood = (trendValue, direction) => {
   return direction === 'up' ? trendValue > 0 : trendValue < 0;
 };
 
-const metricFor = (statKey, formatValue, direction, absoluteTrend = false) => {
+// Trend units mirror the backend pack mode: a relative percent change ('%') for
+// :percent metrics, a percentage-point delta (' pts') for rate metrics packed as
+// :point, and a plain number for :absolute counts like conversation depth.
+const TREND_SUFFIX = { percent: '%', point: ' pts', absolute: '' };
+
+const metricFor = (statKey, formatValue, direction, trendKind = 'percent') => {
   const data = stats.value?.[statKey];
   if (!data) return { value: '—', trend: '', trendGood: null };
 
   const sign = data.trend > 0 ? '+' : '';
   return {
     value: formatValue(data.current),
-    trend: absoluteTrend ? `${sign}${data.trend}` : `${sign}${data.trend}%`,
+    trend: `${sign}${data.trend}${TREND_SUFFIX[trendKind]}`,
     trendGood: resolveTrendGood(data.trend, direction),
   };
 };
@@ -66,13 +71,13 @@ const metrics = computed(() => [
     key: 'autoResolution',
     label: t('CAPTAIN.OVERVIEW.METRICS.AUTO_RESOLUTION.LABEL'),
     hint: t('CAPTAIN.OVERVIEW.METRICS.AUTO_RESOLUTION.HINT'),
-    ...metricFor('auto_resolution_rate', v => `${v}%`, 'up'),
+    ...metricFor('auto_resolution_rate', v => `${v}%`, 'up', 'point'),
   },
   {
     key: 'handoff',
     label: t('CAPTAIN.OVERVIEW.METRICS.HANDOFF.LABEL'),
     hint: t('CAPTAIN.OVERVIEW.METRICS.HANDOFF.HINT'),
-    ...metricFor('handoff_rate', v => `${v}%`, 'down'),
+    ...metricFor('handoff_rate', v => `${v}%`, 'down', 'point'),
   },
   {
     key: 'hoursSaved',
@@ -84,13 +89,18 @@ const metrics = computed(() => [
     key: 'reopen',
     label: t('CAPTAIN.OVERVIEW.METRICS.REOPEN.LABEL'),
     hint: t('CAPTAIN.OVERVIEW.METRICS.REOPEN.HINT'),
-    ...metricFor('reopen_rate', v => `${v}%`, 'down'),
+    ...metricFor('reopen_rate', v => `${v}%`, 'down', 'point'),
   },
   {
     key: 'depth',
     label: t('CAPTAIN.OVERVIEW.METRICS.DEPTH.LABEL'),
     hint: t('CAPTAIN.OVERVIEW.METRICS.DEPTH.HINT'),
-    ...metricFor('conversation_depth', v => v.toFixed(1), 'neutral', true),
+    ...metricFor(
+      'conversation_depth',
+      v => v.toFixed(1),
+      'neutral',
+      'absolute'
+    ),
   },
 ]);
 </script>
