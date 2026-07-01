@@ -46,11 +46,16 @@ class Conversations::UnreadCounts::FilteredCountSnapshotResolver
   def build_with_lock(scope, lock_key, stale_payload, &)
     built_payload = nil
     lock_acquired = false
-    lock_manager.with_lock(lock_key, BUILD_LOCK_TTL) do
-      lock_acquired = true
-      built_payload = instrumentation.observe(:snapshot_build, account_id: account.id, snapshot_scope: scope, &)
+
+    begin
+      lock_manager.with_lock(lock_key, BUILD_LOCK_TTL) do
+        lock_acquired = true
+        built_payload = instrumentation.observe(:snapshot_build, account_id: account.id, snapshot_scope: scope, &)
+      end
+    ensure
+      instrumentation.increment(:build_lock, account_id: account.id, snapshot_scope: scope, acquired: lock_acquired)
     end
-    instrumentation.increment(:build_lock, account_id: account.id, snapshot_scope: scope, acquired: lock_acquired)
+
     lock_acquired ? built_payload : stale_payload
   end
 

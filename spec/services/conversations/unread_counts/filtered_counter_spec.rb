@@ -184,6 +184,37 @@ RSpec.describe Conversations::UnreadCounts::FilteredCounter do
     )
   end
 
+  it 'records acquired build locks when snapshot builds fail' do
+    error = StandardError.new('snapshot failed')
+    lock_manager = instance_double(Redis::LockManager)
+    resolver = Conversations::UnreadCounts::FilteredCountSnapshotResolver.new(
+      account: account,
+      now: now,
+      store: store,
+      lock_manager: lock_manager
+    )
+    state = Conversations::UnreadCounts::FilteredCountStore::SnapshotResult.new(status: :missing, payload: nil)
+
+    allow(lock_manager).to receive(:with_lock)
+      .with('lock-key', Conversations::UnreadCounts::FilteredCountSnapshotResolver::BUILD_LOCK_TTL)
+      .and_yield
+      .and_return(true)
+    allow(Conversations::UnreadCounts::FilteredCountInstrumentation).to receive(:observe) do |_operation, _attributes, &block|
+      block.call
+    end
+    allow(Conversations::UnreadCounts::FilteredCountInstrumentation).to receive(:increment)
+
+    expect do
+      resolver.resolve(scope: :built_in_filter, state: state, lock_key: 'lock-key', claim_refresh: -> { true }) { raise error }
+    end.to raise_error(error)
+    expect(Conversations::UnreadCounts::FilteredCountInstrumentation).to have_received(:increment).with(
+      :build_lock,
+      account_id: account.id,
+      snapshot_scope: :built_in_filter,
+      acquired: true
+    )
+  end
+
   def create_visible_unread_conversation(status: :open, agent_last_seen_at: 1.hour.ago, unattended: false)
     conversation = create_unread_conversation(account: account, inbox: visible_inbox)
     conversation.update!(
