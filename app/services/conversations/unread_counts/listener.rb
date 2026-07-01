@@ -12,12 +12,13 @@ class Conversations::UnreadCounts::Listener < BaseListener
     account = message.account
     return unless account.feature_enabled?('conversation_unread_counts') || account.feature_enabled?(filtered_count_feature_flag)
 
-    invalidate_filtered_conversation(message.conversation)
+    conversation = message.conversation
+    invalidate_filtered_conversation(conversation)
 
-    return unless message.incoming?
-    return unless account.feature_enabled?('conversation_unread_counts')
+    return notify_filtered_count_change(conversation) unless message.incoming?
+    return notify_filtered_count_change(conversation) unless account.feature_enabled?('conversation_unread_counts')
 
-    refresh(message.conversation)
+    notify_filtered_count_change(conversation) unless refresh(conversation)
   end
 
   def conversation_status_changed(event)
@@ -28,7 +29,10 @@ class Conversations::UnreadCounts::Listener < BaseListener
 
   def conversation_updated(event)
     conversation, = extract_conversation_and_account(event)
-    invalidate_filtered_conversation(conversation) if filtered_conversation_update_changed?(event.data[:changed_attributes])
+    if filtered_conversation_update_changed?(event.data[:changed_attributes])
+      invalidate_filtered_conversation(conversation)
+      notify_filtered_count_change(conversation)
+    end
     return unless label_changed?(event.data[:changed_attributes])
 
     refresh(conversation, event.data[:changed_attributes])
@@ -37,6 +41,7 @@ class Conversations::UnreadCounts::Listener < BaseListener
   def conversation_contact_changed(event)
     conversation, = extract_conversation_and_account(event)
     invalidate_filtered_conversation(conversation)
+    notify_filtered_count_change(conversation)
   end
 
   def assignee_changed(event)
@@ -125,6 +130,13 @@ class Conversations::UnreadCounts::Listener < BaseListener
 
   def invalidate_filtered_conversation(conversation)
     filtered_count_invalidator(conversation.account).conversation_changed!
+  end
+
+  def notify_filtered_count_change(conversation)
+    return unless conversation.account.feature_enabled?('conversation_unread_counts')
+    return unless conversation.account.feature_enabled?(filtered_count_feature_flag)
+
+    Rails.configuration.dispatcher.dispatch(CONVERSATION_UNREAD_COUNT_CHANGED, Time.zone.now, conversation: conversation)
   end
 
   def filtered_count_invalidator(account)

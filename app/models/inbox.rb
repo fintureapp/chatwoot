@@ -264,6 +264,8 @@ class Inbox < ApplicationRecord
   end
 
   def capture_filtered_unread_count_user_ids
+    return if account.blank?
+
     @filtered_unread_count_user_ids = (inbox_members.pluck(:user_id) + account.account_users.administrator.pluck(:user_id)).uniq
   end
 

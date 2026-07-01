@@ -6,9 +6,12 @@ class Api::V1::Accounts::Conversations::ParticipantsController < Api::V1::Accoun
   end
 
   def create
+    participant_ids_to_add = participants_to_be_added_ids
+
     ActiveRecord::Base.transaction do
-      @participants = participants_to_be_added_ids.map { |user_id| @conversation.conversation_participants.find_or_create_by(user_id: user_id) }
+      @participants = participant_ids_to_add.map { |user_id| @conversation.conversation_participants.find_or_create_by(user_id: user_id) }
     end
+    notify_unread_count_change if participant_ids_to_add.any?
   end
 
   def update
@@ -26,9 +29,12 @@ class Api::V1::Accounts::Conversations::ParticipantsController < Api::V1::Accoun
   end
 
   def destroy
+    participant_ids_to_remove = current_participant_ids & params[:user_ids]
+
     ActiveRecord::Base.transaction do
       params[:user_ids].map { |user_id| @conversation.conversation_participants.find_by(user_id: user_id)&.destroy }
     end
+    notify_unread_count_change if participant_ids_to_remove.any?
     head :ok
   end
 

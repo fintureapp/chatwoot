@@ -53,6 +53,21 @@ RSpec.describe Conversations::UnreadCounts::Listener do
     expect(Conversations::UnreadCounts::Notifier).not_to have_received(:new)
   end
 
+  it 'notifies clients when outgoing message activity changes filtered counts' do
+    account.enable_features!(:conversation_unread_counts, :unread_count_for_filters)
+    allow(Rails.configuration.dispatcher).to receive(:dispatch)
+    message = create(:message, account: account, inbox: conversation.inbox, conversation: conversation, message_type: :outgoing)
+    event = Events::Base.new('message.created', Time.zone.now, message: message)
+
+    listener.message_created(event)
+
+    expect(Rails.configuration.dispatcher).to have_received(:dispatch).with(
+      'conversation.unread_count_changed',
+      kind_of(Time),
+      conversation: conversation
+    )
+  end
+
   it 'refreshes unread counts when conversation status changes' do
     changed_attributes = { 'status' => %w[open resolved] }
     event = Events::Base.new('conversation.status_changed', Time.zone.now, conversation: conversation, changed_attributes: changed_attributes)
@@ -91,6 +106,20 @@ RSpec.describe Conversations::UnreadCounts::Listener do
       listener.conversation_updated(event)
     end.to change { filtered_store.conversation_version(account.id) }.by(1)
     expect(Conversations::UnreadCounts::Notifier).not_to have_received(:new)
+  end
+
+  it 'notifies clients when filtered conversation fields change' do
+    account.enable_features!(:conversation_unread_counts, :unread_count_for_filters)
+    allow(Rails.configuration.dispatcher).to receive(:dispatch)
+    event = Events::Base.new('conversation.updated', Time.zone.now, conversation: conversation, changed_attributes: { priority: [nil, 'high'] })
+
+    listener.conversation_updated(event)
+
+    expect(Rails.configuration.dispatcher).to have_received(:dispatch).with(
+      'conversation.unread_count_changed',
+      kind_of(Time),
+      conversation: conversation
+    )
   end
 
   it 'invalidates filtered counts when last activity time changes' do
@@ -133,6 +162,20 @@ RSpec.describe Conversations::UnreadCounts::Listener do
     expect do
       listener.conversation_contact_changed(event)
     end.to change { filtered_store.conversation_version(account.id) }.by(1)
+  end
+
+  it 'notifies clients when the conversation contact changes' do
+    account.enable_features!(:conversation_unread_counts, :unread_count_for_filters)
+    allow(Rails.configuration.dispatcher).to receive(:dispatch)
+    event = Events::Base.new('conversation.contact_changed', Time.zone.now, conversation: conversation)
+
+    listener.conversation_contact_changed(event)
+
+    expect(Rails.configuration.dispatcher).to have_received(:dispatch).with(
+      'conversation.unread_count_changed',
+      kind_of(Time),
+      conversation: conversation
+    )
   end
 
   it 'refreshes unread counts when assignee changes' do
