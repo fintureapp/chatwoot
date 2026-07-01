@@ -21,8 +21,7 @@ class ReportingEventListener < BaseListener
     )
 
     create_bot_resolved_event(conversation, reporting_event)
-    reporting_event.save!
-    safe_rollup(reporting_event)
+    persist_reporting_event(reporting_event)
   end
 
   def first_reply_created(event)
@@ -44,8 +43,7 @@ class ReportingEventListener < BaseListener
       **actor_attributes(actor_from_event(event) || message.sender)
     )
 
-    reporting_event.save!
-    safe_rollup(reporting_event)
+    persist_reporting_event(reporting_event)
   end
 
   def reply_created(event)
@@ -70,8 +68,7 @@ class ReportingEventListener < BaseListener
       event_end_time: message.created_at,
       **actor_attributes(actor_from_event(event) || message.sender)
     )
-    reporting_event.save!
-    safe_rollup(reporting_event)
+    persist_reporting_event(reporting_event)
   end
 
   def conversation_bot_handoff(event)
@@ -98,8 +95,7 @@ class ReportingEventListener < BaseListener
       event_end_time: event_end_time,
       **actor_attributes(actor_from_event(event))
     )
-    reporting_event.save!
-    safe_rollup(reporting_event)
+    persist_reporting_event(reporting_event)
   end
 
   def conversation_captain_inference_resolved(event)
@@ -159,14 +155,14 @@ class ReportingEventListener < BaseListener
       **event_attributes,
       **actor_attributes(actor)
     )
-    reporting_event.save!
+    persist_reporting_event(reporting_event, rollup: false)
   end
 
   def create_captain_inference_event(event, event_name)
     conversation = extract_conversation_and_account(event)[0]
     time_to_event = event.timestamp.to_i - conversation.created_at.to_i
 
-    ReportingEvent.create!(
+    reporting_event = ReportingEvent.new(
       name: event_name,
       value: time_to_event,
       account_id: conversation.account_id,
@@ -177,6 +173,7 @@ class ReportingEventListener < BaseListener
       event_end_time: event.timestamp,
       **actor_attributes(actor_from_event(event))
     )
+    persist_reporting_event(reporting_event, rollup: false)
   end
 
   def create_bot_resolved_event(conversation, reporting_event)
@@ -186,8 +183,19 @@ class ReportingEventListener < BaseListener
 
     bot_resolved_event = reporting_event.dup
     bot_resolved_event.name = 'conversation_bot_resolved'
-    bot_resolved_event.save!
-    safe_rollup(bot_resolved_event)
+    persist_reporting_event(bot_resolved_event)
+  end
+
+  def persist_reporting_event(reporting_event, rollup: true)
+    reporting_event.save!
+    safe_rollup(reporting_event) if rollup
+    update_captain_conversation_fact(reporting_event)
+  end
+
+  def update_captain_conversation_fact(reporting_event)
+    return unless defined?(Captain::ConversationFactUpdater)
+
+    Captain::ConversationFactUpdater.record_reporting_event(reporting_event)
   end
 
   def actor_from_event(event)

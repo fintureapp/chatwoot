@@ -45,3 +45,5 @@ class CsatSurveyResponse < ApplicationRecord
   # filter by rating value
   scope :filter_by_rating, ->(rating) { where(rating: rating) if rating.present? }
 end
+
+CsatSurveyResponse.include_mod_with('CsatSurveyResponse')

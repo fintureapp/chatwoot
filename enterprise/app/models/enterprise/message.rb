@@ -4,6 +4,8 @@ module Enterprise::Message
       has_one :call, class_name: 'Call', foreign_key: :message_id, dependent: :nullify, inverse_of: :message
 
       scope :with_call, -> { includes(call: [:contact, { inbox: :channel }]) }
+
+      after_create_commit :update_captain_conversation_fact
     end
   end
 
@@ -14,6 +16,10 @@ module Enterprise::Message
   end
 
   private
+
+  def update_captain_conversation_fact
+    Captain::ConversationFactUpdater.record_message(self)
+  end
 
   def mark_pending_conversation_as_open_for_human_response
     return unless captain_pending_conversation?
