@@ -181,12 +181,13 @@ class Captain::AssistantStatsBuilder
     values.map { |value| quote(value) }.join(', ')
   end
 
-  # Of the conversations Captain auto-resolved (inbox-based), the share reopened afterwards.
-  # Covers both the evaluated (inference) and time-based (bot) resolve paths so the
-  # denominator matches auto_resolution_rate.
+  # Of the conversations Captain auto-resolved, the share reopened afterwards. The cohort is
+  # derived from the assistant's handled conversations (not current inbox membership) so a later
+  # inbox reassignment doesn't drop historical resolves, and covers both the evaluated (inference)
+  # and time-based (bot) resolve paths so the denominator matches auto_resolution_rate.
   def reopen_rate(range)
-    resolved_scope = account.reporting_events.where(name: RESOLVED_EVENT_NAMES,
-                                                    inbox_id: assistant_inbox_ids, created_at: range)
+    resolved_scope = account.reporting_events.where(name: RESOLVED_EVENT_NAMES, created_at: range,
+                                                    conversation_id: handled_scope(range).select(:conversation_id))
     # event_start_time on a reopen is the preceding resolve's timestamp, so requiring it
     # within the window keeps only reopens that followed the in-window resolve, not an
     # earlier resolve/reopen cycle on the same conversation.
@@ -196,10 +197,6 @@ class Captain::AssistantStatsBuilder
                       .where('reporting_events.event_start_time >= ?', range.first)
                       .distinct.count(:conversation_id)
     rate(reopened, resolved_scope.distinct.count(:conversation_id))
-  end
-
-  def assistant_inbox_ids
-    @assistant_inbox_ids ||= assistant.inboxes.ids
   end
 
   # Approved/pending FAQ counts and the document total in a single round trip.
