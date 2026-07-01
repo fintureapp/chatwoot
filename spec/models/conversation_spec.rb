@@ -193,20 +193,36 @@ RSpec.describe Conversation do
         .with(described_class::CONVERSATION_UPDATED, kind_of(Time), conversation: conversation, notifiable_assignee_change: true)
     end
 
-    it 'will run conversation_updated event for conversation_language in additional_attributes' do
-      conversation.additional_attributes[:conversation_language] = 'es'
-      conversation.save!
+    it 'will run conversation_updated event for filterable additional_attributes' do
+      {
+        'browser_language' => 'es',
+        'conversation_language' => 'es',
+        'mail_subject' => 'Subject',
+        'referer' => 'https://www.chatwoot.com/'
+      }.each do |attribute_key, value|
+        conversation.update!(additional_attributes: { attribute_key => value })
+        changed_attributes = conversation.previous_changes
+        expect(Rails.configuration.dispatcher).to have_received(:dispatch)
+          .with(described_class::CONVERSATION_UPDATED, kind_of(Time), conversation: conversation, notifiable_assignee_change: false,
+                                                                      changed_attributes: changed_attributes, performed_by: nil)
+      end
+    end
+
+    it 'will run conversation_updated event when filterable additional_attributes are removed' do
+      conversation.update!(additional_attributes: { 'referer' => 'https://www.chatwoot.com/' })
+      conversation.update!(additional_attributes: {})
       changed_attributes = conversation.previous_changes
+
       expect(Rails.configuration.dispatcher).to have_received(:dispatch)
         .with(described_class::CONVERSATION_UPDATED, kind_of(Time), conversation: conversation, notifiable_assignee_change: false,
                                                                     changed_attributes: changed_attributes, performed_by: nil)
     end
 
-    it 'will not run conversation_updated event for bowser_language in additional_attributes' do
-      conversation.additional_attributes[:browser_language] = 'es'
+    it 'will not run conversation_updated event for non-filterable additional_attributes' do
+      conversation.additional_attributes[:source_id] = 'es'
       conversation.save!
       expect(Rails.configuration.dispatcher).not_to have_received(:dispatch)
-        .with(described_class::CONVERSATION_UPDATED, kind_of(Time), conversation: conversation, notifiable_assignee_change: true)
+        .with(described_class::CONVERSATION_UPDATED, kind_of(Time), anything)
     end
 
     it 'creates conversation activities' do
