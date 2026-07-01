@@ -85,17 +85,16 @@ export const actions = {
         conversationId,
         userIds,
       });
+      const shouldRefreshUnreadCounts = shouldRefreshConversationUnreadCounts(
+        { rootGetters, state: moduleState },
+        conversationId,
+        response.data
+      );
       commit(types.SET_CONVERSATION_PARTICIPANTS, {
         conversationId,
         data: response.data,
       });
-      if (
-        shouldRefreshConversationUnreadCounts(
-          { rootGetters, state: moduleState },
-          conversationId,
-          response.data
-        )
-      ) {
+      if (shouldRefreshUnreadCounts) {
         dispatch('conversationUnreadCounts/get', {}, { root: true });
       }
     } catch (error) {

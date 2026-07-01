@@ -62,14 +62,20 @@ describe('#actions', () => {
     });
     it('refetches unread counts when the current user starts watching', async () => {
       const dispatch = vi.fn();
+      const moduleState = { records: { 2: [] } };
+      const mutatingCommit = vi.fn((mutation, payload) => {
+        if (mutation === types.SET_CONVERSATION_PARTICIPANTS) {
+          moduleState.records[payload.conversationId] = payload.data;
+        }
+      });
       axios.patch.mockResolvedValue({ data: [{ id: 1 }] });
 
       await actions.update(
         {
-          commit,
+          commit: mutatingCommit,
           dispatch,
           rootGetters: conversationUnreadCountsEnabledRootGetters,
-          state: { records: { 2: [] } },
+          state: moduleState,
         },
         { conversationId: 2, userIds: [1] }
       );
