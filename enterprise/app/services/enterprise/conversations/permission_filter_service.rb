@@ -30,20 +30,15 @@ module Enterprise::Conversations::PermissionFilterService
   end
 
   def filter_participating_and_mine
-    mine = accessible_conversations.assigned_to(user)
-    participating = accessible_conversations
-                    .joins(:conversation_participants)
-                    .where(conversation_participants: { user_id: user.id })
+    conversations = accessible_conversations.left_joins(:conversation_participants)
 
-    Conversation.from("(#{mine.to_sql} UNION #{participating.to_sql}) as conversations")
-                .where(account_id: account.id)
+    conversations
+      .where(assignee_id: user.id)
+      .or(conversations.where(conversation_participants: { user_id: user.id }))
+      .distinct
   end
 
   def filter_unassigned_and_mine
-    mine = accessible_conversations.assigned_to(user)
-    unassigned = accessible_conversations.unassigned
-
-    Conversation.from("(#{mine.to_sql} UNION #{unassigned.to_sql}) as conversations")
-                .where(account_id: account.id)
+    accessible_conversations.where(assignee_id: [nil, user.id])
   end
 end
