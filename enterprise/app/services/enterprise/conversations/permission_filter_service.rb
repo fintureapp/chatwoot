@@ -23,10 +23,20 @@ module Enterprise::Conversations::PermissionFilterService
     elsif permissions.include?('conversation_unassigned_manage')
       filter_unassigned_and_mine
     elsif permissions.include?('conversation_participating_manage')
-      accessible_conversations.assigned_to(user)
+      filter_participating_and_mine
     else
       Conversation.none
     end
+  end
+
+  def filter_participating_and_mine
+    mine = accessible_conversations.assigned_to(user)
+    participating = accessible_conversations
+                    .joins(:conversation_participants)
+                    .where(conversation_participants: { user_id: user.id })
+
+    Conversation.from("(#{mine.to_sql} UNION #{participating.to_sql}) as conversations")
+                .where(account_id: account.id)
   end
 
   def filter_unassigned_and_mine
