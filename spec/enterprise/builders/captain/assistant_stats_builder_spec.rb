@@ -161,6 +161,26 @@ RSpec.describe Captain::AssistantStatsBuilder do
     end
   end
 
+  describe 'timezone anchoring' do
+    # 2026-07-01 03:00 UTC is still 2026-06-30 in any timezone behind UTC by 4h+.
+    it 'anchors the this_month window to the supplied offset, not UTC' do
+      travel_to(Time.utc(2026, 7, 1, 3, 0, 0)) do
+        utc = described_class.new(assistant, 'this_month').period
+        la = described_class.new(assistant, 'this_month', -7).period
+
+        expect(utc[:starts_on]).to eq(Date.new(2026, 7, 1))
+        expect(la[:starts_on]).to eq(Date.new(2026, 6, 1))
+        expect(la[:ends_on]).to eq(Date.new(2026, 6, 30))
+      end
+    end
+
+    it 'defaults to UTC when no offset is given' do
+      travel_to(Time.utc(2026, 7, 1, 3, 0, 0)) do
+        expect(described_class.new(assistant, 'this_month').period[:starts_on]).to eq(Date.new(2026, 7, 1))
+      end
+    end
+  end
+
   describe '#metrics knowledge' do
     before do
       create_list(:captain_assistant_response, 3, assistant: assistant, account: account, status: :approved)

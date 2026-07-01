@@ -44,11 +44,11 @@ class Api::V1::Accounts::Captain::AssistantsController < Api::V1::Accounts::Base
   end
 
   def stats
-    render json: Captain::AssistantStatsBuilder.new(@assistant, params[:range]).metrics
+    render json: Captain::AssistantStatsBuilder.new(@assistant, params[:range], params[:timezone_offset]).metrics
   end
 
   def summary
-    result = cached_or_generated_summary(Captain::AssistantStatsBuilder.new(@assistant, params[:range]))
+    result = cached_or_generated_summary(Captain::AssistantStatsBuilder.new(@assistant, params[:range], params[:timezone_offset]))
 
     if result[:error]
       render json: { error: result[:error] }, status: :unprocessable_content
