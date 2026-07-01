@@ -40,6 +40,7 @@ class Conversations::UnreadCounts::Listener < BaseListener
   def conversation_contact_changed(event)
     conversation, = extract_conversation_and_account(event)
     invalidate_filtered_conversation(conversation)
+    notify_filtered_count_change(conversation)
   end
 
   def assignee_changed(event)

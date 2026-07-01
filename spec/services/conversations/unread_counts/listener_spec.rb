@@ -149,6 +149,20 @@ RSpec.describe Conversations::UnreadCounts::Listener do
     end.to change { filtered_store.conversation_version(account.id) }.by(1)
   end
 
+  it 'notifies clients when the conversation contact changes' do
+    account.enable_features!(:conversation_unread_counts, :unread_count_for_filters)
+    allow(Rails.configuration.dispatcher).to receive(:dispatch)
+    event = Events::Base.new('conversation.contact_changed', Time.zone.now, conversation: conversation)
+
+    listener.conversation_contact_changed(event)
+
+    expect(Rails.configuration.dispatcher).to have_received(:dispatch).with(
+      'conversation.unread_count_changed',
+      kind_of(Time),
+      conversation: conversation
+    )
+  end
+
   it 'refreshes unread counts when assignee changes' do
     changed_attributes = { assignee_id: [nil, 1] }
     event = Events::Base.new('assignee.changed', Time.zone.now, conversation: conversation, changed_attributes: changed_attributes)
