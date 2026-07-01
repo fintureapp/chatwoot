@@ -265,6 +265,22 @@ RSpec.describe Conversations::UnreadCounts::Listener do
     end.to change { filtered_store.conversation_version(account.id) }.by(1)
   end
 
+  it 'notifies clients when a deleted conversation only affects filtered counts' do
+    account.enable_features!(:conversation_unread_counts, :unread_count_for_filters)
+    conversation_data = deleted_conversation_data(conversation)
+    allow(Rails.configuration.dispatcher).to receive(:dispatch)
+
+    listener.conversation_deleted(Events::Base.new('conversation.deleted', Time.zone.now, conversation_data: conversation_data))
+
+    expect(Rails.configuration.dispatcher).to have_received(:dispatch).with(
+      'conversation.unread_count_changed',
+      kind_of(Time),
+      conversation_data: conversation_data.stringify_keys
+    )
+  ensure
+    store.clear_account!(account.id)
+  end
+
   it 'removes unread count memberships when a conversation is deleted' do
     account.enable_features!(:conversation_unread_counts)
     label = create(:label, account: account)

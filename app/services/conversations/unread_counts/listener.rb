@@ -67,9 +67,15 @@ class Conversations::UnreadCounts::Listener < BaseListener
     return if conversation_data.blank?
 
     account = Account.find_by(id: conversation_data[:account_id])
+    return if account.blank?
+
     filtered_count_invalidator(account).conversation_changed!
-    return unless account&.feature_enabled?('conversation_unread_counts')
-    return unless remove_deleted_conversation(account, conversation_data)
+    return unless account.feature_enabled?('conversation_unread_counts')
+
+    unless remove_deleted_conversation(account, conversation_data)
+      notify_deleted_filtered_count_change(account, conversation_data)
+      return
+    end
 
     Rails.configuration.dispatcher.dispatch(CONVERSATION_UNREAD_COUNT_CHANGED, Time.zone.now, conversation_data: conversation_data.to_h)
   end
@@ -137,6 +143,12 @@ class Conversations::UnreadCounts::Listener < BaseListener
     return unless conversation.account.feature_enabled?(filtered_count_feature_flag)
 
     Rails.configuration.dispatcher.dispatch(CONVERSATION_UNREAD_COUNT_CHANGED, Time.zone.now, conversation: conversation)
+  end
+
+  def notify_deleted_filtered_count_change(account, conversation_data)
+    return unless account.feature_enabled?(filtered_count_feature_flag)
+
+    Rails.configuration.dispatcher.dispatch(CONVERSATION_UNREAD_COUNT_CHANGED, Time.zone.now, conversation_data: conversation_data.to_h)
   end
 
   def filtered_count_invalidator(account)
