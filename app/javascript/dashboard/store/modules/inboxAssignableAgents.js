@@ -47,7 +47,9 @@ export const actions = {
   async fetchAssignableOwners({ commit }, inboxId) {
     const {
       data: { payload },
-    } = await InboxesAPI.getAssignableOwners(inboxId);
+    } = await InboxesAPI.getAssignableAgents(inboxId, {
+      includeAgentBots: true,
+    });
     commit(types.SET_INBOX_ASSIGNABLE_OWNERS, {
       inboxId,
       owners: payload,

@@ -18,12 +18,9 @@ class Api::V1::Accounts::InboxesController < Api::V1::Accounts::BaseController
 
   # Deprecated: This API will be removed in 2.7.0
   def assignable_agents
-    @assignable_agents = @inbox.assignable_agents
-  end
-
-  def assignable_owners
-    @assignable_agents = @inbox.assignable_agents.select(&:confirmed?)
-    @agent_bots = AgentBot.accessible_to(Current.account)
+    @include_agent_bots = ActiveModel::Type::Boolean.new.cast(params[:include_agent_bots])
+    @assignable_agents = @include_agent_bots ? @inbox.assignable_agents.select(&:confirmed?) : @inbox.assignable_agents
+    @agent_bots = AgentBot.accessible_to(Current.account) if @include_agent_bots
   end
 
   def campaigns

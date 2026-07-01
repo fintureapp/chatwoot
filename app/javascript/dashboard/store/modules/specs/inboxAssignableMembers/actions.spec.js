@@ -42,13 +42,15 @@ describe('#actions', () => {
 
   describe('#fetchAssignableOwners', () => {
     it('stores assignable owners for the inbox', async () => {
-      InboxesAPI.getAssignableOwners.mockResolvedValue({
+      InboxesAPI.getAssignableAgents.mockResolvedValue({
         data: { payload: agentsData },
       });
 
       await actions.fetchAssignableOwners({ commit }, 1);
 
-      expect(InboxesAPI.getAssignableOwners).toHaveBeenCalledWith(1);
+      expect(InboxesAPI.getAssignableAgents).toHaveBeenCalledWith(1, {
+        includeAgentBots: true,
+      });
       expect(commit).toHaveBeenCalledWith(types.SET_INBOX_ASSIGNABLE_OWNERS, {
         inboxId: 1,
         owners: agentsData,
