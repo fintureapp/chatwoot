@@ -172,6 +172,39 @@ describe('ActionCableConnector - Copilot Tests', () => {
       expect(unreadCountFetches()).toHaveLength(2);
     });
 
+    it('reschedules mentioned unread count retries for later invalidations', () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
+
+      const unreadCountFetches = () =>
+        mockDispatch.mock.calls.filter(
+          ([action]) => action === 'conversationUnreadCounts/get'
+        );
+
+      actionCable.onReceived({
+        event: 'conversation.mentioned',
+        data: { id: 1, account_id: 1 },
+      });
+
+      vi.advanceTimersByTime(5000);
+      expect(unreadCountFetches()).toHaveLength(1);
+
+      vi.advanceTimersByTime(10000);
+      actionCable.onReceived({
+        event: 'conversation.mentioned',
+        data: { id: 1, account_id: 1 },
+      });
+
+      vi.advanceTimersByTime(5000);
+      expect(unreadCountFetches()).toHaveLength(2);
+
+      vi.advanceTimersByTime(10000);
+      expect(unreadCountFetches()).toHaveLength(2);
+
+      vi.advanceTimersByTime(15000);
+      expect(unreadCountFetches()).toHaveLength(3);
+    });
+
     it('does not refetch unread counts when unread count feature is disabled', () => {
       store.$store.getters[
         'accounts/isFeatureEnabledonAccount'

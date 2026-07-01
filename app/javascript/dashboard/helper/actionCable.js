@@ -187,7 +187,8 @@ class ActionCableConnector extends BaseActionCableConnector {
     );
     this.scheduleUnreadCountsFetchAfter(
       'mentionUnreadCountsRetryTimer',
-      FILTERED_UNREAD_COUNTS_REFRESH_RETRY_MS
+      FILTERED_UNREAD_COUNTS_REFRESH_RETRY_MS,
+      { reset: true }
     );
   };
 
@@ -198,12 +199,21 @@ class ActionCableConnector extends BaseActionCableConnector {
     // refresh window opens.
     this.scheduleUnreadCountsFetchAfter(
       'filteredUnreadCountsRetryTimer',
-      FILTERED_UNREAD_COUNTS_REFRESH_RETRY_MS
+      FILTERED_UNREAD_COUNTS_REFRESH_RETRY_MS,
+      { reset: true }
     );
   };
 
-  scheduleUnreadCountsFetchAfter = (timerName, delay) => {
-    if (this[timerName]) return;
+  scheduleUnreadCountsFetchAfter = (
+    timerName,
+    delay,
+    { reset = false } = {}
+  ) => {
+    if (this[timerName]) {
+      if (!reset) return;
+
+      clearTimeout(this[timerName]);
+    }
 
     this[timerName] = setTimeout(() => {
       this[timerName] = null;
