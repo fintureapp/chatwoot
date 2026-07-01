@@ -1,5 +1,6 @@
 class Conversations::UnreadCounts::FilterQueryCounter < Conversations::FilterService
   MALFORMED_QUERY_ERRORS = [NoMethodError, TypeError].freeze
+  NUMERIC_ATTRIBUTE_KEYS = %w[assignee_id inbox_id].freeze
   NUMERIC_DATA_TYPES = %w[number numeric].freeze
   VALUELESS_FILTER_OPERATORS = %w[is_present is_not_present].freeze
 
@@ -31,16 +32,21 @@ class Conversations::UnreadCounts::FilterQueryCounter < Conversations::FilterSer
     @params[:payload].all? do |query_hash|
       next true if VALUELESS_FILTER_OPERATORS.include?(query_hash[:filter_operator])
 
-      data_type = @filters.dig('conversations', query_hash[:attribute_key], 'data_type').to_s.downcase
-      next true unless NUMERIC_DATA_TYPES.include?(data_type)
+      attribute_key = query_hash[:attribute_key]
+      data_type = @filters.dig('conversations', attribute_key, 'data_type').to_s.downcase
+      next true unless numeric_filter?(attribute_key, data_type)
 
       valid_numeric_values?(query_hash[:values], data_type)
     end
   end
 
+  def numeric_filter?(attribute_key, data_type)
+    NUMERIC_ATTRIBUTE_KEYS.include?(attribute_key) || NUMERIC_DATA_TYPES.include?(data_type)
+  end
+
   def valid_numeric_values?(values, data_type)
     Array.wrap(values).all? do |value|
-      data_type == 'number' ? Integer(value.to_s, exception: false) : BigDecimal(value.to_s, exception: false)
+      data_type == 'numeric' ? BigDecimal(value.to_s, exception: false) : Integer(value.to_s, exception: false)
     end
   end
 

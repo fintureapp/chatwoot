@@ -182,6 +182,19 @@ RSpec.describe Conversations::UnreadCounts::FilteredCounter do
     expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)).to be_nil
   end
 
+  it 'omits saved folders with invalid ID values' do
+    custom_filter = create(
+      :custom_filter,
+      account: account,
+      user: agent,
+      filter_type: :conversation,
+      query: filter_query(attribute_key: 'assignee_id', values: ['abc'])
+    )
+
+    expect(counter.perform[:folders]).to eq({})
+    expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)).to be_nil
+  end
+
   def create_visible_unread_conversation(status: :open, agent_last_seen_at: 1.hour.ago, unattended: false)
     conversation = create_unread_conversation(account: account, inbox: visible_inbox)
     conversation.update!(
