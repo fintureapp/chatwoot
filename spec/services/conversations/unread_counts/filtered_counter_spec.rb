@@ -250,6 +250,22 @@ RSpec.describe Conversations::UnreadCounts::FilteredCounter do
     expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)).to be_nil
   end
 
+  it 'counts saved folders with days_before date filters' do
+    old_conversation = create_visible_unread_conversation
+    old_conversation.update!(created_at: 8.days.ago)
+    create_visible_unread_conversation
+    custom_filter = create(
+      :custom_filter,
+      account: account,
+      user: agent,
+      filter_type: :conversation,
+      query: filter_query(attribute_key: 'created_at', filter_operator: 'days_before', values: [7])
+    )
+
+    expect(counter.perform[:folders]).to eq(custom_filter.id.to_s => 1)
+    expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)[:count]).to eq(1)
+  end
+
   def create_visible_unread_conversation(status: :open, agent_last_seen_at: 1.hour.ago, unattended: false)
     conversation = create_unread_conversation(account: account, inbox: visible_inbox)
     conversation.update!(

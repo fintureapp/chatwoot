@@ -1,5 +1,6 @@
 class Conversations::UnreadCounts::FilterQueryCounter < Conversations::FilterService
   BOOLEAN_VALUES = %w[0 1 false f n no off on t true y yes].freeze
+  DAYS_BEFORE_FILTER_OPERATOR = 'days_before'.freeze
   MALFORMED_QUERY_ERRORS = [NoMethodError, TypeError].freeze
   NUMERIC_ATTRIBUTE_KEYS = %w[assignee_id inbox_id].freeze
   TYPED_DATA_TYPES = %w[boolean date number numeric].freeze
@@ -36,7 +37,7 @@ class Conversations::UnreadCounts::FilterQueryCounter < Conversations::FilterSer
       data_type = validation_data_type(query_hash)
       next true if data_type.blank?
 
-      valid_typed_values_for?(query_hash[:values], data_type)
+      valid_typed_values_for?(query_hash[:values], data_type, query_hash[:filter_operator])
     end
   end
 
@@ -67,17 +68,19 @@ class Conversations::UnreadCounts::FilterQueryCounter < Conversations::FilterSer
     self.class::ATTRIBUTE_TYPES[custom_attribute&.attribute_display_type].to_s
   end
 
-  def valid_typed_values_for?(values, data_type)
+  def valid_typed_values_for?(values, data_type, filter_operator)
     Array.wrap(values).all? do |value|
-      valid_typed_value?(value, data_type)
+      valid_typed_value?(value, data_type, filter_operator)
     end
   end
 
-  def valid_typed_value?(value, data_type)
+  def valid_typed_value?(value, data_type, filter_operator)
     case data_type
     when 'boolean'
       BOOLEAN_VALUES.include?(value.to_s.downcase)
     when 'date'
+      return Integer(value.to_s, exception: false).present? if filter_operator == DAYS_BEFORE_FILTER_OPERATOR
+
       Date.iso8601(value.to_s).present?
     when 'numeric'
       BigDecimal(value.to_s, exception: false).present?
