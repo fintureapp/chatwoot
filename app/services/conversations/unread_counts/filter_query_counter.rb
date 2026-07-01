@@ -1,5 +1,7 @@
 class Conversations::UnreadCounts::FilterQueryCounter < Conversations::FilterService
   MALFORMED_QUERY_ERRORS = [NoMethodError, TypeError].freeze
+  NUMERIC_DATA_TYPES = %w[number numeric].freeze
+  VALUELESS_FILTER_OPERATORS = %w[is_present is_not_present].freeze
 
   def initialize(account:, user:, query:)
     super(query.with_indifferent_access, user, account)
@@ -7,6 +9,7 @@ class Conversations::UnreadCounts::FilterQueryCounter < Conversations::FilterSer
 
   def perform
     return unless valid_query?
+    return unless valid_typed_values?
 
     validate_query_operator
     query_builder(@filters['conversations']).count
@@ -22,6 +25,23 @@ class Conversations::UnreadCounts::FilterQueryCounter < Conversations::FilterSer
 
   def valid_query?
     @params[:payload].is_a?(Array)
+  end
+
+  def valid_typed_values?
+    @params[:payload].all? do |query_hash|
+      next true if VALUELESS_FILTER_OPERATORS.include?(query_hash[:filter_operator])
+
+      data_type = @filters.dig('conversations', query_hash[:attribute_key], 'data_type').to_s.downcase
+      next true unless NUMERIC_DATA_TYPES.include?(data_type)
+
+      valid_numeric_values?(query_hash[:values], data_type)
+    end
+  end
+
+  def valid_numeric_values?(values, data_type)
+    Array.wrap(values).all? do |value|
+      data_type == 'number' ? Integer(value.to_s, exception: false) : BigDecimal(value.to_s, exception: false)
+    end
   end
 
   def unread_conversations
