@@ -4,6 +4,8 @@ import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 import ConversationInboxApi from '../../api/inbox/conversation';
 
+const FILTERED_UNREAD_COUNTS_REFRESH_RETRY_MS = 30000;
+
 const state = {
   records: {},
   uiFlags: {
@@ -32,6 +34,14 @@ const hasCurrentUser = (participants, currentUserId) =>
   (Array.isArray(participants) ? participants : []).some(
     participant => participant.id === currentUserId
   );
+
+const refreshConversationUnreadCounts = dispatch => {
+  dispatch('conversationUnreadCounts/get', {}, { root: true });
+  setTimeout(
+    () => dispatch('conversationUnreadCounts/get', {}, { root: true }),
+    FILTERED_UNREAD_COUNTS_REFRESH_RETRY_MS
+  );
+};
 
 const shouldRefreshConversationUnreadCounts = (
   { rootGetters, state: moduleState },
@@ -95,7 +105,7 @@ export const actions = {
         data: response.data,
       });
       if (shouldRefreshUnreadCounts) {
-        dispatch('conversationUnreadCounts/get', {}, { root: true });
+        refreshConversationUnreadCounts(dispatch);
       }
     } catch (error) {
       throwErrorMessage(error);

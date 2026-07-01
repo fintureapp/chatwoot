@@ -7,6 +7,11 @@ const commit = vi.fn();
 global.axios = axios;
 vi.mock('axios');
 
+afterEach(() => {
+  vi.clearAllTimers();
+  vi.useRealTimers();
+});
+
 const conversationUnreadCountsEnabledRootGetters = {
   getCurrentAccountId: 1,
   getCurrentUserID: 1,
@@ -61,6 +66,7 @@ describe('#actions', () => {
       ]);
     });
     it('refetches unread counts when the current user starts watching', async () => {
+      vi.useFakeTimers();
       const dispatch = vi.fn();
       const moduleState = { records: { 2: [] } };
       const mutatingCommit = vi.fn((mutation, payload) => {
@@ -85,6 +91,12 @@ describe('#actions', () => {
         {},
         { root: true }
       );
+
+      vi.advanceTimersByTime(29999);
+      expect(dispatch).toHaveBeenCalledTimes(1);
+
+      vi.advanceTimersByTime(1);
+      expect(dispatch).toHaveBeenCalledTimes(2);
     });
     it('does not refetch unread counts when another watcher changes', async () => {
       const dispatch = vi.fn();
