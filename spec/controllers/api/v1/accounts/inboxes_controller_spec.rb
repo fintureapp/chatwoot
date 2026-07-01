@@ -255,6 +255,7 @@ RSpec.describe 'Inboxes API', type: :request do
 
         it 'returns assignable agents and accessible agent bots' do
           get "/api/v1/accounts/#{account.id}/inboxes/#{inbox.id}/assignable_agents",
+              params: { include_agent_bots: true },
               headers: admin.create_new_auth_token,
               as: :json
 

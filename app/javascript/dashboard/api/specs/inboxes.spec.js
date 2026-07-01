@@ -39,9 +39,10 @@ describe('#InboxesAPI', () => {
     });
 
     it('#getAssignableAgents', () => {
-      inboxesAPI.getAssignableAgents(2);
+      inboxesAPI.getAssignableAgents(2, { includeAgentBots: true });
       expect(axiosMock.get).toHaveBeenCalledWith(
-        '/api/v1/inboxes/2/assignable_agents'
+        '/api/v1/inboxes/2/assignable_agents',
+        { params: { include_agent_bots: true } }
       );
     });
 
