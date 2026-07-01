@@ -52,6 +52,15 @@ RSpec.describe Captain::AssistantStatsBuilder do
       expect(metrics[:handoff_rate][:current]).to eq(50.0)
     end
 
+    it 'excludes resolution events that fall outside the current window' do
+      create(:reporting_event, account: account, conversation: current_convo_a,
+                               name: 'conversation_captain_inference_resolved', created_at: 60.days.ago)
+
+      metrics = described_class.new(assistant, '30').metrics
+
+      expect(metrics[:auto_resolution_rate][:current]).to eq(0.0)
+    end
+
     it 'computes conversation depth as public replies per handled conversation' do
       depth = described_class.new(assistant, '30').metrics[:conversation_depth]
 
@@ -66,6 +75,76 @@ RSpec.describe Captain::AssistantStatsBuilder do
       depth = described_class.new(assistant, '30').metrics[:conversation_depth]
 
       expect(depth[:current]).to eq(1.0)
+    end
+  end
+
+  describe 'range handling' do
+    it 'accepts the allowed day and named ranges' do
+      %w[7 30 90 this_month last_month].each do |allowed|
+        expect(described_class.new(assistant, allowed).range).to eq(allowed)
+      end
+    end
+
+    it 'falls back to the default range for values outside the allowed set' do
+      expect(described_class.new(assistant, '365000').range).to eq('30')
+      expect(described_class.new(assistant, 'bogus').range).to eq('30')
+      expect(described_class.new(assistant, nil).range).to eq('30')
+    end
+  end
+
+  describe '#metrics reopen_rate' do
+    # A conversation the assistant handled (messaged) inside the current 30-day window.
+    let(:conversation) { create(:conversation, account: account, inbox: inbox) }
+
+    before do
+      create(:message, account: account, inbox: inbox, conversation: conversation,
+                       sender: assistant, message_type: :outgoing, private: false, created_at: 8.days.ago)
+    end
+
+    it 'counts a reopen that happened after the captain resolve' do
+      create(:reporting_event, account: account, inbox: inbox, conversation: conversation,
+                               name: 'conversation_bot_resolved', event_start_time: 6.days.ago, event_end_time: 6.days.ago)
+      create(:reporting_event, account: account, inbox: inbox, conversation: conversation,
+                               name: 'conversation_opened', value: 120, event_start_time: 6.days.ago, event_end_time: 4.days.ago)
+
+      expect(described_class.new(assistant, '30').metrics[:reopen_rate][:current]).to eq(100.0)
+    end
+
+    it 'ignores a human resolve/reopen that happened before the captain resolve' do
+      # Earlier resolve/reopen cycle, then Captain resolves later in the same window.
+      create(:reporting_event, account: account, inbox: inbox, conversation: conversation,
+                               name: 'conversation_opened', value: 120, event_start_time: 20.days.ago, event_end_time: 18.days.ago)
+      create(:reporting_event, account: account, inbox: inbox, conversation: conversation,
+                               name: 'conversation_bot_resolved', event_start_time: 5.days.ago, event_end_time: 5.days.ago)
+
+      expect(described_class.new(assistant, '30').metrics[:reopen_rate][:current]).to eq(0.0)
+    end
+
+    it 'counts both inference and time-based bot resolves in the denominator' do
+      # conversation: inference-resolved and reopened
+      create(:reporting_event, account: account, inbox: inbox, conversation: conversation,
+                               name: 'conversation_captain_inference_resolved', event_start_time: 6.days.ago, event_end_time: 6.days.ago)
+      create(:reporting_event, account: account, inbox: inbox, conversation: conversation,
+                               name: 'conversation_opened', value: 120, event_start_time: 6.days.ago, event_end_time: 4.days.ago)
+      # other: time-based bot-resolved, never reopened
+      other = create(:conversation, account: account, inbox: inbox)
+      create(:message, account: account, inbox: inbox, conversation: other,
+                       sender: assistant, message_type: :outgoing, private: false, created_at: 8.days.ago)
+      create(:reporting_event, account: account, inbox: inbox, conversation: other,
+                               name: 'conversation_bot_resolved', event_start_time: 6.days.ago, event_end_time: 6.days.ago)
+
+      expect(described_class.new(assistant, '30').metrics[:reopen_rate][:current]).to eq(50.0)
+    end
+
+    it 'derives the cohort from handled conversations, not current inbox membership' do
+      create(:reporting_event, account: account, inbox: inbox, conversation: conversation,
+                               name: 'conversation_captain_inference_resolved', event_start_time: 6.days.ago, event_end_time: 6.days.ago)
+      create(:reporting_event, account: account, inbox: inbox, conversation: conversation,
+                               name: 'conversation_opened', value: 120, event_start_time: 6.days.ago, event_end_time: 4.days.ago)
+      # The assistant is later removed from the inbox; the cohort must still resolve via handled messages.
+      CaptainInbox.where(captain_assistant: assistant).delete_all
+
+      expect(described_class.new(assistant, '30').metrics[:reopen_rate][:current]).to eq(100.0)
     end
   end
 
