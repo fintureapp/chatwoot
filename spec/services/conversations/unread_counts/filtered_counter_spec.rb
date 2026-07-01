@@ -280,6 +280,32 @@ RSpec.describe Conversations::UnreadCounts::FilteredCounter do
     expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)).to be_nil
   end
 
+  it 'omits saved folders with invalid label values' do
+    custom_filter = create(
+      :custom_filter,
+      account: account,
+      user: agent,
+      filter_type: :conversation,
+      query: filter_query(attribute_key: 'labels', values: [1])
+    )
+
+    expect(counter.perform[:folders]).to eq({})
+    expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)).to be_nil
+  end
+
+  it 'omits saved folders with invalid text values' do
+    custom_filter = create(
+      :custom_filter,
+      account: account,
+      user: agent,
+      filter_type: :conversation,
+      query: filter_query(attribute_key: 'mail_subject', values: [1])
+    )
+
+    expect(counter.perform[:folders]).to eq({})
+    expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)).to be_nil
+  end
+
   it 'omits saved folders with invalid date custom attribute values' do
     create(
       :custom_attribute_definition,

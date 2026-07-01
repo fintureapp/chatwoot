@@ -9,9 +9,11 @@ class Conversations::UnreadCounts::FilterQueryCounter < Conversations::FilterSer
   DAYS_BEFORE_FILTER_OPERATOR = 'days_before'.freeze
   MALFORMED_QUERY_ERRORS = [NoMethodError, TypeError].freeze
   NUMERIC_ATTRIBUTE_KEYS = %w[assignee_id inbox_id].freeze
+  TEXT_DATA_TYPES = %w[labels link text text_case_insensitive].freeze
   TEXT_FILTER_OPERATORS = %w[contains does_not_contain].freeze
   TYPED_DATA_TYPES = %w[boolean date number numeric].freeze
   VALID_QUERY_OPERATORS = %w[AND OR].freeze
+  VALIDATION_DATA_TYPES = (TEXT_DATA_TYPES + TYPED_DATA_TYPES).freeze
   VALUELESS_FILTER_OPERATORS = %w[is_present is_not_present].freeze
 
   def initialize(account:, user:, query:)
@@ -68,7 +70,7 @@ class Conversations::UnreadCounts::FilterQueryCounter < Conversations::FilterSer
 
       data_type = validation_data_type(query_hash)
       next true if data_type.blank?
-      next false if text_filter_operator?(query_hash)
+      next false if text_filter_operator?(query_hash) && TYPED_DATA_TYPES.include?(data_type)
 
       valid_typed_values_for?(query_hash[:values], data_type, query_hash[:filter_operator])
     end
@@ -80,7 +82,7 @@ class Conversations::UnreadCounts::FilterQueryCounter < Conversations::FilterSer
 
     return nil if text_search_on_display_id?(query_hash)
     return 'number' if NUMERIC_ATTRIBUTE_KEYS.include?(attribute_key)
-    return data_type if TYPED_DATA_TYPES.include?(data_type)
+    return data_type if VALIDATION_DATA_TYPES.include?(data_type)
 
     nil
   end
@@ -122,6 +124,8 @@ class Conversations::UnreadCounts::FilterQueryCounter < Conversations::FilterSer
       Date.iso8601(value.to_s).present?
     when 'numeric'
       BigDecimal(value.to_s, exception: false).present?
+    when *TEXT_DATA_TYPES
+      value.is_a?(String)
     else
       Integer(value.to_s, exception: false).present?
     end
