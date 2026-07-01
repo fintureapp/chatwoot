@@ -41,6 +41,18 @@ RSpec.describe Inbox do
     it_behaves_like 'avatarable'
   end
 
+  describe 'account teardown' do
+    it 'destroys an orphaned inbox after its account has been deleted' do
+      account = create(:account)
+      inbox = create(:inbox, account: account)
+      account.delete
+
+      orphaned_inbox = described_class.find(inbox.id)
+
+      expect { orphaned_inbox.destroy! }.not_to raise_error
+    end
+  end
+
   describe '#add_members' do
     let(:inbox) { FactoryBot.create(:inbox) }
 

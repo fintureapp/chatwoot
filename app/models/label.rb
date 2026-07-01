@@ -70,6 +70,8 @@ class Label < ApplicationRecord
   end
 
   def invalidate_filtered_unread_count_visibility
+    return if account.blank?
+
     invalidator = ::Conversations::UnreadCounts::FilteredCountInvalidator.new(account)
     account.account_users.find_each { |account_user| invalidator.user_visibility_changed!(user_id: account_user.user_id) }
   end
