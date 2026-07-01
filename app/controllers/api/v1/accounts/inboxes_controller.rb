@@ -19,8 +19,9 @@ class Api::V1::Accounts::InboxesController < Api::V1::Accounts::BaseController
   # Deprecated: This API will be removed in 2.7.0
   def assignable_agents
     # TODO: Remove this opt-in once mobile clients support AgentBot assignees in this payload.
+    include_agent_bots = ActiveModel::Type::Boolean.new.cast(params[:include_agent_bots])
     @assignable_agents = @inbox.assignable_agents
-    @agent_bots = include_agent_bots? ? AgentBot.accessible_to(Current.account) : []
+    @agent_bots = include_agent_bots ? AgentBot.accessible_to(Current.account) : []
   end
 
   def campaigns
@@ -90,10 +91,6 @@ class Api::V1::Accounts::InboxesController < Api::V1::Accounts::BaseController
 
   def fetch_agent_bot
     @agent_bot = AgentBot.accessible_to(Current.account).find(params[:agent_bot]) if params[:agent_bot]
-  end
-
-  def include_agent_bots?
-    ActiveModel::Type::Boolean.new.cast(params[:include_agent_bots])
   end
 
   def create_channel

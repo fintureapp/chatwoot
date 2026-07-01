@@ -59,14 +59,10 @@ export function useAgentsList(
    * @type {import('vue').ComputedRef<Array>}
    */
   const agentsList = computed(() => {
-    const agents = includeAgentBots
-      ? owners.value.filter(
-          owner => owner.assignee_type === 'User' && owner.confirmed
-        )
-      : assignableAgents.value || [];
-    const bots = owners.value.filter(
-      owner => owner.assignee_type === 'AgentBot'
-    );
+    const agents = assignableAgents.value || [];
+    const bots = includeAgentBots
+      ? owners.value.filter(owner => owner.assignee_type === 'AgentBot')
+      : [];
     const agentsByUpdatedPresence = getAgentsByUpdatedPresence(
       agents,
       currentUser.value,

@@ -3,7 +3,6 @@ import InboxesAPI from '../../api/inboxes';
 
 const state = {
   records: {},
-  ownerRecords: {},
   uiFlags: {
     isFetching: false,
   },
@@ -12,7 +11,6 @@ const state = {
 export const types = {
   SET_INBOX_ASSIGNABLE_AGENTS_UI_FLAG: 'SET_INBOX_ASSIGNABLE_AGENTS_UI_FLAG',
   SET_INBOX_ASSIGNABLE_AGENTS: 'SET_INBOX_ASSIGNABLE_AGENTS',
-  SET_INBOX_ASSIGNABLE_OWNERS: 'SET_INBOX_ASSIGNABLE_OWNERS',
 };
 
 export const getters = {
@@ -21,7 +19,7 @@ export const getters = {
     const verifiedAgents = allAgents.filter(record => record.confirmed);
     return verifiedAgents;
   },
-  getAssignableOwners: $state => inboxId => $state.ownerRecords[inboxId] || [],
+  getAssignableOwners: $state => inboxId => $state.records[inboxId] || [],
   getUIFlags($state) {
     return $state.uiFlags;
   },
@@ -50,9 +48,9 @@ export const actions = {
     } = await InboxesAPI.getAssignableAgents(inboxId, {
       includeAgentBots: true,
     });
-    commit(types.SET_INBOX_ASSIGNABLE_OWNERS, {
+    commit(types.SET_INBOX_ASSIGNABLE_AGENTS, {
       inboxId,
-      owners: payload,
+      members: payload,
     });
   },
 };
@@ -68,12 +66,6 @@ export const mutations = {
     $state.records = {
       ...$state.records,
       [inboxId]: members,
-    };
-  },
-  [types.SET_INBOX_ASSIGNABLE_OWNERS]: ($state, { inboxId, owners }) => {
-    $state.ownerRecords = {
-      ...$state.ownerRecords,
-      [inboxId]: owners,
     };
   },
 };

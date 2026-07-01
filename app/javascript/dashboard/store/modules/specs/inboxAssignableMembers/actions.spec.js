@@ -51,9 +51,9 @@ describe('#actions', () => {
       expect(InboxesAPI.getAssignableAgents).toHaveBeenCalledWith(1, {
         includeAgentBots: true,
       });
-      expect(commit).toHaveBeenCalledWith(types.SET_INBOX_ASSIGNABLE_OWNERS, {
+      expect(commit).toHaveBeenCalledWith(types.SET_INBOX_ASSIGNABLE_AGENTS, {
         inboxId: 1,
-        owners: agentsData,
+        members: agentsData,
       });
     });
   });

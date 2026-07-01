@@ -13,16 +13,4 @@ describe('#mutations', () => {
       expect(state.records).toEqual({ 1: agentsData });
     });
   });
-
-  describe('#SET_INBOX_ASSIGNABLE_OWNERS', () => {
-    it('adds inbox owners to ownerRecords', () => {
-      const state = { ownerRecords: {} };
-      mutations[types.SET_INBOX_ASSIGNABLE_OWNERS](state, {
-        owners: [...agentsData],
-        inboxId: 1,
-      });
-
-      expect(state.ownerRecords).toEqual({ 1: agentsData });
-    });
-  });
 });
