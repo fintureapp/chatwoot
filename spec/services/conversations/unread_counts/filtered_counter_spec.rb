@@ -195,6 +195,21 @@ RSpec.describe Conversations::UnreadCounts::FilteredCounter do
     expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)).to be_nil
   end
 
+  it 'counts saved folders with display_id substring filters' do
+    conversation = create_visible_unread_conversation
+    create_visible_unread_conversation
+    custom_filter = create(
+      :custom_filter,
+      account: account,
+      user: agent,
+      filter_type: :conversation,
+      query: filter_query(attribute_key: 'display_id', filter_operator: 'contains', values: [conversation.display_id.to_s])
+    )
+
+    expect(counter.perform[:folders]).to eq(custom_filter.id.to_s => 1)
+    expect(store.filter_count(account_id: account.id, filter_id: custom_filter.id)[:count]).to eq(1)
+  end
+
   def create_visible_unread_conversation(status: :open, agent_last_seen_at: 1.hour.ago, unattended: false)
     conversation = create_unread_conversation(account: account, inbox: visible_inbox)
     conversation.update!(
@@ -206,12 +221,12 @@ RSpec.describe Conversations::UnreadCounts::FilteredCounter do
     conversation
   end
 
-  def filter_query(attribute_key:, values:)
+  def filter_query(attribute_key:, values:, filter_operator: 'equal_to')
     {
       payload: [{
         attribute_key: attribute_key,
         attribute_model: 'standard',
-        filter_operator: 'equal_to',
+        filter_operator: filter_operator,
         values: values
       }]
     }
