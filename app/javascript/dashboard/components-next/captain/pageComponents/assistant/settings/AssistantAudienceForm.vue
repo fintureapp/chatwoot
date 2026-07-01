@@ -2,6 +2,7 @@
 import { ref, watch, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
+import RadioCard from 'dashboard/components-next/radioCard/RadioCard.vue';
 import AudienceGroup from './audience/AudienceGroup.vue';
 import { useAudienceFilterTypes } from './audience/useAudienceFilterTypes.js';
 
@@ -29,6 +30,7 @@ const hasConditions = node =>
 const defaultRoot = () => ({ id: nextId(), operator: 'and', conditions: [] });
 
 const root = ref(defaultRoot());
+const mode = ref('everyone');
 
 const findOption = (filterType, value) =>
   filterType?.options?.find(option => String(option.id) === String(value));
@@ -106,11 +108,13 @@ const serializeNode = node => {
 const groupRef = useTemplateRef('groupRef');
 
 const handleSubmit = () => {
-  if (!groupRef.value.validate()) return;
+  const isSpecific = mode.value === 'specific';
+  if (isSpecific && !groupRef.value.validate()) return;
 
-  const audience = root.value.conditions.length
-    ? serializeNode(root.value)
-    : null;
+  const audience =
+    isSpecific && root.value.conditions.length
+      ? serializeNode(root.value)
+      : null;
 
   emit('submit', {
     config: {
@@ -123,20 +127,42 @@ const handleSubmit = () => {
 watch(
   () => props.assistant,
   newAssistant => {
-    if (newAssistant) root.value = hydrateRoot(newAssistant.config?.audience);
+    if (!newAssistant) return;
+    const audience = newAssistant.config?.audience;
+    root.value = hydrateRoot(audience);
+    mode.value = audience ? 'specific' : 'everyone';
   },
   { immediate: true }
 );
 </script>
 
 <template>
-  <div class="flex flex-col gap-6">
-    <AudienceGroup
-      ref="groupRef"
-      v-model="root"
-      is-root
-      :filter-types="filterTypes"
-    />
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-3">
+      <RadioCard
+        id="everyone"
+        :label="t('CAPTAIN.ASSISTANTS.FORM.AUDIENCE.EVERYONE.LABEL')"
+        :description="t('CAPTAIN.ASSISTANTS.FORM.AUDIENCE.EVERYONE.DESC')"
+        :is-active="mode === 'everyone'"
+        @select="mode = 'everyone'"
+      />
+      <RadioCard
+        id="specific"
+        :label="t('CAPTAIN.ASSISTANTS.FORM.AUDIENCE.SPECIFIC.LABEL')"
+        :description="t('CAPTAIN.ASSISTANTS.FORM.AUDIENCE.SPECIFIC.DESC')"
+        :is-active="mode === 'specific'"
+        @select="mode = 'specific'"
+      >
+        <AudienceGroup
+          v-if="mode === 'specific'"
+          ref="groupRef"
+          v-model="root"
+          is-root
+          class="w-full mt-2"
+          :filter-types="filterTypes"
+        />
+      </RadioCard>
+    </div>
     <div>
       <Button
         :label="t('CAPTAIN.ASSISTANTS.FORM.UPDATE')"
