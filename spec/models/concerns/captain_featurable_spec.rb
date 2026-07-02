@@ -58,11 +58,6 @@ RSpec.describe CaptainFeaturable do
   end
 
   describe 'model accessor methods' do
-    it 'sets GPT-5.2 as the default assistant model for new accounts' do
-      expect(account.captain_models).to eq('assistant' => 'gpt-5.2')
-      expect(account.captain_assistant_model).to eq('gpt-5.2')
-    end
-
     context 'when no models are explicitly configured' do
       before do
         account.update!(captain_models: nil)

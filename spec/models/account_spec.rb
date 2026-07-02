@@ -50,6 +50,21 @@ RSpec.describe Account do
     end
   end
 
+  describe 'captain defaults for new accounts' do
+    it 'enables Captain V2 and stores the default assistant model' do
+      InstallationConfig.find_or_initialize_by(name: 'ACCOUNT_LEVEL_FEATURE_DEFAULTS').update!(
+        value: Featurable::FEATURE_LIST,
+        locked: true
+      )
+
+      account = create(:account)
+
+      expect(account).to be_feature_enabled('captain_integration')
+      expect(account).to be_feature_enabled('captain_integration_v2')
+      expect(account.captain_models).to eq('assistant' => 'gpt-5.2')
+    end
+  end
+
   describe 'conversation unread counts feature flag' do
     let(:account) { create(:account) }
     let(:inbox) { create(:inbox, account: account) }
@@ -335,11 +350,6 @@ RSpec.describe Account do
 
   describe 'captain_preferences' do
     let(:account) { create(:account) }
-
-    it 'sets GPT-5.2 as the default assistant model for new accounts' do
-      expect(account.captain_models).to eq('assistant' => 'gpt-5.2')
-      expect(account.captain_preferences[:models]['assistant']).to eq('gpt-5.2')
-    end
 
     describe 'with no saved preferences' do
       before do
