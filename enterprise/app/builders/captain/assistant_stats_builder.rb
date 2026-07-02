@@ -8,21 +8,19 @@
 class Captain::AssistantStatsBuilder
   RESOLVED_EVENT_NAMES = %w[conversation_captain_inference_resolved conversation_bot_resolved].freeze
   HANDOFF_EVENT_NAMES = %w[conversation_captain_inference_handoff conversation_bot_handoff].freeze
-  DEFAULT_RANGE = '30'.freeze
-  ALLOWED_RANGES = %w[7 30 90 this_month last_month].freeze
 
-  attr_reader :assistant, :account, :range
+  attr_reader :assistant, :account
+
+  delegate :range, :period, to: :window
 
   # `range` is either a day count ('7', '30', '90') or a named period
-  # ('this_month', 'last_month'). The previous window mirrors the current one:
-  # the preceding N days for day ranges, or the preceding month for month ranges.
-  # `timezone_offset` is the viewer's UTC offset in hours (as the reports API sends
-  # it), so month/day boundaries anchor to the viewer's day rather than UTC.
-  def initialize(assistant, range = DEFAULT_RANGE, timezone_offset = nil)
+  # ('this_month', 'last_month'). `timezone_offset` is the viewer's UTC offset in
+  # hours (as the reports API sends it), so month/day boundaries anchor to the
+  # viewer's day rather than UTC. Both windows are resolved by AssistantStatsWindow.
+  def initialize(assistant, range = Captain::AssistantStatsWindow::DEFAULT_RANGE, timezone_offset = nil)
     @assistant = assistant
     @account = assistant.account
-    @range = ALLOWED_RANGES.include?(range.to_s) ? range.to_s : DEFAULT_RANGE
-    @timezone = ActiveSupport::TimeZone[timezone_offset.to_f] || Time.zone
+    @window = Captain::AssistantStatsWindow.new(range, timezone_offset)
   end
 
   def metrics
@@ -34,13 +32,17 @@ class Captain::AssistantStatsBuilder
     build_metrics(current, previous)
   end
 
-  # Human-readable description of the period the metrics cover, for grounding the
-  # LLM summary in real dates.
-  def period
-    { label: period_label, starts_on: current_range.first.to_date, ends_on: current_range.last.to_date }
+  private
+
+  attr_reader :window
+
+  def current_range
+    window.current
   end
 
-  private
+  def previous_range
+    window.previous
+  end
 
   def build_metrics(current, previous)
     {
@@ -52,53 +54,6 @@ class Captain::AssistantStatsBuilder
       conversation_depth: pack(current[:depth], previous[:depth], :absolute),
       knowledge: knowledge
     }
-  end
-
-  def period_label
-    { 'this_month' => 'this month', 'last_month' => 'last month' }[range.to_s] || "the last #{range.to_i} days"
-  end
-
-  def current_range
-    resolved_ranges[:current]
-  end
-
-  def previous_range
-    resolved_ranges[:previous]
-  end
-
-  def resolved_ranges
-    @resolved_ranges ||= case range.to_s
-                         when 'this_month' then this_month_ranges
-                         when 'last_month' then last_month_ranges
-                         else day_ranges
-                         end
-  end
-
-  # Current time anchored to the viewer's timezone, so calendar boundaries land on
-  # the viewer's day instead of UTC's.
-  def now
-    @now ||= Time.current.in_time_zone(@timezone)
-  end
-
-  def this_month_ranges
-    start = now.beginning_of_month
-    elapsed = now - start
-    previous_start = start - 1.month
-    # Clamp to the previous month's end so a longer current month can't pull the
-    # comparison window into the current month and double-count its rows.
-    previous_end = [previous_start + elapsed, previous_start.end_of_month].min
-    { current: start..now, previous: previous_start..previous_end }
-  end
-
-  def last_month_ranges
-    start = (now - 1.month).beginning_of_month
-    previous_start = start - 1.month
-    { current: start..start.end_of_month, previous: previous_start..previous_start.end_of_month }
-  end
-
-  def day_ranges
-    days = range.to_i
-    { current: (now - days.days)..now, previous: (now - (2 * days).days)..(now - days.days) }
   end
 
   # Combines the per-window message counts and reply time with the reporting-event metrics for one window.
