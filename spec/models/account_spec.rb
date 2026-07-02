@@ -336,7 +336,16 @@ RSpec.describe Account do
   describe 'captain_preferences' do
     let(:account) { create(:account) }
 
+    it 'sets GPT-5.2 as the default assistant model for new accounts' do
+      expect(account.captain_models).to eq('assistant' => 'gpt-5.2')
+      expect(account.captain_preferences[:models]['assistant']).to eq('gpt-5.2')
+    end
+
     describe 'with no saved preferences' do
+      before do
+        account.update!(captain_models: nil)
+      end
+
       it 'returns defaults from llm.yml' do
         prefs = account.captain_preferences
 

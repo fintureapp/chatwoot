@@ -3,7 +3,12 @@
 module CaptainFeaturable
   extend ActiveSupport::Concern
 
+  DEFAULT_CAPTAIN_MODELS = {
+    'assistant' => 'gpt-5.2'
+  }.freeze
+
   included do
+    before_validation :set_default_captain_models, on: :create
     before_validation :normalize_captain_models
     validate :validate_captain_models
 
@@ -29,6 +34,12 @@ module CaptainFeaturable
   end
 
   private
+
+  def set_default_captain_models
+    existing_models = captain_models.is_a?(Hash) ? captain_models.compact_blank : {}
+
+    self.captain_models = DEFAULT_CAPTAIN_MODELS.merge(existing_models)
+  end
 
   def captain_models_with_defaults
     Llm::Models.feature_keys.index_with do |feature_key|
