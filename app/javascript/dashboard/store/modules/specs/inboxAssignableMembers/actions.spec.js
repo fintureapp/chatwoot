@@ -1,12 +1,10 @@
 import axios from 'axios';
-import InboxesAPI from 'dashboard/api/inboxes';
 import { actions, types } from '../../inboxAssignableAgents';
 import agentsData from './fixtures';
 
 const commit = vi.fn();
 global.axios = axios;
 vi.mock('axios');
-vi.mock('dashboard/api/inboxes');
 
 describe('#actions', () => {
   beforeEach(() => {
@@ -19,6 +17,12 @@ describe('#actions', () => {
         data: { payload: agentsData },
       });
       await actions.fetch({ commit }, [1]);
+      expect(axios.get).toHaveBeenCalledWith('/api/v1/assignable_agents', {
+        params: {
+          inbox_ids: [1],
+          include_agent_bots: true,
+        },
+      });
       expect(commit.mock.calls).toEqual([
         [types.SET_INBOX_ASSIGNABLE_AGENTS_UI_FLAG, { isFetching: true }],
         [
@@ -30,31 +34,11 @@ describe('#actions', () => {
     });
     it('sends correct actions if API is error', async () => {
       axios.get.mockRejectedValue({ message: 'Incorrect header' });
-      await expect(actions.fetch({ commit }, { inboxId: 1 })).rejects.toThrow(
-        Error
-      );
+      await expect(actions.fetch({ commit }, [1])).rejects.toThrow(Error);
       expect(commit.mock.calls).toEqual([
         [types.SET_INBOX_ASSIGNABLE_AGENTS_UI_FLAG, { isFetching: true }],
         [types.SET_INBOX_ASSIGNABLE_AGENTS_UI_FLAG, { isFetching: false }],
       ]);
-    });
-    it('can include Agent Bots for a single inbox', async () => {
-      InboxesAPI.getAssignableAgents.mockResolvedValue({
-        data: { payload: agentsData },
-      });
-
-      await actions.fetch(
-        { commit },
-        { inboxIds: [1], includeAgentBots: true }
-      );
-
-      expect(InboxesAPI.getAssignableAgents).toHaveBeenCalledWith(1, {
-        includeAgentBots: true,
-      });
-      expect(commit).toHaveBeenCalledWith(types.SET_INBOX_ASSIGNABLE_AGENTS, {
-        inboxId: '1',
-        members: agentsData,
-      });
     });
   });
 });

@@ -167,12 +167,6 @@ export default {
       return false;
     },
   },
-  mounted() {
-    this.$store.dispatch('inboxAssignableAgents/fetch', {
-      inboxIds: [this.currentChat.inbox_id],
-      includeAgentBots: true,
-    });
-  },
   methods: {
     onSelfAssign() {
       const {

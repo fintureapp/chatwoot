@@ -1,5 +1,4 @@
 import AssignableAgentsAPI from '../../api/assignableAgents';
-import InboxesAPI from '../../api/inboxes';
 
 const state = {
   records: {},
@@ -27,17 +26,12 @@ export const getters = {
 };
 
 export const actions = {
-  async fetch({ commit }, request) {
-    const inboxIds = Array.isArray(request) ? request : request.inboxIds;
+  async fetch({ commit }, inboxIds) {
     commit(types.SET_INBOX_ASSIGNABLE_AGENTS_UI_FLAG, { isFetching: true });
     try {
       const {
         data: { payload },
-      } = Array.isArray(request)
-        ? await AssignableAgentsAPI.get(inboxIds)
-        : await InboxesAPI.getAssignableAgents(inboxIds[0], {
-            includeAgentBots: true,
-          });
+      } = await AssignableAgentsAPI.get(inboxIds, { includeAgentBots: true });
       commit(types.SET_INBOX_ASSIGNABLE_AGENTS, {
         inboxId: inboxIds.join(','),
         members: payload,
