@@ -1,5 +1,12 @@
 class CreateDataImportItems < ActiveRecord::Migration[7.1]
   def change
+    create_data_import_items
+    add_data_import_item_indexes
+  end
+
+  private
+
+  def create_data_import_items
     create_table :data_import_items do |t|
       t.references :data_import, null: false, index: true
       t.string :source_provider, null: false
@@ -15,7 +22,9 @@ class CreateDataImportItems < ActiveRecord::Migration[7.1]
 
       t.timestamps
     end
+  end
 
+  def add_data_import_item_indexes
     add_index :data_import_items,
               [:data_import_id, :source_object_type, :source_object_id],
               unique: true,
