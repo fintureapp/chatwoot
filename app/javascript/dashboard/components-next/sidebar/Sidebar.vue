@@ -326,6 +326,13 @@ const menuItems = computed(() => {
       },
     },
     {
+      name: 'Kanban SDR AI',
+      label: t('SIDEBAR.KANBAN'),
+      icon: 'i-lucide-square-kanban',
+      to: accountScopedRoute('kanban_sdr_index'),
+      activeOn: ['kanban_sdr_index'],
+    },
+    {
       name: 'Conversation',
       label: t('SIDEBAR.CONVERSATIONS'),
       icon: 'i-lucide-message-circle',

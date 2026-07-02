@@ -1,0 +1,37 @@
+{
+  "KANBAN": {
+    "HEADER_TITLE": "Kanban SDR AI",
+    "CARD": {
+      "OPEN_CONVERSATION": "Abrir conversa"
+    },
+    "COLUMN": {
+      "EMPTY": "Nenhum lead nesta etapa"
+    },
+    "INBOX_FILTER": {
+      "PLACEHOLDER": "Selecione caixas de entrada",
+      "ALL": "Todas as caixas",
+      "SELECTED": "{count} caixa(s) selecionada(s)"
+    },
+    "EMPTY_STATE": {
+      "NO_INBOX_TITLE": "Selecione uma caixa de entrada",
+      "NO_INBOX_SUBTITLE": "Escolha uma ou mais caixas de entrada no topo para carregar os leads do Kanban."
+    },
+    "LOST_DIALOG": {
+      "TITLE": "Marcar lead como Perdido",
+      "DESCRIPTION": "Informe o motivo da perda para registrar o histórico do lead.",
+      "CONFIRM": "Confirmar perda",
+      "REASON_LABEL": "Motivo da perda",
+      "REASON_PLACEHOLDER": "Selecione um motivo",
+      "COMMENT_LABEL": "Observação (opcional)",
+      "COMMENT_PLACEHOLDER": "Detalhe o que aconteceu com este lead"
+    },
+    "WON_DIALOG": {
+      "TITLE": "Marcar lead como Ganho",
+      "DESCRIPTION": "Confirmar a movimentação deste lead para a etapa Ganho?",
+      "CONFIRM": "Confirmar ganho"
+    },
+    "ERRORS": {
+      "UPDATE_STAGE": "Não foi possível atualizar a etapa do lead. Tente novamente."
+    }
+  }
+}
