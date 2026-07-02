@@ -462,7 +462,7 @@ const createNode = (editorView, nodeType, content) => {
       );
     }
     case 'variable':
-      return state.schema.text(`{{${content}}}`);
+      return state.schema.text(content);
     case 'emoji':
       return state.schema.text(content);
     case 'tool': {
@@ -497,11 +497,18 @@ const nodeCreators = {
       to,
     };
   },
-  variable: (editorView, content, from, to) => ({
-    node: createNode(editorView, 'variable', content),
-    from,
-    to,
-  }),
+  variable: (editorView, content, from, to, variables) => {
+    // Insert the resolved value when available, else keep the {{placeholder}}
+    // so the backend can still resolve it at send time.
+    const value = variables?.[content];
+    const hasValue = value !== undefined && value !== null && value !== '';
+    const text = hasValue ? String(value) : `{{${content}}}`;
+    return {
+      node: createNode(editorView, 'variable', text),
+      from,
+      to,
+    };
+  },
   emoji: (editorView, content, from, to) => ({
     node: createNode(editorView, 'emoji', content),
     from,
