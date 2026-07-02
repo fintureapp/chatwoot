@@ -51,7 +51,7 @@ RSpec.describe Account do
   end
 
   describe 'captain defaults for new accounts' do
-    it 'stores the default assistant model without enabling premium Captain features' do
+    it 'does not store Captain model overrides or enable premium Captain features' do
       InstallationConfig.find_or_initialize_by(name: 'ACCOUNT_LEVEL_FEATURE_DEFAULTS').update!(
         value: Featurable::FEATURE_LIST,
         locked: true
@@ -61,7 +61,7 @@ RSpec.describe Account do
 
       expect(account).not_to be_feature_enabled('captain_integration')
       expect(account).not_to be_feature_enabled('captain_integration_v2')
-      expect(account.captain_models).to eq('assistant' => 'gpt-5.2')
+      expect(account.captain_models).to be_nil
     end
   end
 
@@ -364,6 +364,13 @@ RSpec.describe Account do
         Llm::Models.feature_keys.each do |feature|
           expect(prefs[:models][feature]).to eq(Llm::Models.default_model_for(feature))
         end
+      end
+
+      it 'returns GPT-5.2 for assistant when Captain V2 is enabled' do
+        account.enable_features!('captain_integration_v2')
+
+        expect(account.captain_preferences[:models]['assistant']).to eq('gpt-5.2')
+        expect(account.reload.captain_models).to be_nil
       end
     end
 

@@ -222,6 +222,26 @@ RSpec.describe Account, type: :model do
     end
   end
 
+  describe 'default features' do
+    before do
+      InstallationConfig.find_or_initialize_by(name: 'ACCOUNT_LEVEL_FEATURE_DEFAULTS').update!(
+        value: Featurable::FEATURE_LIST,
+        locked: true
+      )
+    end
+
+    it 'enables Captain V2 for new self-hosted enterprise accounts' do
+      allow(ChatwootApp).to receive(:self_hosted_enterprise?).and_return(true)
+
+      account = create(:account)
+
+      expect(account).to be_feature_enabled('captain_integration')
+      expect(account).to be_feature_enabled('captain_integration_v2')
+      expect(account.captain_preferences[:models]['assistant']).to eq('gpt-5.2')
+      expect(account.captain_models).to be_nil
+    end
+  end
+
   describe 'captain document sync cadence' do
     let(:account) { create(:account) }
 
