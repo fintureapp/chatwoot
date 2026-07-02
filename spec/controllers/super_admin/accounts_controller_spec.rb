@@ -97,6 +97,7 @@ RSpec.describe 'Super Admin accounts API', type: :request do
 
       it 'rejects invalid Captain model overrides' do
         sign_in(super_admin, scope: :super_admin)
+        existing_captain_models = account.captain_models
 
         patch "/super_admin/accounts/#{account.id}",
               params: {
@@ -112,7 +113,7 @@ RSpec.describe 'Super Admin accounts API', type: :request do
 
         expect(response).to have_http_status(:unprocessable_entity)
         expect(response.body).to include('not a valid model for label_suggestion')
-        expect(account.reload.captain_models).to be_nil
+        expect(account.reload.captain_models).to eq(existing_captain_models)
       end
     end
   end

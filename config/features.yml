@@ -135,7 +135,7 @@
   enabled: false
 - name: captain_integration
   display_name: Captain
-  enabled: true
+  enabled: false
   premium: true
 - name: custom_roles
   display_name: Custom Roles
@@ -176,7 +176,7 @@
   enabled: false
 - name: captain_integration_v2
   display_name: Captain V2
-  enabled: true
+  enabled: false
   premium: true
 - name: whatsapp_embedded_signup
   display_name: WhatsApp Embedded Signup
