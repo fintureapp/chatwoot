@@ -339,6 +339,7 @@
     "NOTIFICATIONS": "Notifications",
     "CANNED_RESPONSES": "Canned Responses",
     "INTEGRATIONS": "Integrations",
+    "DATA": "Data",
     "PROFILE_SETTINGS": "Profile Settings",
     "ACCOUNT_SETTINGS": "Account Settings",
     "APPLICATIONS": "Applications",
@@ -409,6 +410,108 @@
     "SECURITY": "Security",
     "CAPTAIN_AI": "Captain",
     "CONVERSATION_WORKFLOW": "Conversation Workflow"
+  },
+  "DATA_IMPORTS": {
+    "HEADER": "Data",
+    "DESCRIPTION": "Import contacts and conversations into this account.",
+    "LOADING": "Fetching imports",
+    "DEFAULT_IMPORT_NAME": "Intercom import",
+    "TABS": {
+      "IMPORT": "Import",
+      "EXPORT": "Export"
+    },
+    "TYPES": {
+      "CONTACTS": "Contacts",
+      "CONVERSATIONS": "Conversations",
+      "MESSAGES": "Messages"
+    },
+    "INTERCOM": {
+      "TITLE": "Intercom",
+      "DESCRIPTION": "Bring historical contacts and conversations from Intercom into Chatwoot.",
+      "NAME_LABEL": "Import name",
+      "NAME_PLACEHOLDER": "July Intercom migration",
+      "CONNECT": "Connect Intercom",
+      "START_IMPORT": "Start import",
+      "PLACEHOLDER_NOTE": "Conversations are routed into source-based API inboxes that can be renamed later."
+    },
+    "EXPORT": {
+      "TITLE": "Exports",
+      "DESCRIPTION": "Export workflows will be available here later."
+    },
+    "TABLE": {
+      "TITLE": "Recent imports",
+      "EMPTY": "No imports yet.",
+      "UNNAMED": "Untitled import",
+      "NAME": "Name",
+      "TYPE": "Type",
+      "STATUS": "Status",
+      "IMPORTED": "Imported",
+      "CREATED": "Created",
+      "ACTIONS": "Actions",
+      "ABANDON": "Abandon"
+    },
+    "DETAIL": {
+      "BACK": "Back to imports",
+      "DESCRIPTION": "Review this import run, counts, timestamps, and errors.",
+      "STATUS": "Status",
+      "IMPORTED": "Imported",
+      "ERRORS": "Errors",
+      "SKIP_LOGS": "Skip logs",
+      "ITEMS": "Items",
+      "METADATA": "Metadata",
+      "SOURCE": "Source",
+      "IMPORT_TYPES": "Import types",
+      "CREATED": "Created",
+      "STARTED": "Started",
+      "COMPLETED": "Completed",
+      "INITIATED_BY": "Started by",
+      "STATS": "Stats",
+      "CONTACTS_IMPORTED": "Contacts imported",
+      "CONTACTS_SKIPPED": "Contacts skipped",
+      "CONVERSATIONS_IMPORTED": "Conversations imported",
+      "CONVERSATIONS_SKIPPED": "Conversations skipped",
+      "MESSAGES_IMPORTED": "Messages imported",
+      "MESSAGES_SKIPPED": "Messages skipped",
+      "NO_SKIP_LOGS": "No skipped or failed records recorded.",
+      "DOWNLOAD_SKIP_LOGS": "Download CSV",
+      "ALL_SKIP_LOGS": "All",
+      "SKIP_LOGS_PAGE": "Page {current} of {total} - {count} total",
+      "PREVIOUS_PAGE": "Previous",
+      "NEXT_PAGE": "Next",
+      "KIND": "Kind",
+      "NO_ERRORS": "No errors recorded.",
+      "ERROR_LOGS_PAGE": "Page {current} of {total} - {count} total",
+      "ERROR_CODE": "Code",
+      "SOURCE_OBJECT": "Source object",
+      "MESSAGE": "Message",
+      "CONFIGURATION": "Configuration"
+    },
+    "MONITOR": {
+      "NO_IMPORTS": "No imports yet",
+      "NO_ACTIVE_IMPORTS": "No active imports",
+      "LIVE": "Live updates every {seconds}s",
+      "LAST_UPDATED": "Last updated {time}",
+      "WAITING": "Waiting for first refresh",
+      "REFRESH": "Refresh",
+      "REFRESHING": "Refreshing",
+      "STAGES": {
+        "unknown": "Waiting for update",
+        "queued": "Queued",
+        "preparing": "Preparing import",
+        "contacts": "Importing contacts",
+        "conversations": "Importing conversations",
+        "finalizing": "Finalizing import",
+        "completed": "Completed",
+        "completed_with_errors": "Completed with errors",
+        "failed": "Failed",
+        "abandoned": "Abandoned"
+      }
+    },
+    "ALERTS": {
+      "IMPORT_STARTED": "Intercom import has started.",
+      "IMPORT_ABANDONED": "Intercom import has been abandoned.",
+      "IMPORT_FAILED": "Could not start the Intercom import."
+    }
   },
   "CAPTAIN_SETTINGS": {
     "TITLE": "Captain Settings",

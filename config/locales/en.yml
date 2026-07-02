@@ -392,6 +392,10 @@ en:
       name: 'Notion'
       short_description: 'Integrate databases, documents and pages directly with Captain.'
       description: 'Connect your Notion workspace to enable Captain to access and generate intelligent responses using content from your databases, documents, and pages to provide more contextual customer support.'
+    intercom:
+      name: 'Intercom'
+      short_description: 'Import historical contacts and conversations from Intercom.'
+      description: 'Connect Intercom to import historical contacts and conversations into Chatwoot as source-bucket import inboxes.'
     shopify:
       name: 'Shopify'
       short_description: 'Access order details and customer data from your Shopify store.'

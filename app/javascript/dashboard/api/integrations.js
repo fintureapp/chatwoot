@@ -38,6 +38,20 @@ class IntegrationsAPI extends ApiClient {
       shop_domain: shopDomain,
     });
   }
+
+  getIntercom() {
+    return axios.get(`${this.baseUrl()}/integrations/intercom`);
+  }
+
+  connectIntercom({ accessToken }) {
+    return axios.post(`${this.baseUrl()}/integrations/intercom`, {
+      access_token: accessToken,
+    });
+  }
+
+  disconnectIntercom() {
+    return axios.delete(`${this.baseUrl()}/integrations/intercom`);
+  }
 }
 
 export default new IntegrationsAPI();

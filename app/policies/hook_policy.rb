@@ -1,4 +1,8 @@
 class HookPolicy < ApplicationPolicy
+  def show?
+    @account_user.administrator?
+  end
+
   def create?
     @account_user.administrator?
   end

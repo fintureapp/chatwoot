@@ -1,0 +1,36 @@
+class Api::V1::Accounts::Integrations::IntercomController < Api::V1::Accounts::BaseController
+  before_action :check_authorization
+
+  def show
+    @hook = Current.account.hooks.find_by(app_id: 'intercom')
+  end
+
+  def create
+    @hook = DataImports::Intercom::ConnectionService.new(
+      account: Current.account,
+      access_token: params[:access_token]
+    ).perform
+  rescue DataImports::Intercom::Client::AuthenticationError, DataImports::Intercom::Client::Error, ArgumentError => e
+    render json: { message: e.message }, status: :unprocessable_entity
+  end
+
+  def destroy
+    if active_intercom_import?
+      render json: { message: 'Intercom cannot be disconnected while an import is active.' }, status: :unprocessable_entity
+      return
+    end
+
+    Current.account.hooks.find_by(app_id: 'intercom')&.destroy!
+    head :ok
+  end
+
+  private
+
+  def check_authorization
+    authorize(:hook)
+  end
+
+  def active_intercom_import?
+    Current.account.data_imports.exists?(source_provider: 'intercom', status: [:pending, :processing])
+  end
+end

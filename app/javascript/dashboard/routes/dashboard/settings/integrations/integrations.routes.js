@@ -9,6 +9,7 @@ import Slack from './Slack.vue';
 import Linear from './Linear.vue';
 import Notion from './Notion.vue';
 import Shopify from './Shopify.vue';
+import Intercom from './Intercom.vue';
 
 export default {
   routes: [
@@ -77,6 +78,14 @@ export default {
             permissions: ['administrator'],
           },
           props: route => ({ code: route.query.code }),
+        },
+        {
+          path: 'intercom',
+          name: 'settings_integrations_intercom',
+          component: Intercom,
+          meta: {
+            permissions: ['administrator'],
+          },
         },
         {
           path: 'shopify',

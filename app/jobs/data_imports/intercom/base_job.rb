@@ -1,0 +1,35 @@
+class DataImports::Intercom::BaseJob < ApplicationJob
+  queue_as :low
+
+  retry_on DataImports::Intercom::Client::RateLimitError, wait: 1.minute, attempts: 5 do |job, error|
+    job.fail_import!(error)
+  end
+
+  retry_on DataImports::Intercom::Client::Error, wait: 1.minute, attempts: 3 do |job, error|
+    job.fail_import!(error)
+  end
+
+  def fail_import!(error)
+    data_import = arguments.first
+    return if data_import.blank? || data_import.abandoned?
+
+    DataImports::Intercom::Importer.new(data_import: data_import).fail!(error)
+  end
+
+  private
+
+  def skip_import?(data_import)
+    data_import.abandoned? || data_import.completed? || data_import.completed_with_errors?
+  end
+
+  def importer_for(data_import)
+    DataImports::Intercom::Importer.new(data_import: data_import)
+  end
+
+  def fail_unexpected_error(importer, error)
+    raise error if error.is_a?(DataImports::Intercom::Client::Error)
+
+    importer&.fail!(error)
+    raise error
+  end
+end

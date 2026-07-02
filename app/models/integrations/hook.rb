@@ -70,6 +70,10 @@ class Integrations::Hook < ApplicationRecord
     app_id == 'notion'
   end
 
+  def intercom?
+    app_id == 'intercom'
+  end
+
   def disable
     update(status: 'disabled')
   end

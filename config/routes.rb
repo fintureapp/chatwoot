@@ -219,6 +219,13 @@ Rails.application.routes.draw do
               post :call, on: :member, to: 'calls#create' if ChatwootApp.enterprise?
             end
           end
+          resources :data_imports, only: [:index, :show, :create] do
+            member do
+              post :start
+              post :abandon
+              get :skip_logs
+            end
+          end
           resources :csat_survey_responses, only: [:index] do
             collection do
               get :metrics
@@ -385,6 +392,7 @@ Rails.application.routes.draw do
                 delete :destroy
               end
             end
+            resource :intercom, controller: 'intercom', only: [:show, :create, :destroy]
           end
           resources :portals do
             member do

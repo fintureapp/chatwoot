@@ -1,0 +1,289 @@
+require 'rails_helper'
+
+RSpec.describe DataImports::Intercom::Importer do
+  let(:account) { create(:account) }
+  let(:hook) { create(:integrations_hook, :intercom, account: account, access_token: 'intercom-token') }
+  let(:data_import) do
+    create(
+      :data_import,
+      account: account,
+      data_type: 'intercom',
+      source_type: 'integration',
+      source_provider: 'intercom',
+      import_types: %w[contacts conversations],
+      integration_hook: hook,
+      import_file: nil
+    )
+  end
+  let(:client) { instance_double(DataImports::Intercom::Client) }
+  let(:contact_payload) do
+    {
+      'id' => 'contact_1',
+      'external_id' => 'external_1',
+      'email' => 'CUSTOMER@Example.com',
+      'phone' => '15551234567',
+      'name' => 'Customer One',
+      'created_at' => 1_700_000_000,
+      'updated_at' => 1_700_000_100
+    }
+  end
+  let(:conversation_payload) do
+    {
+      'id' => 'conversation_1',
+      'created_at' => 1_700_000_000,
+      'updated_at' => 1_700_000_200,
+      'state' => 'closed',
+      'open' => false,
+      'admin_assignee_id' => 123,
+      'team_assignee_id' => 456,
+      'contacts' => { 'contacts' => [{ 'id' => 'contact_1' }] },
+      'source' => {
+        'id' => 'source_1',
+        'type' => 'email',
+        'delivered_as' => 'customer_initiated',
+        'subject' => 'Need help',
+        'body' => '<p>Hello there</p>',
+        'author' => { 'type' => 'user', 'id' => 'contact_1', 'email' => 'CUSTOMER@example.com' }
+      },
+      'conversation_parts' => {
+        'conversation_parts' => [
+          {
+            'id' => 'part_1',
+            'part_type' => 'comment',
+            'body' => '<p>Admin reply</p>',
+            'created_at' => 1_700_000_100,
+            'updated_at' => 1_700_000_100,
+            'author' => { 'type' => 'admin', 'id' => 'admin_1' },
+            'attachments' => []
+          },
+          {
+            'id' => 'part_2',
+            'part_type' => 'note',
+            'body' => '<strong>Internal note</strong>',
+            'created_at' => 1_700_000_150,
+            'updated_at' => 1_700_000_150,
+            'author' => { 'type' => 'admin', 'id' => 'admin_1' },
+            'attachments' => []
+          }
+        ]
+      }
+    }
+  end
+
+  before do
+    allow(DataImports::Intercom::Client).to receive(:new).with(access_token: 'intercom-token').and_return(client)
+    allow(client).to receive(:list_contacts).with(starting_after: nil).and_return(
+      'data' => [contact_payload],
+      'pages' => { 'next' => nil }
+    )
+    allow(client).to receive(:list_conversations).with(starting_after: nil).and_return(
+      'conversations' => [{ 'id' => 'conversation_1' }],
+      'pages' => { 'next' => nil }
+    )
+    allow(client).to receive(:retrieve_conversation).with('conversation_1').and_return(conversation_payload)
+    allow(client).to receive(:retrieve_contact).with('contact_1').and_return(contact_payload)
+  end
+
+  it 'imports contacts, conversations, messages, and source-bucket inboxes without normal message creation callbacks', :aggregate_failures do
+    described_class.new(data_import: data_import).perform
+
+    contact = account.contacts.find_by!(email: 'customer@example.com')
+    expect(contact.name).to eq('Customer One')
+    expect(contact.phone_number).to eq('+15551234567')
+    expect(contact.custom_attributes).to include('intercom_contact_id' => 'contact_1')
+
+    inbox = account.inboxes.find_by!(name: 'Intercom Import - Email')
+    expect(inbox.channel.additional_attributes).to include('source_bucket' => 'email', 'import_placeholder' => true)
+
+    conversation = account.conversations.find_by!(identifier: 'intercom:conversation_1')
+    expect(conversation).to have_attributes(
+      status: 'resolved',
+      inbox_id: inbox.id,
+      contact_id: contact.id
+    )
+    expect(conversation.additional_attributes.dig('source', 'routing_method')).to eq('source_bucket_api_inbox')
+
+    expect(conversation.messages.order(:created_at).pluck(:content)).to eq(["Need help\n\nHello there", 'Admin reply', 'Internal note'])
+    expect(conversation.messages.order(:created_at).map(&:message_type)).to eq(%w[incoming outgoing outgoing])
+    expect(conversation.messages.order(:created_at).last.private).to be(true)
+
+    expect(data_import.reload).to be_completed
+    expect(data_import.stats).to include(
+      'contacts' => { 'imported' => 1, 'skipped' => 0 },
+      'conversations' => { 'imported' => 1, 'skipped' => 0 },
+      'messages' => { 'imported' => 3, 'skipped' => 0 },
+      'errors' => { 'count' => 0 }
+    )
+    expect(data_import.processed_records).to eq(5)
+    expect(data_import.items.imported.count).to eq(2)
+    expect(DataImportMapping.where(data_import: data_import).count).to eq(5)
+  end
+
+  context 'when the Intercom records were imported by an earlier run' do
+    let(:next_data_import) do
+      create(
+        :data_import,
+        account: account,
+        data_type: 'intercom',
+        source_type: 'integration',
+        source_provider: 'intercom',
+        import_types: %w[contacts conversations],
+        integration_hook: hook,
+        import_file: nil
+      )
+    end
+
+    it 'records the already mapped records as skipped for the current import run', :aggregate_failures do
+      described_class.new(data_import: data_import).perform
+
+      described_class.new(data_import: next_data_import).perform
+
+      expect(next_data_import.reload.stats).to include(
+        'contacts' => { 'imported' => 0, 'skipped' => 1 },
+        'conversations' => { 'imported' => 0, 'skipped' => 1 },
+        'messages' => { 'imported' => 0, 'skipped' => 3 },
+        'errors' => { 'count' => 0 }
+      )
+      expect(next_data_import).to be_completed
+      expect(next_data_import.total_records).to eq(5)
+      expect(next_data_import.processed_records).to eq(0)
+      expect(next_data_import.items.skipped.count).to eq(2)
+      expect(next_data_import.import_errors.skip_logs.group(:source_object_type).count).to eq(
+        'contact' => 1,
+        'conversation' => 1,
+        'message' => 3
+      )
+      expect(next_data_import.import_errors.skip_logs.pluck(:details).map { |details| details['reason'] }.uniq).to eq(['already_imported'])
+    end
+  end
+
+  context 'when Intercom omits the conversation source' do
+    let(:conversation_payload) do
+      super().merge(
+        'source' => nil,
+        'first_contact_reply' => {
+          'type' => 'whatsapp',
+          'created_at' => 1_700_000_000,
+          'url' => nil
+        }
+      )
+    end
+
+    it 'routes the conversation from the first contact reply type', :aggregate_failures do
+      described_class.new(data_import: data_import).perform
+
+      inbox = account.inboxes.find_by!(name: 'Intercom Import - WhatsApp')
+      conversation = account.conversations.find_by!(identifier: 'intercom:conversation_1')
+
+      expect(conversation.inbox).to eq(inbox)
+      expect(conversation.additional_attributes.dig('source', 'source_type')).to eq('whatsapp')
+    end
+  end
+
+  context 'when an Intercom message part cannot be imported' do
+    let(:conversation_payload) do
+      super().deep_merge(
+        'conversation_parts' => {
+          'conversation_parts' => [
+            {
+              'id' => 'blank_part',
+              'part_type' => 'assignment',
+              'body' => nil,
+              'created_at' => 1_700_000_175,
+              'updated_at' => 1_700_000_175,
+              'author' => { 'type' => 'admin', 'id' => 'admin_1' },
+              'attachments' => []
+            }
+          ]
+        }
+      )
+    end
+
+    it 'records a skip log with the Intercom message source id', :aggregate_failures do
+      described_class.new(data_import: data_import).perform
+
+      skip_log = data_import.import_errors.skip_logs.find_by!(source_object_type: 'message')
+      expect(skip_log).to have_attributes(
+        source_object_id: 'conversation:conversation_1:part:blank_part',
+        error_code: 'DataImports::Intercom::SkippedMessage'
+      )
+      expect(skip_log.details).to include(
+        'kind' => 'skipped',
+        'reason' => 'blank_or_unsupported_intercom_part'
+      )
+      expect(data_import.reload.stats.dig('messages', 'skipped')).to eq(1)
+    end
+
+    it 'records the skip log again for a later import run', :aggregate_failures do
+      described_class.new(data_import: data_import).perform
+      next_data_import = create(
+        :data_import,
+        account: account,
+        data_type: 'intercom',
+        source_type: 'integration',
+        source_provider: 'intercom',
+        import_types: %w[contacts conversations],
+        integration_hook: hook,
+        import_file: nil
+      )
+
+      described_class.new(data_import: next_data_import).perform
+
+      skip_log = next_data_import.import_errors.skip_logs.find_by!(
+        source_object_type: 'message',
+        source_object_id: 'conversation:conversation_1:part:blank_part',
+        error_code: 'DataImports::Intercom::SkippedMessage'
+      )
+      expect(skip_log).to have_attributes(
+        source_object_id: 'conversation:conversation_1:part:blank_part',
+        error_code: 'DataImports::Intercom::SkippedMessage'
+      )
+      expect(next_data_import.reload.stats.dig('messages', 'skipped')).to eq(2)
+    end
+  end
+
+  context 'when a specific Intercom message part fails to persist' do
+    let(:conversation_payload) do
+      super().deep_merge(
+        'conversation_parts' => {
+          'conversation_parts' => [
+            {
+              'id' => 'bad_part',
+              'part_type' => 'comment',
+              'body' => '<p>Message that cannot be stored</p>',
+              'created_at' => 1_700_000_175,
+              'updated_at' => 1_700_000_175,
+              'author' => { 'type' => 'admin', 'id' => 'admin_1' },
+              'attachments' => []
+            }
+          ]
+        }
+      )
+    end
+
+    before do
+      allow(Message).to receive(:insert_all!).and_wrap_original do |method, records, **kwargs|
+        raise ActiveRecord::StatementInvalid, 'bad message' if records.first[:source_id] == 'intercom:conversation:conversation_1:part:bad_part'
+
+        method.call(records, **kwargs)
+      end
+    end
+
+    it 'records a skip log with the Intercom message part id', :aggregate_failures do
+      described_class.new(data_import: data_import).perform
+
+      skip_log = data_import.import_errors.skip_logs.find_by!(source_object_type: 'message')
+      expect(skip_log).to have_attributes(
+        source_object_id: 'conversation:conversation_1:part:bad_part',
+        error_code: 'ActiveRecord::StatementInvalid',
+        message: 'bad message'
+      )
+      expect(skip_log.details).to include(
+        'kind' => 'failed',
+        'conversation_id' => 'intercom:conversation_1'
+      )
+      expect(data_import.reload).to be_completed_with_errors
+      expect(data_import.stats.dig('errors', 'count')).to eq(1)
+    end
+  end
+end
