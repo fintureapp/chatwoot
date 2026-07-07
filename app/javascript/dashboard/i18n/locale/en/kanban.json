@@ -2,7 +2,9 @@
   "KANBAN": {
     "HEADER_TITLE": "Kanban SDR AI",
     "CARD": {
-      "OPEN_CONVERSATION": "Abrir conversa"
+      "OPEN_CONVERSATION": "Abrir conversa",
+      "ADD_NOTE": "Adicionar nota",
+      "EDIT_NEXT_ACTION": "Editar próxima ação"
     },
     "COLUMN": {
       "EMPTY": "Nenhum lead nesta etapa"
@@ -12,9 +14,71 @@
       "ALL": "Todas as caixas",
       "SELECTED": "{count} caixa(s) selecionada(s)"
     },
+    "TOOLBAR": {
+      "SEARCH_PLACEHOLDER": "Buscar por cliente ou produto",
+      "ALL_PRODUCTS": "Todos os produtos",
+      "ALL_STAGES": "Todas as etapas",
+      "ALL_ASSIGNEES": "Todos os responsáveis",
+      "CREATED_FROM": "Criado de",
+      "CREATED_TO": "até",
+      "CLEAR": "Limpar filtros",
+      "SORT": {
+        "LAST_ACTIVITY": "Última atualização",
+        "CREATED_DESC": "Mais recentes",
+        "CREATED_ASC": "Mais antigos",
+        "VOLUME_DESC": "Maior volume"
+      }
+    },
+    "CSV": {
+      "EXPORT": "Exportar CSV",
+      "EXPORT_FILTERED": "Exportar filtradas",
+      "EXPORT_ALL": "Exportar todas"
+    },
+    "DRAWER": {
+      "CLOSE": "Fechar",
+      "NOT_INFORMED": "Não informado",
+      "EDIT": "Editar",
+      "ADD": "Adicionar",
+      "SAVE": "Salvar",
+      "CANCEL": "Cancelar",
+      "ADD_NOTE": "Adicionar nota",
+      "NO_NEXT_ACTION": "Nenhuma próxima ação definida.",
+      "NEXT_ACTION_PLACEHOLDER": "Ex.: Fazer follow-up com o cliente",
+      "NOTE_PLACEHOLDER": "Escreva uma nota sobre este lead",
+      "NO_NOTES": "Nenhuma nota registrada.",
+      "NOTES_ERROR": "Não foi possível carregar as notas.",
+      "SECTIONS": {
+        "DETAILS": "Detalhes",
+        "NEXT_ACTION": "Próxima ação",
+        "NOTES": "Notas",
+        "HISTORY": "Histórico"
+      },
+      "FIELDS": {
+        "CLIENT": "Cliente",
+        "PHONE": "Telefone",
+        "EMAIL": "E-mail",
+        "PRODUCT": "Produto",
+        "VOLUME": "Volume",
+        "STAGE": "Etapa",
+        "ASSIGNEE": "Responsável",
+        "INBOX": "Caixa de entrada",
+        "CREATED_AT": "Primeiro contato",
+        "UPDATED_AT": "Último contato",
+        "LOST_REASON": "Motivo da perda"
+      },
+      "HISTORY": {
+        "STAGE_CHANGE": "Etapa: {from} → {to}",
+        "CREATED": "Demanda criada"
+      }
+    },
     "EMPTY_STATE": {
       "NO_INBOX_TITLE": "Selecione uma caixa de entrada",
-      "NO_INBOX_SUBTITLE": "Escolha uma ou mais caixas de entrada no topo para carregar os leads do Kanban."
+      "NO_INBOX_SUBTITLE": "Escolha uma ou mais caixas de entrada no topo para carregar os leads do Kanban.",
+      "ERROR_TITLE": "Não foi possível carregar o Kanban",
+      "ERROR_SUBTITLE": "Ocorreu um erro ao buscar os leads. Tente novamente.",
+      "RETRY": "Tentar novamente",
+      "NO_RESULTS_TITLE": "Nenhum lead encontrado",
+      "NO_RESULTS_SUBTITLE": "Nenhum lead corresponde aos filtros atuais. Ajuste ou limpe os filtros."
     },
     "LOST_DIALOG": {
       "TITLE": "Marcar lead como Perdido",
@@ -31,7 +95,9 @@
       "CONFIRM": "Confirmar ganho"
     },
     "ERRORS": {
-      "UPDATE_STAGE": "Não foi possível atualizar a etapa do lead. Tente novamente."
+      "UPDATE_STAGE": "Não foi possível atualizar a etapa do lead. Tente novamente.",
+      "UPDATE_NEXT_ACTION": "Não foi possível salvar a próxima ação. Tente novamente.",
+      "ADD_NOTE": "Não foi possível salvar a nota. Tente novamente."
     }
   }
 }
