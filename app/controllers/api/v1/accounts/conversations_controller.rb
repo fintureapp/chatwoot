@@ -3,10 +3,12 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   include DateRangeHelper
   include HmacConcern
 
-  before_action :conversation, except: [:index, :meta, :search, :create, :filter]
+  before_action :conversation, except: [:index, :meta, :search, :create, :filter, :kanban]
   before_action :inbox, :contact, :contact_inbox, only: [:create]
 
   ATTACHMENT_RESULTS_PER_PAGE = 100
+  # Teto de segurança para a visão Kanban (carrega tudo de uma vez, sem paginação).
+  KANBAN_RESULTS_CAP = 1000
 
   def index
     result = conversation_finder.perform
@@ -23,6 +25,16 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
     result = conversation_finder.perform
     @conversations = result[:conversations]
     @conversations_count = result[:count]
+  end
+
+  # Visão enxuta para o Kanban SDR AI.
+  # Diferente do #index (paginado em 25 e com payload completo por conversa), esta
+  # ação devolve, de uma vez, todas as conversas das inboxes selecionadas com apenas
+  # os campos necessários para renderizar os cards (ver kanban.json.jbuilder). Sem
+  # inbox selecionada, retorna vazio. Escopo e permissão reutilizam exatamente o mesmo
+  # caminho do #index (assigned_inboxes + PermissionFilterService).
+  def kanban
+    @conversations = kanban_conversations
   end
 
   def attachments
@@ -230,6 +242,22 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
 
   def conversation_finder
     @conversation_finder ||= ConversationFinder.new(Current.user, params)
+  end
+
+  def kanban_conversations
+    # assigned_inboxes já resolve admin (todas as inboxes) vs agente (só as suas);
+    # o where(id:) aceita valor único ou array (inbox_id[]=...).
+    inbox_ids = current_user.assigned_inboxes.where(id: params[:inbox_id]).pluck(:id)
+    return Conversation.none if inbox_ids.blank?
+
+    scope = Current.account.conversations.where(inbox_id: inbox_ids)
+    # Reaplica a permission scoping (respeita custom roles enterprise via prepend).
+    scope = Conversations::PermissionFilterService.new(scope, current_user, current_account).perform
+    scope.includes(
+      :taggings,
+      { contact: { avatar_attachment: :blob } },
+      { assignee: { avatar_attachment: :blob } }
+    ).order(last_activity_at: :desc).limit(KANBAN_RESULTS_CAP)
   end
 
   def assignee?

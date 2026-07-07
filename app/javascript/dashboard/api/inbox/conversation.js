@@ -32,6 +32,14 @@ class ConversationApi extends ApiClient {
     });
   }
 
+  // Visão enxuta do Kanban SDR AI: uma única chamada que devolve todas as conversas
+  // das inboxes selecionadas com payload mínimo (ver kanban.json.jbuilder no backend).
+  kanban({ inboxIds }) {
+    return axios.get(`${this.url}/kanban`, {
+      params: { inbox_id: inboxIds },
+    });
+  }
+
   filter(payload) {
     return axios.post(`${this.url}/filter`, payload.queryData, {
       params: {

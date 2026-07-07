@@ -27,6 +27,16 @@ export const STAGE_VALUES = KANBAN_STAGES.map(stage => stage.value);
 export const STAGE_ATTRIBUTE_KEY = 'sdr_stage';
 export const LOST_REASON_ATTRIBUTE_KEY = 'sdr_lost_reason';
 export const LOST_COMMENT_ATTRIBUTE_KEY = 'sdr_lost_comment';
+export const NEXT_ACTION_ATTRIBUTE_KEY = 'sdr_next_action';
+
+/**
+ * Log estruturado de movimentações, gravado como ARRAY em
+ * `custom_attributes.sdr_history`. O validador jsonb do backend só limita
+ * String (<1500) e Integer; arrays passam sem cap — por isso limitamos o
+ * tamanho aqui às últimas `HISTORY_MAX_ENTRIES` entradas.
+ */
+export const HISTORY_ATTRIBUTE_KEY = 'sdr_history';
+export const HISTORY_MAX_ENTRIES = 20;
 
 /**
  * Resolve a etapa de uma conversa, tratando ausência de valor e valores
@@ -54,3 +64,20 @@ export const LOST_REASONS = [
   { value: 'indicacao_incorreta', label: 'Indicação incorreta' },
   { value: 'outro', label: 'Outro' },
 ];
+
+/**
+ * Rótulo de exibição de uma etapa a partir do seu `value` persistido.
+ * Cai no rótulo da `DEFAULT_STAGE` quando o valor é desconhecido/ausente.
+ */
+export const stageLabel = value => {
+  const stage = KANBAN_STAGES.find(item => item.value === value);
+  if (stage) return stage.label;
+  const fallback = KANBAN_STAGES.find(item => item.value === DEFAULT_STAGE);
+  return fallback ? fallback.label : value;
+};
+
+/**
+ * Rótulo de exibição de um motivo de perda a partir do seu `value` persistido.
+ */
+export const lostReasonLabel = value =>
+  LOST_REASONS.find(reason => reason.value === value)?.label || value || '';

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useStore, useMapGetter } from 'dashboard/composables/store';
+import { useStore } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import {
   KANBAN_STAGES,
@@ -12,16 +12,26 @@ import {
 
 import KanbanColumn from './KanbanColumn.vue';
 import LostReasonDialog from './LostReasonDialog.vue';
+import KanbanCardDrawer from './KanbanCardDrawer.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
+
+const props = defineProps({
+  // Registros já filtrados/ordenados pela toolbar da página.
+  records: {
+    type: Array,
+    default: () => [],
+  },
+  inboxNames: {
+    type: Object,
+    default: () => ({}),
+  },
+});
 
 const store = useStore();
 const { t } = useI18n();
 
-const records = useMapGetter('kanban/getRecords');
-const selectedInboxIds = useMapGetter('kanban/getSelectedInboxIds');
-const inboxes = useMapGetter('inboxes/getInboxes');
-
 const localColumns = ref([]);
+const isDragging = ref(false);
 
 const lostDialogRef = ref(null);
 const wonDialogRef = ref(null);
@@ -29,30 +39,23 @@ const pendingLost = ref(null);
 const pendingWon = ref(null);
 const wonConfirmed = ref(false);
 
-const inboxNames = computed(() => {
-  const map = {};
-  inboxes.value.forEach(inbox => {
-    map[inbox.id] = inbox.name;
-  });
-  return map;
-});
+// Estado do drawer de detalhe.
+const selectedConversationId = ref(null);
+const drawerIntent = ref('detail');
+const isDrawerOpen = ref(false);
 
 const rebuildColumns = () => {
-  const selected = selectedInboxIds.value;
-  const filtered = records.value.filter(record =>
-    selected.includes(record.inbox_id)
-  );
   localColumns.value = KANBAN_STAGES.map(stage => ({
     stage,
-    cards: filtered.filter(record => resolveStage(record) === stage.value),
+    cards: props.records.filter(record => resolveStage(record) === stage.value),
   }));
 };
 
-// Reconstrói apenas quando o conjunto de conversas ou a seleção muda (fetch),
-// nunca em atualizações de atributo em memória — evita "piscar" o card após o drop.
-const columnsSignature = computed(
-  () =>
-    `${records.value.map(record => record.id).join(',')}|${selectedInboxIds.value.join(',')}`
+// Reconstrói apenas quando o conjunto/ordem de registros muda (fetch, filtro,
+// ordenação), nunca em atualização de atributo em memória — evita "piscar" o card
+// após o drop (o SortableJS já moveu o DOM).
+const columnsSignature = computed(() =>
+  props.records.map(record => record.id).join(',')
 );
 watch(columnsSignature, rebuildColumns, { immediate: true });
 
@@ -113,18 +116,30 @@ const onWonConfirm = () => {
 const onWonClose = () => {
   if (!wonConfirmed.value) rebuildColumns();
 };
+
+const openDrawer = ({ conversation, intent }) => {
+  selectedConversationId.value = conversation.id;
+  drawerIntent.value = intent || 'detail';
+  isDrawerOpen.value = true;
+};
 </script>
 
 <template>
-  <div class="flex gap-4 px-6 py-4 overflow-x-auto min-h-0">
-    <KanbanColumn
-      v-for="column in localColumns"
-      :key="column.stage.value"
-      :stage="column.stage"
-      :cards="column.cards"
-      :inbox-names="inboxNames"
-      @change="handleChange(column.stage.value, $event)"
-    />
+  <div class="flex flex-col min-h-0">
+    <div class="flex flex-1 gap-4 px-6 py-4 overflow-x-auto min-h-0">
+      <KanbanColumn
+        v-for="column in localColumns"
+        :key="column.stage.value"
+        :stage="column.stage"
+        :cards="column.cards"
+        :inbox-names="inboxNames"
+        :is-dragging="isDragging"
+        @change="handleChange(column.stage.value, $event)"
+        @drag-start="isDragging = true"
+        @drag-end="isDragging = false"
+        @open="openDrawer"
+      />
+    </div>
 
     <LostReasonDialog
       ref="lostDialogRef"
@@ -140,6 +155,13 @@ const onWonClose = () => {
       :confirm-button-label="t('KANBAN.WON_DIALOG.CONFIRM')"
       @confirm="onWonConfirm"
       @close="onWonClose"
+    />
+
+    <KanbanCardDrawer
+      v-model:open="isDrawerOpen"
+      :conversation-id="selectedConversationId"
+      :intent="drawerIntent"
+      :inbox-names="inboxNames"
     />
   </div>
 </template>
