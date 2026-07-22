@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_06_11_184600) do
+ActiveRecord::Schema[7.1].define(version: 2026_07_21_120100) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -846,6 +846,34 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_11_184600) do
     t.index ["name", "account_id"], name: "index_email_templates_on_name_and_account_id", unique: true
   end
 
+  create_table "finture_follow_ups", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "user_id"
+    t.string "title", null: false
+    t.text "notes"
+    t.datetime "due_at", null: false
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_finture_follow_ups_on_account_id"
+    t.index ["conversation_id", "due_at"], name: "index_finture_follow_ups_on_conversation_id_and_due_at"
+    t.index ["due_at"], name: "index_finture_follow_ups_open_due", where: "(completed_at IS NULL)"
+  end
+
+  create_table "finture_quotes", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "conversation_id", null: false
+    t.string "product_type", null: false
+    t.jsonb "data", default: {}, null: false
+    t.decimal "total_value", precision: 12, scale: 2
+    t.string "source", default: "agent", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_finture_quotes_on_account_id"
+    t.index ["conversation_id"], name: "index_finture_quotes_on_conversation_id", unique: true
+  end
+
   create_table "folders", force: :cascade do |t|
     t.integer "account_id", null: false
     t.integer "category_id", null: false
@@ -1345,6 +1373,11 @@ ActiveRecord::Schema[7.1].define(version: 2026_06_11_184600) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "finture_follow_ups", "accounts", on_delete: :cascade
+  add_foreign_key "finture_follow_ups", "conversations", on_delete: :cascade
+  add_foreign_key "finture_follow_ups", "users", on_delete: :nullify
+  add_foreign_key "finture_quotes", "accounts", on_delete: :cascade
+  add_foreign_key "finture_quotes", "conversations", on_delete: :cascade
   add_foreign_key "inboxes", "portals"
   add_foreign_key "user_sessions", "users"
   create_trigger("accounts_after_insert_row_tr", :generated => true, :compatibility => 1).

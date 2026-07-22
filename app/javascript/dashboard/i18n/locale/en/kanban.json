@@ -98,6 +98,76 @@
       "UPDATE_STAGE": "Não foi possível atualizar a etapa do lead. Tente novamente.",
       "UPDATE_NEXT_ACTION": "Não foi possível salvar a próxima ação. Tente novamente.",
       "ADD_NOTE": "Não foi possível salvar a nota. Tente novamente."
+    },
+    "QUOTE": {
+      "TITLE": "Cotação",
+      "PRODUCT": "Produto",
+      "EMPTY": "Nenhuma cotação registrada",
+      "YES": "Sim",
+      "NO": "Não",
+      "LIVES_TOTAL": "{total} vidas",
+      "SOURCE_N8N": "Preenchida pelo SDR IA",
+      "SAVE_ERROR": "Não foi possível salvar a cotação. Tente novamente.",
+      "PRODUCTS": {
+        "SAUDE_PME": "Saúde PME",
+        "CONSORCIO": "Consórcio",
+        "SEGUROS": "Seguros",
+        "CREDITO": "Crédito"
+      },
+      "TOTAL_VALUE": {
+        "SAUDE_PME": "Valor investido (mensal)",
+        "CONSORCIO": "Valor da carta",
+        "SEGUROS": "Prêmio estimado",
+        "CREDITO": "Valor solicitado"
+      },
+      "FIELDS": {
+        "HAS_CNPJ": "Tem CNPJ?",
+        "CNPJ": "CNPJ",
+        "COMPANY_NAME": "Razão social",
+        "CITY": "Cidade",
+        "CURRENT_PLAN": "Plano atual",
+        "HOSPITAL": "Hospital de preferência",
+        "ACCOMMODATION": "Acomodação",
+        "COPAY": "Coparticipação",
+        "LIVES": "Vidas por faixa etária (ANS)",
+        "NOTES": "Observações",
+        "ASSET_TYPE": "Tipo de bem",
+        "TERM_MONTHS": "Prazo (meses)",
+        "DOWN_PAYMENT": "Entrada disponível (R$)",
+        "INSURANCE_TYPE": "Tipo de seguro",
+        "CURRENT_INSURER": "Seguradora atual",
+        "INSURED_AMOUNT": "Capital segurado (R$)",
+        "CREDIT_TYPE": "Tipo de crédito",
+        "COLLATERAL": "Garantia"
+      },
+      "OPTIONS": {
+        "ENFERMARIA": "Enfermaria",
+        "APARTAMENTO": "Apartamento",
+        "IMOVEL": "Imóvel",
+        "VEICULO": "Veículo",
+        "SERVICOS": "Serviços",
+        "VIDA": "Vida",
+        "AUTO": "Auto",
+        "RESIDENCIAL": "Residencial",
+        "EMPRESARIAL": "Empresarial",
+        "OUTROS": "Outros",
+        "CONSIGNADO": "Consignado",
+        "PESSOAL": "Pessoal",
+        "IMOBILIARIO": "Imobiliário",
+        "CAPITAL_GIRO": "Capital de giro"
+      },
+      "SOURCE_BADGE": "SDR IA",
+      "PLACEHOLDER_ZERO": "0",
+      "PLACEHOLDER_MONEY": "0,00"
+    },
+    "FOLLOW_UPS": {
+      "TITLE": "Follow-ups",
+      "EMPTY": "Nenhum follow-up agendado",
+      "TITLE_PLACEHOLDER": "O que precisa ser feito?",
+      "COMPLETE": "Concluir",
+      "REOPEN": "Reabrir",
+      "DELETE": "Excluir",
+      "SAVE_ERROR": "Não foi possível salvar o follow-up. Tente novamente."
     }
   }
 }

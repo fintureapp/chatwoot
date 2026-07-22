@@ -1,5 +1,6 @@
 import ConversationApi from 'dashboard/api/inbox/conversation';
 import MessageApi from 'dashboard/api/inbox/message';
+import FintureCrmApi from 'dashboard/api/fintureCrm';
 import {
   STAGE_ATTRIBUTE_KEY,
   LOST_REASON_ATTRIBUTE_KEY,
@@ -30,6 +31,19 @@ export const state = {
     isCreating: false,
     hasError: false,
   },
+  // Cotação estruturada e follow-ups (CRM Fase 1), carregados sob demanda no drawer.
+  quotes: {},
+  quoteUiFlags: {
+    isFetching: false,
+    isSaving: false,
+    hasError: false,
+  },
+  followUps: {},
+  followUpsUiFlags: {
+    isFetching: false,
+    isSaving: false,
+    hasError: false,
+  },
 };
 
 export const getters = {
@@ -39,6 +53,11 @@ export const getters = {
   getRecordById: $state => id => $state.records.find(item => item.id === id),
   getNotes: $state => conversationId => $state.notes[conversationId] || [],
   getNotesUIFlags: $state => $state.notesUiFlags,
+  getQuote: $state => conversationId => $state.quotes[conversationId] ?? null,
+  getQuoteUIFlags: $state => $state.quoteUiFlags,
+  getFollowUps: $state => conversationId =>
+    $state.followUps[conversationId] || [],
+  getFollowUpsUIFlags: $state => $state.followUpsUiFlags,
 };
 
 export const actions = {
@@ -102,7 +121,9 @@ export const actions = {
       };
       if (lostReason !== undefined) entry.reason = lostReason;
       if (lostComment) entry.comment = lostComment;
-      const history = Array.isArray(record?.custom_attributes?.[HISTORY_ATTRIBUTE_KEY])
+      const history = Array.isArray(
+        record?.custom_attributes?.[HISTORY_ATTRIBUTE_KEY]
+      )
         ? record.custom_attributes[HISTORY_ATTRIBUTE_KEY]
         : [];
       customAttributes[HISTORY_ATTRIBUTE_KEY] = [...history, entry].slice(
@@ -121,7 +142,10 @@ export const actions = {
   },
 
   // Salva a próxima ação (sdr_next_action) preservando o restante do hash.
-  async updateNextAction({ commit, state: $state }, { conversationId, nextAction }) {
+  async updateNextAction(
+    { commit, state: $state },
+    { conversationId, nextAction }
+  ) {
     const record = $state.records.find(item => item.id === conversationId);
     const customAttributes = {
       ...(record?.custom_attributes ?? {}),
@@ -157,6 +181,112 @@ export const actions = {
     } finally {
       commit('SET_NOTES_UI_FLAG', { isFetching: false });
     }
+  },
+
+  // ---- Cotação estruturada (CRM Fase 1) ------------------------------------
+  async fetchQuote({ commit }, { conversationId }) {
+    commit('SET_QUOTE_UI_FLAG', { isFetching: true, hasError: false });
+    try {
+      const response = await FintureCrmApi.getQuote(conversationId);
+      commit('SET_QUOTE', {
+        conversationId,
+        quote: response.data?.quote ?? null,
+      });
+    } catch (error) {
+      commit('SET_QUOTE_UI_FLAG', { hasError: true });
+      throw error;
+    } finally {
+      commit('SET_QUOTE_UI_FLAG', { isFetching: false });
+    }
+  },
+
+  // Upsert pela aba Cotação (source=agent → sobrescreve). O espelho
+  // sdr_quote_summary/valor_potencial chega ao board pelo realtime; aqui só
+  // atualizamos a cotação carregada no drawer.
+  async saveQuote({ commit }, { conversationId, quote }) {
+    commit('SET_QUOTE_UI_FLAG', { isSaving: true, hasError: false });
+    try {
+      const response = await FintureCrmApi.updateQuote(conversationId, quote);
+      commit('SET_QUOTE', {
+        conversationId,
+        quote: response.data?.quote ?? null,
+      });
+    } catch (error) {
+      commit('SET_QUOTE_UI_FLAG', { hasError: true });
+      throw error;
+    } finally {
+      commit('SET_QUOTE_UI_FLAG', { isSaving: false });
+    }
+  },
+
+  // ---- Follow-ups (CRM Fase 1) ----------------------------------------------
+  async fetchFollowUps({ commit }, { conversationId }) {
+    commit('SET_FOLLOW_UPS_UI_FLAG', { isFetching: true, hasError: false });
+    try {
+      const response = await FintureCrmApi.getFollowUps(conversationId);
+      commit('SET_FOLLOW_UPS', {
+        conversationId,
+        followUps: response.data?.follow_ups ?? [],
+      });
+    } catch (error) {
+      commit('SET_FOLLOW_UPS_UI_FLAG', { hasError: true });
+      throw error;
+    } finally {
+      commit('SET_FOLLOW_UPS_UI_FLAG', { isFetching: false });
+    }
+  },
+
+  async createFollowUp({ commit, dispatch }, { conversationId, followUp }) {
+    commit('SET_FOLLOW_UPS_UI_FLAG', { isSaving: true, hasError: false });
+    try {
+      await FintureCrmApi.createFollowUp(conversationId, followUp);
+      await dispatch('fetchFollowUps', { conversationId });
+    } catch (error) {
+      commit('SET_FOLLOW_UPS_UI_FLAG', { hasError: true });
+      throw error;
+    } finally {
+      commit('SET_FOLLOW_UPS_UI_FLAG', { isSaving: false });
+    }
+  },
+
+  async updateFollowUp(
+    { commit, dispatch },
+    { conversationId, followUpId, changes }
+  ) {
+    commit('SET_FOLLOW_UPS_UI_FLAG', { isSaving: true, hasError: false });
+    try {
+      await FintureCrmApi.updateFollowUp(conversationId, followUpId, changes);
+      await dispatch('fetchFollowUps', { conversationId });
+    } catch (error) {
+      commit('SET_FOLLOW_UPS_UI_FLAG', { hasError: true });
+      throw error;
+    } finally {
+      commit('SET_FOLLOW_UPS_UI_FLAG', { isSaving: false });
+    }
+  },
+
+  async deleteFollowUp({ commit, dispatch }, { conversationId, followUpId }) {
+    commit('SET_FOLLOW_UPS_UI_FLAG', { isSaving: true, hasError: false });
+    try {
+      await FintureCrmApi.deleteFollowUp(conversationId, followUpId);
+      await dispatch('fetchFollowUps', { conversationId });
+    } catch (error) {
+      commit('SET_FOLLOW_UPS_UI_FLAG', { hasError: true });
+      throw error;
+    } finally {
+      commit('SET_FOLLOW_UPS_UI_FLAG', { isSaving: false });
+    }
+  },
+
+  // ---- Realtime (CRM Fase 1) --------------------------------------------------
+  // Chamada pelo actionCable em todo conversation.updated: faz merge no card
+  // carregado (custom_attributes/priority/assignee) e ignora conversas fora do
+  // board. O payload do cable usa o mesmo display_id do payload do kanban.
+  handleConversationUpdated({ commit, state: $state }, conversation) {
+    if (!conversation?.id) return;
+    const record = $state.records.find(item => item.id === conversation.id);
+    if (!record) return;
+    commit('MERGE_RECORD_REALTIME', { conversation });
   },
 
   async addNote({ commit, rootGetters }, { conversationId, content }) {
@@ -212,6 +342,31 @@ export const mutations = {
   },
   SET_NOTES_UI_FLAG($state, uiFlag) {
     $state.notesUiFlags = { ...$state.notesUiFlags, ...uiFlag };
+  },
+  SET_QUOTE($state, { conversationId, quote }) {
+    $state.quotes = { ...$state.quotes, [conversationId]: quote };
+  },
+  SET_QUOTE_UI_FLAG($state, uiFlag) {
+    $state.quoteUiFlags = { ...$state.quoteUiFlags, ...uiFlag };
+  },
+  SET_FOLLOW_UPS($state, { conversationId, followUps }) {
+    $state.followUps = { ...$state.followUps, [conversationId]: followUps };
+  },
+  SET_FOLLOW_UPS_UI_FLAG($state, uiFlag) {
+    $state.followUpsUiFlags = { ...$state.followUpsUiFlags, ...uiFlag };
+  },
+  MERGE_RECORD_REALTIME($state, { conversation }) {
+    const record = $state.records.find(item => item.id === conversation.id);
+    if (!record) return;
+    if (conversation.custom_attributes) {
+      record.custom_attributes = conversation.custom_attributes;
+    }
+    if (conversation.priority !== undefined) {
+      record.priority = conversation.priority;
+    }
+    if (conversation.meta?.assignee !== undefined) {
+      record.meta = { ...record.meta, assignee: conversation.meta.assignee };
+    }
   },
 };
 

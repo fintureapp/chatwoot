@@ -7,6 +7,10 @@ import {
   resolveFieldValue,
 } from 'dashboard/routes/dashboard/kanban/config/cardFields';
 import { NEXT_ACTION_ATTRIBUTE_KEY } from 'dashboard/routes/dashboard/kanban/config/stages';
+import {
+  QUOTE_ATTRIBUTE_KEY,
+  FOLLOW_UP_DUE_ATTRIBUTE_KEY,
+} from 'dashboard/routes/dashboard/kanban/config/quoteProducts';
 
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
@@ -44,9 +48,33 @@ const nextAction = computed(
   () => props.conversation?.custom_attributes?.[NEXT_ACTION_ATTRIBUTE_KEY]
 );
 
-const fieldValue = field => resolveFieldValue(enrichedConversation.value, field);
+// Espelhos do CRM Fase 1 (gravados pelo backend em custom_attributes).
+const quoteSummary = computed(
+  () => props.conversation?.custom_attributes?.[QUOTE_ATTRIBUTE_KEY]
+);
+const followUpDueAt = computed(() => {
+  const epoch =
+    props.conversation?.custom_attributes?.[FOLLOW_UP_DUE_ATTRIBUTE_KEY];
+  return epoch ? epoch * 1000 : null;
+});
+const followUpOverdue = computed(
+  () => followUpDueAt.value && followUpDueAt.value < Date.now()
+);
+const followUpLabel = computed(() => {
+  if (!followUpDueAt.value) return '';
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(followUpDueAt.value));
+});
 
-const open = (intent = 'detail') => emit('open', { conversation: props.conversation, intent });
+const fieldValue = field =>
+  resolveFieldValue(enrichedConversation.value, field);
+
+const open = (intent = 'detail') =>
+  emit('open', { conversation: props.conversation, intent });
 
 const openConversation = e => {
   const path = frontendURL(
@@ -120,6 +148,36 @@ const openConversation = e => {
           :value="fieldValue(field)"
         />
       </div>
+    </div>
+    <!-- Badges do CRM: resumo da cotação e follow-up (vencido em destaque). -->
+    <div
+      v-if="quoteSummary || followUpDueAt"
+      class="flex flex-wrap items-center gap-x-2 gap-y-1"
+    >
+      <span
+        v-if="quoteSummary"
+        class="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs rounded bg-n-alpha-1 text-n-slate-11"
+        :title="$t('KANBAN.QUOTE.TITLE')"
+      >
+        <Icon icon="i-lucide-file-text" class="size-3 shrink-0" />
+        <span class="truncate max-w-40">{{ quoteSummary }}</span>
+      </span>
+      <span
+        v-if="followUpDueAt"
+        class="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs rounded"
+        :class="
+          followUpOverdue
+            ? 'bg-n-ruby-3 text-n-ruby-11 font-medium'
+            : 'bg-n-alpha-1 text-n-slate-11'
+        "
+        :title="$t('KANBAN.FOLLOW_UPS.TITLE')"
+      >
+        <Icon
+          :icon="followUpOverdue ? 'i-lucide-bell-ring' : 'i-lucide-bell'"
+          class="size-3 shrink-0"
+        />
+        {{ followUpLabel }}
+      </span>
     </div>
     <!-- Dica de próxima ação, quando existir (discreta, no rodapé do card). -->
     <div

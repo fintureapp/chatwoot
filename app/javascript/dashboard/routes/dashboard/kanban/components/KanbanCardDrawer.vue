@@ -18,6 +18,8 @@ import {
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
+import QuoteSection from './QuoteSection.vue';
+import FollowUpsSection from './FollowUpsSection.vue';
 
 const props = defineProps({
   open: {
@@ -82,7 +84,12 @@ const isLost = computed(() => resolveStage(record.value) === LOST_STAGE);
 const volume = computed(() => {
   const raw = custom('valor_potencial');
   const number = Number(raw);
-  if (raw === undefined || raw === null || raw === '' || !Number.isFinite(number)) {
+  if (
+    raw === undefined ||
+    raw === null ||
+    raw === '' ||
+    !Number.isFinite(number)
+  ) {
     return '';
   }
   return number.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -93,16 +100,56 @@ const nextAction = computed(() => custom(NEXT_ACTION_ATTRIBUTE_KEY) || '');
 const detailRows = computed(() => {
   const sender = record.value?.meta?.sender || {};
   return [
-    { key: 'client', label: t('KANBAN.DRAWER.FIELDS.CLIENT'), value: sender.name },
-    { key: 'phone', label: t('KANBAN.DRAWER.FIELDS.PHONE'), value: sender.phone_number },
-    { key: 'email', label: t('KANBAN.DRAWER.FIELDS.EMAIL'), value: sender.email },
-    { key: 'product', label: t('KANBAN.DRAWER.FIELDS.PRODUCT'), value: custom('produto_interesse') },
-    { key: 'volume', label: t('KANBAN.DRAWER.FIELDS.VOLUME'), value: volume.value },
-    { key: 'stage', label: t('KANBAN.DRAWER.FIELDS.STAGE'), value: currentStage.value },
-    { key: 'assignee', label: t('KANBAN.DRAWER.FIELDS.ASSIGNEE'), value: record.value?.meta?.assignee?.name },
-    { key: 'inbox', label: t('KANBAN.DRAWER.FIELDS.INBOX'), value: props.inboxNames[record.value?.inbox_id] },
-    { key: 'createdAt', label: t('KANBAN.DRAWER.FIELDS.CREATED_AT'), value: formatDateTime(record.value?.created_at) },
-    { key: 'updatedAt', label: t('KANBAN.DRAWER.FIELDS.UPDATED_AT'), value: formatDateTime(record.value?.last_activity_at) },
+    {
+      key: 'client',
+      label: t('KANBAN.DRAWER.FIELDS.CLIENT'),
+      value: sender.name,
+    },
+    {
+      key: 'phone',
+      label: t('KANBAN.DRAWER.FIELDS.PHONE'),
+      value: sender.phone_number,
+    },
+    {
+      key: 'email',
+      label: t('KANBAN.DRAWER.FIELDS.EMAIL'),
+      value: sender.email,
+    },
+    {
+      key: 'product',
+      label: t('KANBAN.DRAWER.FIELDS.PRODUCT'),
+      value: custom('produto_interesse'),
+    },
+    {
+      key: 'volume',
+      label: t('KANBAN.DRAWER.FIELDS.VOLUME'),
+      value: volume.value,
+    },
+    {
+      key: 'stage',
+      label: t('KANBAN.DRAWER.FIELDS.STAGE'),
+      value: currentStage.value,
+    },
+    {
+      key: 'assignee',
+      label: t('KANBAN.DRAWER.FIELDS.ASSIGNEE'),
+      value: record.value?.meta?.assignee?.name,
+    },
+    {
+      key: 'inbox',
+      label: t('KANBAN.DRAWER.FIELDS.INBOX'),
+      value: props.inboxNames[record.value?.inbox_id],
+    },
+    {
+      key: 'createdAt',
+      label: t('KANBAN.DRAWER.FIELDS.CREATED_AT'),
+      value: formatDateTime(record.value?.created_at),
+    },
+    {
+      key: 'updatedAt',
+      label: t('KANBAN.DRAWER.FIELDS.UPDATED_AT'),
+      value: formatDateTime(record.value?.last_activity_at),
+    },
   ];
 });
 
@@ -191,7 +238,9 @@ watch(
   () => [props.open, props.conversationId],
   ([open]) => {
     if (!open || !props.conversationId) return;
-    store.dispatch('kanban/fetchNotes', { conversationId: props.conversationId });
+    store.dispatch('kanban/fetchNotes', {
+      conversationId: props.conversationId,
+    });
     nextActionEditing.value = false;
     noteDraft.value = '';
     nextTick(() => {
@@ -259,7 +308,9 @@ watch(
                 <dt class="w-32 shrink-0 text-n-slate-11">{{ row.label }}</dt>
                 <dd
                   class="min-w-0 break-words"
-                  :class="row.value ? 'text-n-slate-12' : 'text-n-slate-10 italic'"
+                  :class="
+                    row.value ? 'text-n-slate-12' : 'text-n-slate-10 italic'
+                  "
                 >
                   {{ row.value || NOT_INFORMED() }}
                 </dd>
@@ -272,11 +323,18 @@ watch(
                   {{ $t('KANBAN.DRAWER.FIELDS.LOST_REASON') }}
                 </dt>
                 <dd class="min-w-0 break-words text-n-ruby-11">
-                  {{ lostReason }}<template v-if="lostComment"> — {{ lostComment }}</template>
+                  {{ lostReason
+                  }}<template v-if="lostComment"> — {{ lostComment }}</template>
                 </dd>
               </div>
             </dl>
           </section>
+
+          <!-- Cotação estruturada (CRM Fase 1) -->
+          <QuoteSection :conversation-id="conversationId" />
+
+          <!-- Follow-ups com prazo (CRM Fase 1) -->
+          <FollowUpsSection :conversation-id="conversationId" />
 
           <!-- Próxima ação -->
           <section class="flex flex-col gap-2">
@@ -291,7 +349,11 @@ watch(
                 class="text-xs text-n-brand hover:underline"
                 @click="startEditNextAction"
               >
-                {{ nextAction ? $t('KANBAN.DRAWER.EDIT') : $t('KANBAN.DRAWER.ADD') }}
+                {{
+                  nextAction
+                    ? $t('KANBAN.DRAWER.EDIT')
+                    : $t('KANBAN.DRAWER.ADD')
+                }}
               </button>
             </div>
             <template v-if="nextActionEditing">
@@ -377,7 +439,9 @@ watch(
                 :key="note.id"
                 class="p-3 text-sm rounded-lg bg-n-alpha-1 text-n-slate-12"
               >
-                <p class="whitespace-pre-wrap break-words">{{ note.content }}</p>
+                <p class="whitespace-pre-wrap break-words">
+                  {{ note.content }}
+                </p>
                 <p class="mt-1 text-xs text-n-slate-10">
                   <template v-if="note.author">{{ note.author }} · </template>
                   {{ formatDateTime(note.createdAt) }}
@@ -399,14 +463,18 @@ watch(
                 :key="event.id"
                 class="flex gap-3 text-sm"
               >
-                <span class="mt-1.5 size-2 rounded-full shrink-0 bg-n-slate-8" />
+                <span
+                  class="mt-1.5 size-2 rounded-full shrink-0 bg-n-slate-8"
+                />
                 <div class="flex flex-col min-w-0">
                   <span class="text-n-slate-12">{{ event.title }}</span>
                   <span v-if="event.detail" class="text-n-slate-11">
                     {{ event.detail }}
                   </span>
                   <span class="text-xs text-n-slate-10">
-                    <template v-if="event.author">{{ event.author }} · </template>
+                    <template v-if="event.author">
+                      {{ event.author }} ·
+                    </template>
                     {{ formatDateTime(event.at) }}
                   </span>
                 </div>

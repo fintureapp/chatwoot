@@ -153,6 +153,8 @@ Rails.application.routes.draw do
               resource :participants, only: [:show, :create, :update, :destroy]
               resource :direct_uploads, only: [:create]
               resource :draft_messages, only: [:show, :update, :destroy]
+              resource :finture_quote, only: [:show, :update], controller: 'finture_quotes'
+              resources :finture_follow_ups, only: [:index, :create, :update, :destroy]
             end
             member do
               post :mute
