@@ -136,6 +136,8 @@ class ActionCableConnector extends BaseActionCableConnector {
 
   onConversationUpdated = data => {
     this.app.$store.dispatch('updateConversation', data);
+    // Kanban SDR (fork Finture): board reflete mudanças sem refetch manual.
+    this.app.$store.dispatch('kanban/handleConversationUpdated', data);
     this.fetchConversationStats();
   };
 
