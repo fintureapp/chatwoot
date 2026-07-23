@@ -46,7 +46,7 @@ class Api::V1::Accounts::FinturePipelineStagesController < Api::V1::Accounts::Ba
       locked_ids = scoped_stages.where(locked: true).pluck(:id)
       final = (locked_ids + (ordered_ids - locked_ids)).uniq
       final.each_with_index do |id, index|
-        scoped_stages.where(id: id).update_all(position: index)
+        Finture::PipelineStage.where(inbox_id: @inbox.id, id: id).update_all(position: index) # rubocop:disable Rails/SkipsModelValidations
       end
     end
     render json: { payload: scoped_stages.reload.map { |stage| serialize(stage) } }
