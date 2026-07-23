@@ -138,6 +138,7 @@ Rails.application.routes.draw do
               get :meta
               get :search
               get :kanban
+              get :kanban_history
               get :unread_counts, to: 'conversations/unread_counts#index'
               post :filter
             end
@@ -156,6 +157,7 @@ Rails.application.routes.draw do
               resource :finture_quote, only: [:show, :update], controller: 'finture_quotes'
               resources :finture_follow_ups, only: [:index, :create, :update, :destroy]
               resource :finture_stage, only: [:update], controller: 'finture_stages'
+              resource :finture_outcome, only: [:update], controller: 'finture_outcomes'
             end
             member do
               post :mute

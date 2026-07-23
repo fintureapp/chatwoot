@@ -23,6 +23,12 @@ export const state = {
     isSaving: false,
     hasError: false,
   },
+  // Histórico de leads fechados (ganho/perdido) por caixa (Fase C).
+  historyByInbox: {},
+  historyUiFlags: {
+    isFetching: false,
+    hasError: false,
+  },
   // Notas (mensagens privadas) carregadas sob demanda, por conversa.
   notes: {},
   notesUiFlags: {
@@ -52,6 +58,8 @@ export const getters = {
   getRecordById: $state => id => $state.records.find(item => item.id === id),
   getStagesForInbox: $state => inboxId => $state.stagesByInbox[inboxId] || [],
   getStagesUIFlags: $state => $state.stagesUiFlags,
+  getHistoryForInbox: $state => inboxId => $state.historyByInbox[inboxId] || [],
+  getHistoryUIFlags: $state => $state.historyUiFlags,
   getNotes: $state => conversationId => $state.notes[conversationId] || [],
   getNotesUIFlags: $state => $state.notesUiFlags,
   getQuote: $state => conversationId => $state.quotes[conversationId] ?? null,
@@ -170,6 +178,36 @@ export const actions = {
         [STAGE_ATTRIBUTE_KEY]: stage,
       },
     });
+  },
+
+  // ---- Desfecho / histórico (Fase C) ----------------------------------------
+  // Marca ganho/perdido: o card sai do board ativo (passa a viver no Histórico).
+  async markOutcome({ commit }, { conversationId, kind, reason, comment }) {
+    await FintureCrmApi.markOutcome(conversationId, { kind, reason, comment });
+    if (kind === 'won' || kind === 'lost') {
+      commit('REMOVE_RECORD', conversationId);
+    }
+  },
+
+  async fetchHistory({ commit }, { inboxId }) {
+    if (!inboxId) return;
+    commit('SET_HISTORY_UI_FLAG', { isFetching: true, hasError: false });
+    try {
+      const response = await FintureCrmApi.getHistory(inboxId);
+      commit('SET_HISTORY', { inboxId, history: response.data?.payload ?? [] });
+    } catch (error) {
+      commit('SET_HISTORY_UI_FLAG', { hasError: true });
+      throw error;
+    } finally {
+      commit('SET_HISTORY_UI_FLAG', { isFetching: false });
+    }
+  },
+
+  // Reabrir: limpa o desfecho e devolve o card ao funil ativo.
+  async reopenLead({ dispatch }, { conversationId, inboxId }) {
+    await FintureCrmApi.markOutcome(conversationId, { kind: 'reopen' });
+    await dispatch('fetchHistory', { inboxId });
+    await dispatch('fetchBoard');
   },
 
   // Salva a próxima ação (sdr_next_action) preservando o restante do hash.
@@ -363,6 +401,15 @@ export const mutations = {
   },
   SET_STAGES_UI_FLAG($state, uiFlag) {
     $state.stagesUiFlags = { ...$state.stagesUiFlags, ...uiFlag };
+  },
+  SET_HISTORY($state, { inboxId, history }) {
+    $state.historyByInbox = { ...$state.historyByInbox, [inboxId]: history };
+  },
+  SET_HISTORY_UI_FLAG($state, uiFlag) {
+    $state.historyUiFlags = { ...$state.historyUiFlags, ...uiFlag };
+  },
+  REMOVE_RECORD($state, conversationId) {
+    $state.records = $state.records.filter(item => item.id !== conversationId);
   },
   UPDATE_RECORD_ATTRIBUTES($state, { conversationId, customAttributes }) {
     const record = $state.records.find(item => item.id === conversationId);

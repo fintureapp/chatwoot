@@ -81,6 +81,21 @@ class FintureCrmApi extends ApiClient {
   changeStage(conversationId, payload) {
     return axios.patch(`${this.url}/${conversationId}/finture_stage`, payload);
   }
+
+  // ---- Desfecho do card: ganho / perdido / reabrir --------------------------
+  markOutcome(conversationId, payload) {
+    return axios.patch(
+      `${this.url}/${conversationId}/finture_outcome`,
+      payload
+    );
+  }
+
+  // ---- Histórico (leads fechados) de uma caixa ------------------------------
+  getHistory(inboxId) {
+    return axios.get(`${this.url}/kanban_history`, {
+      params: { inbox_id: inboxId },
+    });
+  }
 }
 
 export default new FintureCrmApi();

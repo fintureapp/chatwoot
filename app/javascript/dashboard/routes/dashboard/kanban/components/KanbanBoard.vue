@@ -7,6 +7,7 @@ import { resolveStage } from 'dashboard/routes/dashboard/kanban/config/stages';
 
 import KanbanColumn from './KanbanColumn.vue';
 import KanbanCardDrawer from './KanbanCardDrawer.vue';
+import LostReasonDialog from './LostReasonDialog.vue';
 
 const props = defineProps({
   // Registros já filtrados/ordenados pela toolbar da página.
@@ -31,6 +32,10 @@ const { t } = useI18n();
 const localColumns = ref([]);
 const isDragging = ref(false);
 
+// Desfecho (ganho/perdido) marcado dentro do card.
+const lostDialogRef = ref(null);
+const pendingLost = ref(null);
+
 // Estado do drawer de detalhe.
 const selectedConversationId = ref(null);
 const drawerIntent = ref('detail');
@@ -49,8 +54,8 @@ const rebuildColumns = () => {
 };
 
 // Reconstrói quando as etapas OU o conjunto/ordem de registros mudam (fetch,
-// filtro, ordenação, reconfiguração de etapas), nunca em atualização de atributo
-// em memória — evita "piscar" o card após o drop (o SortableJS já moveu o DOM).
+// filtro, ordenação, reconfiguração de etapas, desfecho), nunca em atualização
+// de atributo em memória — evita "piscar" o card após o drop.
 const columnsSignature = computed(
   () =>
     `${stageSlugs.value.join(',')}|${props.records
@@ -77,6 +82,35 @@ const handleChange = (stageValue, event) => {
   persistStage(event.added.element, stageValue);
 };
 
+const markOutcome = async (conversation, kind, extra = {}) => {
+  try {
+    await store.dispatch('kanban/markOutcome', {
+      conversationId: conversation.id,
+      kind,
+      ...extra,
+    });
+  } catch {
+    useAlert(t('KANBAN.ERRORS.UPDATE_OUTCOME'));
+  }
+};
+
+const onWon = conversation => markOutcome(conversation, 'won');
+
+const onLost = conversation => {
+  pendingLost.value = conversation;
+  lostDialogRef.value.open();
+};
+
+const onLostSubmit = ({ reason, comment }) => {
+  const conversation = pendingLost.value;
+  pendingLost.value = null;
+  markOutcome(conversation, 'lost', { reason, comment });
+};
+
+const onLostCancel = () => {
+  pendingLost.value = null;
+};
+
 const openDrawer = ({ conversation, intent }) => {
   selectedConversationId.value = conversation.id;
   drawerIntent.value = intent || 'detail';
@@ -98,8 +132,16 @@ const openDrawer = ({ conversation, intent }) => {
         @drag-start="isDragging = true"
         @drag-end="isDragging = false"
         @open="openDrawer"
+        @won="onWon"
+        @lost="onLost"
       />
     </div>
+
+    <LostReasonDialog
+      ref="lostDialogRef"
+      @submit="onLostSubmit"
+      @cancel="onLostCancel"
+    />
 
     <KanbanCardDrawer
       v-model:open="isDrawerOpen"

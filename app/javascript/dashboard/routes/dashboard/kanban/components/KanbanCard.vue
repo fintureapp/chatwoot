@@ -27,7 +27,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['open']);
+const emit = defineEmits(['open', 'won', 'lost']);
 
 const route = useRoute();
 const router = useRouter();
@@ -108,6 +108,22 @@ const openConversation = e => {
     <div
       class="absolute z-10 items-center hidden gap-0.5 top-2 ltr:right-2 rtl:left-2 group-hover:flex"
     >
+      <button
+        class="flex items-center justify-center rounded-md size-6 text-n-teal-11 hover:bg-n-teal-3"
+        :title="$t('KANBAN.CARD.MARK_WON')"
+        @click.stop="emit('won', conversation)"
+        @pointerdown.stop
+      >
+        <Icon icon="i-lucide-trophy" class="size-4" />
+      </button>
+      <button
+        class="flex items-center justify-center rounded-md size-6 text-n-ruby-11 hover:bg-n-ruby-3"
+        :title="$t('KANBAN.CARD.MARK_LOST')"
+        @click.stop="emit('lost', conversation)"
+        @pointerdown.stop
+      >
+        <Icon icon="i-lucide-circle-x" class="size-4" />
+      </button>
       <button
         class="flex items-center justify-center rounded-md size-6 text-n-slate-11 hover:bg-n-alpha-2 hover:text-n-slate-12"
         :title="$t('KANBAN.CARD.ADD_NOTE')"

@@ -10,6 +10,7 @@ import KanbanInboxFilter from '../components/KanbanInboxFilter.vue';
 import KanbanToolbar from '../components/KanbanToolbar.vue';
 import KanbanBoard from '../components/KanbanBoard.vue';
 import StageManagerDialog from '../components/StageManagerDialog.vue';
+import KanbanHistoryView from '../components/KanbanHistoryView.vue';
 import EmptyStateLayout from 'dashboard/components-next/EmptyStateLayout.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 
@@ -49,7 +50,7 @@ const activeTab = ref('board');
 const tabs = computed(() => [
   { key: 'board', label: t('KANBAN.TABS.BOARD') },
   { key: 'dashboard', label: t('KANBAN.TABS.DASHBOARD'), soon: true },
-  { key: 'history', label: t('KANBAN.TABS.HISTORY'), soon: true },
+  { key: 'history', label: t('KANBAN.TABS.HISTORY') },
 ]);
 
 // ---- Gerenciador de etapas (admin) ----------------------------------------
@@ -399,14 +400,8 @@ onMounted(async () => {
       :show-backdrop="false"
     />
 
-    <!-- Aba: Histórico (em breve — Fase C) -->
-    <EmptyStateLayout
-      v-else
-      class="flex-1 min-h-0"
-      :title="t('KANBAN.TABS.HISTORY_SOON_TITLE')"
-      :subtitle="t('KANBAN.TABS.HISTORY_SOON_SUBTITLE')"
-      :show-backdrop="false"
-    />
+    <!-- Aba: Histórico -->
+    <KanbanHistoryView v-else :inbox-id="activeInboxId" />
 
     <StageManagerDialog
       ref="stageManagerRef"

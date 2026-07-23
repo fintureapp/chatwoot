@@ -24,7 +24,25 @@
     "CARD": {
       "OPEN_CONVERSATION": "Abrir conversa",
       "ADD_NOTE": "Adicionar nota",
-      "EDIT_NEXT_ACTION": "Editar próxima ação"
+      "EDIT_NEXT_ACTION": "Editar próxima ação",
+      "MARK_WON": "Marcar como ganho",
+      "MARK_LOST": "Marcar como perdido"
+    },
+    "OUTCOME": {
+      "WON": "Ganho",
+      "LOST": "Perdido",
+      "REOPEN": "Reabrir"
+    },
+    "HISTORY": {
+      "COUNT": "{count} lead(s) fechado(s)",
+      "REFRESH": "Atualizar",
+      "EMPTY_TITLE": "Nenhum lead fechado",
+      "EMPTY_SUBTITLE": "Leads marcados como ganho ou perdido aparecem aqui — com valor, motivo e data.",
+      "COL_LEAD": "Lead",
+      "COL_OUTCOME": "Desfecho",
+      "COL_VALUE": "Valor",
+      "COL_REASON": "Motivo",
+      "COL_DATE": "Fechado em"
     },
     "COLUMN": {
       "EMPTY": "Nenhum lead nesta etapa"
@@ -122,6 +140,7 @@
     },
     "ERRORS": {
       "UPDATE_STAGE": "Não foi possível atualizar a etapa do lead. Tente novamente.",
+      "UPDATE_OUTCOME": "Não foi possível atualizar o desfecho do lead. Tente novamente.",
       "UPDATE_NEXT_ACTION": "Não foi possível salvar a próxima ação. Tente novamente.",
       "ADD_NOTE": "Não foi possível salvar a nota. Tente novamente."
     },
