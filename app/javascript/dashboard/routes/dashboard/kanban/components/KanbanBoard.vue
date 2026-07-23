@@ -126,7 +126,7 @@ const openDrawer = ({ conversation, intent }) => {
 
 <template>
   <div class="flex flex-col min-h-0">
-    <div class="flex flex-1 gap-4 px-6 py-4 overflow-x-auto min-h-0">
+    <div class="flex flex-1 gap-3 px-3 py-3 overflow-x-auto min-h-0">
       <KanbanColumn
         v-for="column in localColumns"
         :key="column.stage.value"

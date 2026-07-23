@@ -1,6 +1,16 @@
 {
   "KANBAN": {
     "HEADER_TITLE": "Kanban SDR AI",
+    "TABS": {
+      "BOARD": "Board",
+      "DASHBOARD": "Dashboard SDR",
+      "HISTORY": "Histórico",
+      "SOON": "Em breve",
+      "DASHBOARD_SOON_TITLE": "Dashboard SDR em breve",
+      "DASHBOARD_SOON_SUBTITLE": "Aqui você verá tempo médio por etapa, leads identificados, conversão e ticket médio, com filtro por caixa ou visão geral.",
+      "HISTORY_SOON_TITLE": "Histórico em breve",
+      "HISTORY_SOON_SUBTITLE": "Aqui ficarão os leads ganhos e perdidos — com valor, motivo e data — e a opção de reabrir."
+    },
     "CARD": {
       "OPEN_CONVERSATION": "Abrir conversa",
       "ADD_NOTE": "Adicionar nota",
@@ -16,11 +26,17 @@
     },
     "TOOLBAR": {
       "SEARCH_PLACEHOLDER": "Buscar por cliente ou produto",
+      "FILTERS": "Filtros",
+      "PRODUCT": "Produto",
+      "STAGE": "Etapa",
+      "ASSIGNEE": "Responsável",
+      "SORT_LABEL": "Ordenar por",
       "ALL_PRODUCTS": "Todos os produtos",
       "ALL_STAGES": "Todas as etapas",
       "ALL_ASSIGNEES": "Todos os responsáveis",
       "CREATED_FROM": "Criado de",
       "CREATED_TO": "até",
+      "CREATED_TO_LABEL": "Criado até",
       "CLEAR": "Limpar filtros",
       "SORT": {
         "LAST_ACTIVITY": "Última atualização",
