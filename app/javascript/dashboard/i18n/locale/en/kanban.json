@@ -11,6 +11,16 @@
       "HISTORY_SOON_TITLE": "Histórico em breve",
       "HISTORY_SOON_SUBTITLE": "Aqui ficarão os leads ganhos e perdidos — com valor, motivo e data — e a opção de reabrir."
     },
+    "STAGE_MANAGER": {
+      "MANAGE": "Gerenciar etapas",
+      "TITLE": "Etapas do funil",
+      "SUBTITLE": "A 1ª etapa (Lead Identificado) é fixa. Adicione, renomeie, recolora e reordene as demais — as mudanças valem para esta caixa.",
+      "FIXED": "Fixa",
+      "ADD": "Adicionar",
+      "NEW_PLACEHOLDER": "Nome da nova etapa",
+      "CLOSE": "Fechar",
+      "SAVE_ERROR": "Não foi possível salvar as etapas. Tente novamente."
+    },
     "CARD": {
       "OPEN_CONVERSATION": "Abrir conversa",
       "ADD_NOTE": "Adicionar nota",

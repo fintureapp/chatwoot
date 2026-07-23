@@ -40,11 +40,14 @@ export const HISTORY_MAX_ENTRIES = 20;
 
 /**
  * Resolve a etapa de uma conversa, tratando ausência de valor e valores
- * desconhecidos como `DEFAULT_STAGE` para nunca perder o card.
+ * desconhecidos (etapa renomeada/excluída) como a 1ª etapa válida — nunca perde
+ * o card. `validSlugs` são as etapas da caixa (dinâmicas, Fase B); sem elas,
+ * cai no conjunto estático de fallback.
  */
-export const resolveStage = conversation => {
+export const resolveStage = (conversation, validSlugs = STAGE_VALUES) => {
   const stage = conversation?.custom_attributes?.[STAGE_ATTRIBUTE_KEY];
-  return STAGE_VALUES.includes(stage) ? stage : DEFAULT_STAGE;
+  if (validSlugs.includes(stage)) return stage;
+  return validSlugs[0] || DEFAULT_STAGE;
 };
 
 /**

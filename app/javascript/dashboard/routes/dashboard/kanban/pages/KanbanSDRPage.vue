@@ -9,6 +9,7 @@ import { downloadKanbanCsv } from 'dashboard/routes/dashboard/kanban/helper/csv'
 import KanbanInboxFilter from '../components/KanbanInboxFilter.vue';
 import KanbanToolbar from '../components/KanbanToolbar.vue';
 import KanbanBoard from '../components/KanbanBoard.vue';
+import StageManagerDialog from '../components/StageManagerDialog.vue';
 import EmptyStateLayout from 'dashboard/components-next/EmptyStateLayout.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 
@@ -21,8 +22,17 @@ const inboxes = useMapGetter('inboxes/getInboxes');
 const selectedInboxIds = useMapGetter('kanban/getSelectedInboxIds');
 const uiFlags = useMapGetter('kanban/getUIFlags');
 const records = useMapGetter('kanban/getRecords');
+const currentRole = useMapGetter('getCurrentRole');
 
+const isAdmin = computed(() => currentRole.value === 'administrator');
 const hasSelection = computed(() => selectedInboxIds.value.length > 0);
+
+// Board opera sobre UMA caixa (o funil é por caixa).
+const activeInboxId = computed(() => selectedInboxIds.value[0] ?? null);
+const stages = computed(() =>
+  store.getters['kanban/getStagesForInbox'](activeInboxId.value)
+);
+const stageSlugs = computed(() => stages.value.map(stage => stage.slug));
 
 const inboxNames = computed(() => {
   const map = {};
@@ -41,6 +51,10 @@ const tabs = computed(() => [
   { key: 'dashboard', label: t('KANBAN.TABS.DASHBOARD'), soon: true },
   { key: 'history', label: t('KANBAN.TABS.HISTORY'), soon: true },
 ]);
+
+// ---- Gerenciador de etapas (admin) ----------------------------------------
+const stageManagerRef = ref(null);
+const openStageManager = () => stageManagerRef.value?.open();
 
 // ---- Filtros / ordenação (client-side) ------------------------------------
 const defaultFilters = () => ({
@@ -115,6 +129,7 @@ const sorters = {
 const filteredRecords = computed(() => {
   const createdFrom = toSeconds(filters.createdFrom);
   const createdTo = toSeconds(filters.createdTo, true);
+  const slugs = stageSlugs.value;
   const result = records.value.filter(record => {
     if (!matchesQuery(record)) return false;
     if (
@@ -123,7 +138,9 @@ const filteredRecords = computed(() => {
     ) {
       return false;
     }
-    if (filters.stage && resolveStage(record) !== filters.stage) return false;
+    if (filters.stage && resolveStage(record, slugs) !== filters.stage) {
+      return false;
+    }
     if (
       filters.assigneeId &&
       String(record.meta?.assignee?.id) !== filters.assigneeId
@@ -159,13 +176,18 @@ const parseInboxIds = raw => {
 };
 
 const applySelection = (ids, { updateQuery = true } = {}) => {
-  store.dispatch('kanban/setSelectedInboxIds', ids);
+  // Board por caixa: mantém no máximo uma caixa selecionada.
+  const single = ids.slice(0, 1);
+  store.dispatch('kanban/setSelectedInboxIds', single);
   if (updateQuery) {
     router.replace({
-      query: { ...route.query, inbox_ids: ids.join(',') || undefined },
+      query: { ...route.query, inbox_ids: single.join(',') || undefined },
     });
   }
   store.dispatch('kanban/fetchBoard');
+  if (single.length) {
+    store.dispatch('kanban/fetchStages', { inboxId: single[0] });
+  }
 };
 
 const onSelectionUpdate = ids => applySelection(ids);
@@ -184,7 +206,12 @@ onMounted(async () => {
   if (!inboxes.value.length) {
     await store.dispatch('inboxes/get');
   }
-  applySelection(parseInboxIds(route.query.inbox_ids), { updateQuery: false });
+  // Board por caixa: cai na 1ª caixa quando não há uma na URL.
+  let ids = parseInboxIds(route.query.inbox_ids);
+  if (!ids.length && inboxes.value.length) {
+    ids = [inboxes.value[0].id];
+  }
+  applySelection(ids, { updateQuery: false });
 });
 </script>
 
@@ -197,6 +224,15 @@ onMounted(async () => {
         {{ t('KANBAN.HEADER_TITLE') }}
       </h1>
       <div class="flex items-center gap-2">
+        <Button
+          v-if="activeTab === 'board' && isAdmin && hasSelection"
+          color="slate"
+          variant="ghost"
+          size="sm"
+          icon="i-lucide-settings-2"
+          :label="t('KANBAN.STAGE_MANAGER.MANAGE')"
+          @click="openStageManager"
+        />
         <Button
           v-if="activeTab === 'board' && hasSelection && records.length"
           color="slate"
@@ -270,6 +306,7 @@ onMounted(async () => {
         :sort-by="sortBy"
         :products="products"
         :assignees="assignees"
+        :stages="stages"
         :has-active-filters="hasActiveFilters"
         @update:filters="onFiltersUpdate"
         @update:sort-by="onSortUpdate"
@@ -348,6 +385,7 @@ onMounted(async () => {
         v-else
         class="flex-1 min-h-0"
         :records="filteredRecords"
+        :stages="stages"
         :inbox-names="inboxNames"
       />
     </template>
@@ -368,6 +406,12 @@ onMounted(async () => {
       :title="t('KANBAN.TABS.HISTORY_SOON_TITLE')"
       :subtitle="t('KANBAN.TABS.HISTORY_SOON_SUBTITLE')"
       :show-backdrop="false"
+    />
+
+    <StageManagerDialog
+      ref="stageManagerRef"
+      :inbox-id="activeInboxId"
+      :stages="stages"
     />
   </section>
 </template>

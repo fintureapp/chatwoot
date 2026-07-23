@@ -2,7 +2,6 @@
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { vOnClickOutside } from '@vueuse/components';
-import { KANBAN_STAGES } from 'dashboard/routes/dashboard/kanban/config/stages';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 
@@ -26,6 +25,10 @@ const props = defineProps({
   hasActiveFilters: {
     type: Boolean,
     default: false,
+  },
+  stages: {
+    type: Array,
+    default: () => [],
   },
 });
 
@@ -121,11 +124,11 @@ const fieldClass = `w-full ${inputClass}`;
           >
             <option value="">{{ t('KANBAN.TOOLBAR.ALL_STAGES') }}</option>
             <option
-              v-for="stage in KANBAN_STAGES"
-              :key="stage.value"
-              :value="stage.value"
+              v-for="stage in stages"
+              :key="stage.slug"
+              :value="stage.slug"
             >
-              {{ stage.label }}
+              {{ stage.name }}
             </option>
           </select>
         </label>

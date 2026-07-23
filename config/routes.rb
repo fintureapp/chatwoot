@@ -155,6 +155,7 @@ Rails.application.routes.draw do
               resource :draft_messages, only: [:show, :update, :destroy]
               resource :finture_quote, only: [:show, :update], controller: 'finture_quotes'
               resources :finture_follow_ups, only: [:index, :create, :update, :destroy]
+              resource :finture_stage, only: [:update], controller: 'finture_stages'
             end
             member do
               post :mute
@@ -254,6 +255,11 @@ Rails.application.routes.draw do
 
           resources :custom_attribute_definitions, only: [:index, :show, :create, :update, :destroy]
           resources :custom_filters, only: [:index, :show, :create, :update, :destroy]
+          resources :finture_pipeline_stages, only: [:index, :create, :update, :destroy] do
+            collection do
+              post :reorder
+            end
+          end
           resources :inboxes, only: [:index, :show, :create, :update, :destroy] do
             get :assignable_agents, on: :member
             get :campaigns, on: :member

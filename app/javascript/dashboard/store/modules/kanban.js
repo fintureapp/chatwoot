@@ -3,25 +3,24 @@ import MessageApi from 'dashboard/api/inbox/message';
 import FintureCrmApi from 'dashboard/api/fintureCrm';
 import {
   STAGE_ATTRIBUTE_KEY,
-  LOST_REASON_ATTRIBUTE_KEY,
-  LOST_COMMENT_ATTRIBUTE_KEY,
   NEXT_ACTION_ATTRIBUTE_KEY,
-  HISTORY_ATTRIBUTE_KEY,
-  HISTORY_MAX_ENTRIES,
-  resolveStage,
 } from 'dashboard/routes/dashboard/kanban/config/stages';
 
 const nowInSeconds = () => Math.round(Date.now() / 1000);
-
-// Autor da ação a partir do usuário logado (pode não existir em contextos sem sessão).
-const authorFromUser = user =>
-  user && user.id ? { id: user.id, name: user.name } : null;
 
 export const state = {
   records: [],
   selectedInboxIds: [],
   uiFlags: {
     isFetching: false,
+    hasError: false,
+  },
+  // Etapas do funil por caixa (Fase B): fonte de verdade no backend
+  // (finture_pipeline_stages), carregadas por inbox e cacheadas aqui.
+  stagesByInbox: {},
+  stagesUiFlags: {
+    isFetching: false,
+    isSaving: false,
     hasError: false,
   },
   // Notas (mensagens privadas) carregadas sob demanda, por conversa.
@@ -51,6 +50,8 @@ export const getters = {
   getSelectedInboxIds: $state => $state.selectedInboxIds,
   getUIFlags: $state => $state.uiFlags,
   getRecordById: $state => id => $state.records.find(item => item.id === id),
+  getStagesForInbox: $state => inboxId => $state.stagesByInbox[inboxId] || [],
+  getStagesUIFlags: $state => $state.stagesUiFlags,
   getNotes: $state => conversationId => $state.notes[conversationId] || [],
   getNotesUIFlags: $state => $state.notesUiFlags,
   getQuote: $state => conversationId => $state.quotes[conversationId] ?? null,
@@ -87,57 +88,87 @@ export const actions = {
     }
   },
 
-  // Persiste a etapa (+ campos de perda) e registra a transição no histórico.
-  async updateStage(
-    { commit, state: $state, rootGetters },
-    { conversationId, stage, lostReason, lostComment }
-  ) {
+  // ---- Etapas do funil (Fase B) ---------------------------------------------
+  async fetchStages({ commit }, { inboxId }) {
+    if (!inboxId) return;
+    commit('SET_STAGES_UI_FLAG', { isFetching: true, hasError: false });
+    try {
+      const response = await FintureCrmApi.getStages(inboxId);
+      commit('SET_STAGES', { inboxId, stages: response.data?.payload ?? [] });
+    } catch (error) {
+      commit('SET_STAGES_UI_FLAG', { hasError: true });
+      throw error;
+    } finally {
+      commit('SET_STAGES_UI_FLAG', { isFetching: false });
+    }
+  },
+
+  async createStage({ commit }, { inboxId, stage }) {
+    commit('SET_STAGES_UI_FLAG', { isSaving: true, hasError: false });
+    try {
+      await FintureCrmApi.createStage(inboxId, stage);
+      const response = await FintureCrmApi.getStages(inboxId);
+      commit('SET_STAGES', { inboxId, stages: response.data?.payload ?? [] });
+    } catch (error) {
+      commit('SET_STAGES_UI_FLAG', { hasError: true });
+      throw error;
+    } finally {
+      commit('SET_STAGES_UI_FLAG', { isSaving: false });
+    }
+  },
+
+  async updateStageConfig({ commit }, { inboxId, stageId, changes }) {
+    commit('SET_STAGES_UI_FLAG', { isSaving: true, hasError: false });
+    try {
+      await FintureCrmApi.updateStageConfig(inboxId, stageId, changes);
+      const response = await FintureCrmApi.getStages(inboxId);
+      commit('SET_STAGES', { inboxId, stages: response.data?.payload ?? [] });
+    } catch (error) {
+      commit('SET_STAGES_UI_FLAG', { hasError: true });
+      throw error;
+    } finally {
+      commit('SET_STAGES_UI_FLAG', { isSaving: false });
+    }
+  },
+
+  async deleteStage({ commit }, { inboxId, stageId }) {
+    commit('SET_STAGES_UI_FLAG', { isSaving: true, hasError: false });
+    try {
+      await FintureCrmApi.deleteStage(inboxId, stageId);
+      const response = await FintureCrmApi.getStages(inboxId);
+      commit('SET_STAGES', { inboxId, stages: response.data?.payload ?? [] });
+    } catch (error) {
+      commit('SET_STAGES_UI_FLAG', { hasError: true });
+      throw error;
+    } finally {
+      commit('SET_STAGES_UI_FLAG', { isSaving: false });
+    }
+  },
+
+  async reorderStages({ commit }, { inboxId, order }) {
+    commit('SET_STAGES_UI_FLAG', { isSaving: true, hasError: false });
+    try {
+      const response = await FintureCrmApi.reorderStages(inboxId, order);
+      commit('SET_STAGES', { inboxId, stages: response.data?.payload ?? [] });
+    } catch (error) {
+      commit('SET_STAGES_UI_FLAG', { hasError: true });
+      throw error;
+    } finally {
+      commit('SET_STAGES_UI_FLAG', { isSaving: false });
+    }
+  },
+
+  // Move o card de etapa NO SERVIDOR: o Finture::StageChangeService valida a
+  // etapa-alvo, grava a transição (Dashboard/histórico) e espelha sdr_stage.
+  async changeStage({ commit, state: $state }, { conversationId, stage }) {
     const record = $state.records.find(item => item.id === conversationId);
-    const previousStage = resolveStage(record);
-
-    // Merge obrigatório: o endpoint substitui todo o hash de custom_attributes.
-    const customAttributes = {
-      ...(record?.custom_attributes ?? {}),
-      [STAGE_ATTRIBUTE_KEY]: stage,
-    };
-    if (lostReason !== undefined) {
-      customAttributes[LOST_REASON_ATTRIBUTE_KEY] = lostReason;
-    }
-    if (lostComment !== undefined) {
-      customAttributes[LOST_COMMENT_ATTRIBUTE_KEY] = lostComment;
-    }
-
-    // Log de movimentação (item 11): só quando a etapa realmente muda, evitando
-    // duplicar em rebuild/rollback ou em drop na mesma coluna.
-    if (previousStage !== stage) {
-      const entry = {
-        id: `${Date.now()}`,
-        type: 'stage_change',
-        from: previousStage,
-        to: stage,
-        at: nowInSeconds(),
-        by: authorFromUser(rootGetters.getCurrentUser),
-        origin: 'kanban',
-      };
-      if (lostReason !== undefined) entry.reason = lostReason;
-      if (lostComment) entry.comment = lostComment;
-      const history = Array.isArray(
-        record?.custom_attributes?.[HISTORY_ATTRIBUTE_KEY]
-      )
-        ? record.custom_attributes[HISTORY_ATTRIBUTE_KEY]
-        : [];
-      customAttributes[HISTORY_ATTRIBUTE_KEY] = [...history, entry].slice(
-        -HISTORY_MAX_ENTRIES
-      );
-    }
-
-    const response = await ConversationApi.updateCustomAttributes({
-      conversationId,
-      customAttributes,
-    });
+    const response = await FintureCrmApi.changeStage(conversationId, { stage });
     commit('UPDATE_RECORD_ATTRIBUTES', {
       conversationId,
-      customAttributes: response.data?.custom_attributes ?? customAttributes,
+      customAttributes: response.data?.custom_attributes ?? {
+        ...(record?.custom_attributes ?? {}),
+        [STAGE_ATTRIBUTE_KEY]: stage,
+      },
     });
   },
 
@@ -326,6 +357,12 @@ export const mutations = {
   },
   SET_UI_FLAG($state, uiFlag) {
     $state.uiFlags = { ...$state.uiFlags, ...uiFlag };
+  },
+  SET_STAGES($state, { inboxId, stages }) {
+    $state.stagesByInbox = { ...$state.stagesByInbox, [inboxId]: stages };
+  },
+  SET_STAGES_UI_FLAG($state, uiFlag) {
+    $state.stagesUiFlags = { ...$state.stagesUiFlags, ...uiFlag };
   },
   UPDATE_RECORD_ATTRIBUTES($state, { conversationId, customAttributes }) {
     const record = $state.records.find(item => item.id === conversationId);
