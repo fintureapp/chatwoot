@@ -262,6 +262,7 @@ Rails.application.routes.draw do
               post :reorder
             end
           end
+          resource :finture_sdr_dashboard, only: [:show], controller: 'finture_sdr_dashboard'
           resources :inboxes, only: [:index, :show, :create, :update, :destroy] do
             get :assignable_agents, on: :member
             get :campaigns, on: :member

@@ -44,6 +44,21 @@
       "COL_REASON": "Motivo",
       "COL_DATE": "Fechado em"
     },
+    "DASHBOARD": {
+      "ALL_INBOXES": "Visão geral (todas as caixas)",
+      "PERIOD_7": "Últimos 7 dias",
+      "PERIOD_30": "Últimos 30 dias",
+      "PERIOD_90": "Últimos 90 dias",
+      "LOADING": "Carregando…",
+      "LEADS": "Leads identificados",
+      "CONVERSION": "Conversão",
+      "TICKET": "Ticket médio",
+      "WON": "Ganhos",
+      "LOST": "Perdidos",
+      "OPEN": "Em aberto",
+      "AVG_TIME_TITLE": "Tempo médio por etapa",
+      "AVG_TIME_EMPTY": "Ainda não há transições suficientes no período."
+    },
     "COLUMN": {
       "EMPTY": "Nenhum lead nesta etapa"
     },

@@ -11,6 +11,7 @@ import KanbanToolbar from '../components/KanbanToolbar.vue';
 import KanbanBoard from '../components/KanbanBoard.vue';
 import StageManagerDialog from '../components/StageManagerDialog.vue';
 import KanbanHistoryView from '../components/KanbanHistoryView.vue';
+import SdrDashboard from '../components/SdrDashboard.vue';
 import EmptyStateLayout from 'dashboard/components-next/EmptyStateLayout.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 
@@ -49,7 +50,7 @@ const inboxNames = computed(() => {
 const activeTab = ref('board');
 const tabs = computed(() => [
   { key: 'board', label: t('KANBAN.TABS.BOARD') },
-  { key: 'dashboard', label: t('KANBAN.TABS.DASHBOARD'), soon: true },
+  { key: 'dashboard', label: t('KANBAN.TABS.DASHBOARD') },
   { key: 'history', label: t('KANBAN.TABS.HISTORY') },
 ]);
 
@@ -391,13 +392,10 @@ onMounted(async () => {
       />
     </template>
 
-    <!-- Aba: Dashboard SDR (em breve — Fase D) -->
-    <EmptyStateLayout
+    <!-- Aba: Dashboard SDR -->
+    <SdrDashboard
       v-else-if="activeTab === 'dashboard'"
-      class="flex-1 min-h-0"
-      :title="t('KANBAN.TABS.DASHBOARD_SOON_TITLE')"
-      :subtitle="t('KANBAN.TABS.DASHBOARD_SOON_SUBTITLE')"
-      :show-backdrop="false"
+      :default-inbox-id="activeInboxId"
     />
 
     <!-- Aba: Histórico -->

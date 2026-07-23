@@ -96,6 +96,11 @@ class FintureCrmApi extends ApiClient {
       params: { inbox_id: inboxId },
     });
   }
+
+  // ---- Dashboard SDR (métricas do funil por caixa ou geral) -----------------
+  getDashboard(params) {
+    return axios.get(`${this.baseUrl()}/finture_sdr_dashboard`, { params });
+  }
 }
 
 export default new FintureCrmApi();

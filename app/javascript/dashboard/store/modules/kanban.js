@@ -29,6 +29,12 @@ export const state = {
     isFetching: false,
     hasError: false,
   },
+  // Dashboard SDR (Fase D): métricas do funil (caixa ou geral).
+  dashboard: null,
+  dashboardUiFlags: {
+    isFetching: false,
+    hasError: false,
+  },
   // Notas (mensagens privadas) carregadas sob demanda, por conversa.
   notes: {},
   notesUiFlags: {
@@ -60,6 +66,8 @@ export const getters = {
   getStagesUIFlags: $state => $state.stagesUiFlags,
   getHistoryForInbox: $state => inboxId => $state.historyByInbox[inboxId] || [],
   getHistoryUIFlags: $state => $state.historyUiFlags,
+  getDashboard: $state => $state.dashboard,
+  getDashboardUIFlags: $state => $state.dashboardUiFlags,
   getNotes: $state => conversationId => $state.notes[conversationId] || [],
   getNotesUIFlags: $state => $state.notesUiFlags,
   getQuote: $state => conversationId => $state.quotes[conversationId] ?? null,
@@ -208,6 +216,20 @@ export const actions = {
     await FintureCrmApi.markOutcome(conversationId, { kind: 'reopen' });
     await dispatch('fetchHistory', { inboxId });
     await dispatch('fetchBoard');
+  },
+
+  // ---- Dashboard SDR (Fase D) -----------------------------------------------
+  async fetchDashboard({ commit }, params) {
+    commit('SET_DASHBOARD_UI_FLAG', { isFetching: true, hasError: false });
+    try {
+      const response = await FintureCrmApi.getDashboard(params);
+      commit('SET_DASHBOARD', response.data ?? null);
+    } catch (error) {
+      commit('SET_DASHBOARD_UI_FLAG', { hasError: true });
+      throw error;
+    } finally {
+      commit('SET_DASHBOARD_UI_FLAG', { isFetching: false });
+    }
   },
 
   // Salva a próxima ação (sdr_next_action) preservando o restante do hash.
@@ -410,6 +432,12 @@ export const mutations = {
   },
   REMOVE_RECORD($state, conversationId) {
     $state.records = $state.records.filter(item => item.id !== conversationId);
+  },
+  SET_DASHBOARD($state, dashboard) {
+    $state.dashboard = dashboard;
+  },
+  SET_DASHBOARD_UI_FLAG($state, uiFlag) {
+    $state.dashboardUiFlags = { ...$state.dashboardUiFlags, ...uiFlag };
   },
   UPDATE_RECORD_ATTRIBUTES($state, { conversationId, customAttributes }) {
     const record = $state.records.find(item => item.id === conversationId);
