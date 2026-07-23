@@ -37,6 +37,10 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
     @conversations = kanban_conversations
   end
 
+  def kanban_history
+    @conversations = kanban_history_conversations
+  end
+
   def attachments
     @attachments_count = @conversation.attachments.count
     @attachments = @conversation.attachments
@@ -245,19 +249,36 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   end
 
   def kanban_conversations
-    # assigned_inboxes já resolve admin (todas as inboxes) vs agente (só as suas);
-    # o where(id:) aceita valor único ou array (inbox_id[]=...).
+    # Board ativo: exclui os leads já fechados (sdr_outcome presente) — eles
+    # passam a viver no Histórico (endpoint kanban_history).
+    kanban_scope
+      .where("conversations.custom_attributes ->> 'sdr_outcome' IS NULL")
+      .order(last_activity_at: :desc)
+      .limit(KANBAN_RESULTS_CAP)
+  end
+
+  def kanban_history_conversations
+    # Histórico: só os leads fechados (ganho/perdido), do mais recente ao mais antigo.
+    kanban_scope
+      .where("conversations.custom_attributes ->> 'sdr_outcome' IS NOT NULL")
+      .order(Arel.sql("(conversations.custom_attributes ->> 'sdr_outcome_at')::bigint DESC NULLS LAST"))
+      .limit(KANBAN_RESULTS_CAP)
+  end
+
+  # Base comum do board/histórico: caixas do usuário (assigned_inboxes resolve
+  # admin vs agente; where(id:) aceita único ou array) + permission scoping
+  # (respeita custom roles enterprise via prepend) + includes do payload enxuto.
+  def kanban_scope
     inbox_ids = current_user.assigned_inboxes.where(id: params[:inbox_id]).pluck(:id)
     return Conversation.none if inbox_ids.blank?
 
     scope = Current.account.conversations.where(inbox_id: inbox_ids)
-    # Reaplica a permission scoping (respeita custom roles enterprise via prepend).
     scope = Conversations::PermissionFilterService.new(scope, current_user, current_account).perform
     scope.includes(
       :taggings,
       { contact: { avatar_attachment: :blob } },
       { assignee: { avatar_attachment: :blob } }
-    ).order(last_activity_at: :desc).limit(KANBAN_RESULTS_CAP)
+    )
   end
 
   def assignee?

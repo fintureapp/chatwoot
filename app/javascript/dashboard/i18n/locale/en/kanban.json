@@ -1,10 +1,63 @@
 {
   "KANBAN": {
     "HEADER_TITLE": "Kanban SDR AI",
+    "TABS": {
+      "BOARD": "Board",
+      "DASHBOARD": "Dashboard SDR",
+      "HISTORY": "Histórico",
+      "SOON": "Em breve",
+      "DASHBOARD_SOON_TITLE": "Dashboard SDR em breve",
+      "DASHBOARD_SOON_SUBTITLE": "Aqui você verá tempo médio por etapa, leads identificados, conversão e ticket médio, com filtro por caixa ou visão geral.",
+      "HISTORY_SOON_TITLE": "Histórico em breve",
+      "HISTORY_SOON_SUBTITLE": "Aqui ficarão os leads ganhos e perdidos — com valor, motivo e data — e a opção de reabrir."
+    },
+    "STAGE_MANAGER": {
+      "MANAGE": "Gerenciar etapas",
+      "TITLE": "Etapas do funil",
+      "SUBTITLE": "A 1ª etapa (Lead Identificado) é fixa. Adicione, renomeie, recolora e reordene as demais — as mudanças valem para esta caixa.",
+      "FIXED": "Fixa",
+      "ADD": "Adicionar",
+      "NEW_PLACEHOLDER": "Nome da nova etapa",
+      "CLOSE": "Fechar",
+      "SAVE_ERROR": "Não foi possível salvar as etapas. Tente novamente."
+    },
     "CARD": {
       "OPEN_CONVERSATION": "Abrir conversa",
       "ADD_NOTE": "Adicionar nota",
-      "EDIT_NEXT_ACTION": "Editar próxima ação"
+      "EDIT_NEXT_ACTION": "Editar próxima ação",
+      "MARK_WON": "Marcar como ganho",
+      "MARK_LOST": "Marcar como perdido"
+    },
+    "OUTCOME": {
+      "WON": "Ganho",
+      "LOST": "Perdido",
+      "REOPEN": "Reabrir"
+    },
+    "HISTORY": {
+      "COUNT": "{count} lead(s) fechado(s)",
+      "REFRESH": "Atualizar",
+      "EMPTY_TITLE": "Nenhum lead fechado",
+      "EMPTY_SUBTITLE": "Leads marcados como ganho ou perdido aparecem aqui — com valor, motivo e data.",
+      "COL_LEAD": "Lead",
+      "COL_OUTCOME": "Desfecho",
+      "COL_VALUE": "Valor",
+      "COL_REASON": "Motivo",
+      "COL_DATE": "Fechado em"
+    },
+    "DASHBOARD": {
+      "ALL_INBOXES": "Visão geral (todas as caixas)",
+      "PERIOD_7": "Últimos 7 dias",
+      "PERIOD_30": "Últimos 30 dias",
+      "PERIOD_90": "Últimos 90 dias",
+      "LOADING": "Carregando…",
+      "LEADS": "Leads identificados",
+      "CONVERSION": "Conversão",
+      "TICKET": "Ticket médio",
+      "WON": "Ganhos",
+      "LOST": "Perdidos",
+      "OPEN": "Em aberto",
+      "AVG_TIME_TITLE": "Tempo médio por etapa",
+      "AVG_TIME_EMPTY": "Ainda não há transições suficientes no período."
     },
     "COLUMN": {
       "EMPTY": "Nenhum lead nesta etapa"
@@ -16,11 +69,17 @@
     },
     "TOOLBAR": {
       "SEARCH_PLACEHOLDER": "Buscar por cliente ou produto",
+      "FILTERS": "Filtros",
+      "PRODUCT": "Produto",
+      "STAGE": "Etapa",
+      "ASSIGNEE": "Responsável",
+      "SORT_LABEL": "Ordenar por",
       "ALL_PRODUCTS": "Todos os produtos",
       "ALL_STAGES": "Todas as etapas",
       "ALL_ASSIGNEES": "Todos os responsáveis",
       "CREATED_FROM": "Criado de",
       "CREATED_TO": "até",
+      "CREATED_TO_LABEL": "Criado até",
       "CLEAR": "Limpar filtros",
       "SORT": {
         "LAST_ACTIVITY": "Última atualização",
@@ -96,6 +155,7 @@
     },
     "ERRORS": {
       "UPDATE_STAGE": "Não foi possível atualizar a etapa do lead. Tente novamente.",
+      "UPDATE_OUTCOME": "Não foi possível atualizar o desfecho do lead. Tente novamente.",
       "UPDATE_NEXT_ACTION": "Não foi possível salvar a próxima ação. Tente novamente.",
       "ADD_NOTE": "Não foi possível salvar a nota. Tente novamente."
     },

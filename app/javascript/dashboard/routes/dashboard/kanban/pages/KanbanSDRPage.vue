@@ -9,6 +9,9 @@ import { downloadKanbanCsv } from 'dashboard/routes/dashboard/kanban/helper/csv'
 import KanbanInboxFilter from '../components/KanbanInboxFilter.vue';
 import KanbanToolbar from '../components/KanbanToolbar.vue';
 import KanbanBoard from '../components/KanbanBoard.vue';
+import StageManagerDialog from '../components/StageManagerDialog.vue';
+import KanbanHistoryView from '../components/KanbanHistoryView.vue';
+import SdrDashboard from '../components/SdrDashboard.vue';
 import EmptyStateLayout from 'dashboard/components-next/EmptyStateLayout.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 
@@ -21,8 +24,17 @@ const inboxes = useMapGetter('inboxes/getInboxes');
 const selectedInboxIds = useMapGetter('kanban/getSelectedInboxIds');
 const uiFlags = useMapGetter('kanban/getUIFlags');
 const records = useMapGetter('kanban/getRecords');
+const currentRole = useMapGetter('getCurrentRole');
 
+const isAdmin = computed(() => currentRole.value === 'administrator');
 const hasSelection = computed(() => selectedInboxIds.value.length > 0);
+
+// Board opera sobre UMA caixa (o funil é por caixa).
+const activeInboxId = computed(() => selectedInboxIds.value[0] ?? null);
+const stages = computed(() =>
+  store.getters['kanban/getStagesForInbox'](activeInboxId.value)
+);
+const stageSlugs = computed(() => stages.value.map(stage => stage.slug));
 
 const inboxNames = computed(() => {
   const map = {};
@@ -31,6 +43,20 @@ const inboxNames = computed(() => {
   });
   return map;
 });
+
+// ---- Abas (Board / Dashboard SDR / Histórico) -----------------------------
+// Dashboard (Fase D) e Histórico (Fase C) entram nas próximas fases; por ora
+// exibem um estado "Em breve" para sinalizar o roadmap.
+const activeTab = ref('board');
+const tabs = computed(() => [
+  { key: 'board', label: t('KANBAN.TABS.BOARD') },
+  { key: 'dashboard', label: t('KANBAN.TABS.DASHBOARD') },
+  { key: 'history', label: t('KANBAN.TABS.HISTORY') },
+]);
+
+// ---- Gerenciador de etapas (admin) ----------------------------------------
+const stageManagerRef = ref(null);
+const openStageManager = () => stageManagerRef.value?.open();
 
 // ---- Filtros / ordenação (client-side) ------------------------------------
 const defaultFilters = () => ({
@@ -91,10 +117,12 @@ const matchesQuery = record => {
   return haystack.includes(needle);
 };
 
-const volumeOf = record => Number(record.custom_attributes?.valor_potencial) || 0;
+const volumeOf = record =>
+  Number(record.custom_attributes?.valor_potencial) || 0;
 
 const sorters = {
-  last_activity_desc: (a, b) => (b.last_activity_at || 0) - (a.last_activity_at || 0),
+  last_activity_desc: (a, b) =>
+    (b.last_activity_at || 0) - (a.last_activity_at || 0),
   created_desc: (a, b) => (b.created_at || 0) - (a.created_at || 0),
   created_asc: (a, b) => (a.created_at || 0) - (b.created_at || 0),
   volume_desc: (a, b) => volumeOf(b) - volumeOf(a),
@@ -103,12 +131,18 @@ const sorters = {
 const filteredRecords = computed(() => {
   const createdFrom = toSeconds(filters.createdFrom);
   const createdTo = toSeconds(filters.createdTo, true);
+  const slugs = stageSlugs.value;
   const result = records.value.filter(record => {
     if (!matchesQuery(record)) return false;
-    if (filters.product && record.custom_attributes?.produto_interesse !== filters.product) {
+    if (
+      filters.product &&
+      record.custom_attributes?.produto_interesse !== filters.product
+    ) {
       return false;
     }
-    if (filters.stage && resolveStage(record) !== filters.stage) return false;
+    if (filters.stage && resolveStage(record, slugs) !== filters.stage) {
+      return false;
+    }
     if (
       filters.assigneeId &&
       String(record.meta?.assignee?.id) !== filters.assigneeId
@@ -144,13 +178,18 @@ const parseInboxIds = raw => {
 };
 
 const applySelection = (ids, { updateQuery = true } = {}) => {
-  store.dispatch('kanban/setSelectedInboxIds', ids);
+  // Board por caixa: mantém no máximo uma caixa selecionada.
+  const single = ids.slice(0, 1);
+  store.dispatch('kanban/setSelectedInboxIds', single);
   if (updateQuery) {
     router.replace({
-      query: { ...route.query, inbox_ids: ids.join(',') || undefined },
+      query: { ...route.query, inbox_ids: single.join(',') || undefined },
     });
   }
   store.dispatch('kanban/fetchBoard');
+  if (single.length) {
+    store.dispatch('kanban/fetchStages', { inboxId: single[0] });
+  }
 };
 
 const onSelectionUpdate = ids => applySelection(ids);
@@ -169,21 +208,35 @@ onMounted(async () => {
   if (!inboxes.value.length) {
     await store.dispatch('inboxes/get');
   }
-  applySelection(parseInboxIds(route.query.inbox_ids), { updateQuery: false });
+  // Board por caixa: cai na 1ª caixa quando não há uma na URL.
+  let ids = parseInboxIds(route.query.inbox_ids);
+  if (!ids.length && inboxes.value.length) {
+    ids = [inboxes.value[0].id];
+  }
+  applySelection(ids, { updateQuery: false });
 });
 </script>
 
 <template>
   <section class="flex flex-col w-full h-full overflow-hidden bg-n-surface-1">
     <header
-      class="flex items-center justify-between flex-shrink-0 gap-4 px-6 py-4 border-b border-n-weak"
+      class="flex items-center justify-between flex-shrink-0 gap-4 px-6 py-2.5 border-b border-n-weak"
     >
-      <h1 class="text-xl font-medium text-n-slate-12">
+      <h1 class="text-lg font-medium text-n-slate-12">
         {{ t('KANBAN.HEADER_TITLE') }}
       </h1>
       <div class="flex items-center gap-2">
         <Button
-          v-if="hasSelection && records.length"
+          v-if="activeTab === 'board' && isAdmin && hasSelection"
+          color="slate"
+          variant="ghost"
+          size="sm"
+          icon="i-lucide-settings-2"
+          :label="t('KANBAN.STAGE_MANAGER.MANAGE')"
+          @click="openStageManager"
+        />
+        <Button
+          v-if="activeTab === 'board' && hasSelection && records.length"
           color="slate"
           variant="outline"
           size="sm"
@@ -196,7 +249,12 @@ onMounted(async () => {
           @click="exportCsv('filtered')"
         />
         <Button
-          v-if="hasSelection && records.length && hasActiveFilters"
+          v-if="
+            activeTab === 'board' &&
+            hasSelection &&
+            records.length &&
+            hasActiveFilters
+          "
           color="slate"
           variant="ghost"
           size="sm"
@@ -211,91 +269,142 @@ onMounted(async () => {
       </div>
     </header>
 
-    <KanbanToolbar
-      v-if="hasSelection && !uiFlags.isFetching && !uiFlags.hasError && records.length"
-      :filters="filters"
-      :sort-by="sortBy"
-      :products="products"
-      :assignees="assignees"
-      :has-active-filters="hasActiveFilters"
-      @update:filters="onFiltersUpdate"
-      @update:sortBy="onSortUpdate"
-      @clear="clearFilters"
-    />
-
-    <!-- Sem inbox selecionada -->
-    <EmptyStateLayout
-      v-if="!hasSelection"
-      class="flex-1 min-h-0"
-      :title="t('KANBAN.EMPTY_STATE.NO_INBOX_TITLE')"
-      :subtitle="t('KANBAN.EMPTY_STATE.NO_INBOX_SUBTITLE')"
-      :show-backdrop="false"
-    />
-
-    <!-- Carregando: skeleton do board -->
-    <div
-      v-else-if="uiFlags.isFetching"
-      class="flex flex-1 gap-4 px-6 py-4 overflow-hidden min-h-0"
+    <!-- Abas -->
+    <nav
+      class="flex items-center flex-shrink-0 gap-1 px-4 border-b border-n-weak"
     >
-      <div
-        v-for="col in skeletonColumns"
-        :key="col"
-        class="flex flex-col w-72 shrink-0 gap-2 p-2 rounded-xl bg-n-solid-1 outline outline-1 -outline-offset-1 outline-n-weak"
+      <button
+        v-for="tab in tabs"
+        :key="tab.key"
+        type="button"
+        class="relative flex items-center gap-1.5 px-3 -mb-px text-sm font-medium transition-colors border-b-2 h-9"
+        :class="
+          activeTab === tab.key
+            ? 'border-n-brand text-n-slate-12'
+            : 'border-transparent text-n-slate-11 hover:text-n-slate-12'
+        "
+        @click="activeTab = tab.key"
       >
-        <div class="h-6 mb-1 rounded-md bg-n-alpha-2 animate-pulse" />
+        {{ tab.label }}
+        <span
+          v-if="tab.soon"
+          class="px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-n-alpha-2 text-n-slate-10"
+        >
+          {{ t('KANBAN.TABS.SOON') }}
+        </span>
+      </button>
+    </nav>
+
+    <!-- Aba: Board -->
+    <template v-if="activeTab === 'board'">
+      <KanbanToolbar
+        v-if="
+          hasSelection &&
+          !uiFlags.isFetching &&
+          !uiFlags.hasError &&
+          records.length
+        "
+        :filters="filters"
+        :sort-by="sortBy"
+        :products="products"
+        :assignees="assignees"
+        :stages="stages"
+        :has-active-filters="hasActiveFilters"
+        @update:filters="onFiltersUpdate"
+        @update:sort-by="onSortUpdate"
+        @clear="clearFilters"
+      />
+
+      <!-- Sem inbox selecionada -->
+      <EmptyStateLayout
+        v-if="!hasSelection"
+        class="flex-1 min-h-0"
+        :title="t('KANBAN.EMPTY_STATE.NO_INBOX_TITLE')"
+        :subtitle="t('KANBAN.EMPTY_STATE.NO_INBOX_SUBTITLE')"
+        :show-backdrop="false"
+      />
+
+      <!-- Carregando: skeleton do board -->
+      <div
+        v-else-if="uiFlags.isFetching"
+        class="flex flex-1 gap-3 px-3 py-3 overflow-hidden min-h-0"
+      >
         <div
-          v-for="card in skeletonCards"
-          :key="card"
-          class="h-20 rounded-xl bg-n-alpha-1 animate-pulse"
-        />
+          v-for="col in skeletonColumns"
+          :key="col"
+          class="flex flex-col w-72 shrink-0 gap-2 p-2 rounded-xl bg-n-solid-1 outline outline-1 -outline-offset-1 outline-n-weak"
+        >
+          <div class="h-6 mb-1 rounded-md bg-n-alpha-2 animate-pulse" />
+          <div
+            v-for="card in skeletonCards"
+            :key="card"
+            class="h-20 rounded-xl bg-n-alpha-1 animate-pulse"
+          />
+        </div>
       </div>
-    </div>
 
-    <!-- Erro ao carregar -->
-    <EmptyStateLayout
-      v-else-if="uiFlags.hasError"
-      class="flex-1 min-h-0"
-      :title="t('KANBAN.EMPTY_STATE.ERROR_TITLE')"
-      :subtitle="t('KANBAN.EMPTY_STATE.ERROR_SUBTITLE')"
-      :show-backdrop="false"
-    >
-      <template #actions>
-        <Button
-          color="slate"
-          variant="outline"
-          size="sm"
-          icon="i-lucide-refresh-cw"
-          :label="t('KANBAN.EMPTY_STATE.RETRY')"
-          @click="retry"
-        />
-      </template>
-    </EmptyStateLayout>
+      <!-- Erro ao carregar -->
+      <EmptyStateLayout
+        v-else-if="uiFlags.hasError"
+        class="flex-1 min-h-0"
+        :title="t('KANBAN.EMPTY_STATE.ERROR_TITLE')"
+        :subtitle="t('KANBAN.EMPTY_STATE.ERROR_SUBTITLE')"
+        :show-backdrop="false"
+      >
+        <template #actions>
+          <Button
+            color="slate"
+            variant="outline"
+            size="sm"
+            icon="i-lucide-refresh-cw"
+            :label="t('KANBAN.EMPTY_STATE.RETRY')"
+            @click="retry"
+          />
+        </template>
+      </EmptyStateLayout>
 
-    <!-- Filtros sem resultado -->
-    <EmptyStateLayout
-      v-else-if="records.length && !filteredRecords.length"
-      class="flex-1 min-h-0"
-      :title="t('KANBAN.EMPTY_STATE.NO_RESULTS_TITLE')"
-      :subtitle="t('KANBAN.EMPTY_STATE.NO_RESULTS_SUBTITLE')"
-      :show-backdrop="false"
-    >
-      <template #actions>
-        <Button
-          color="slate"
-          variant="outline"
-          size="sm"
-          :label="t('KANBAN.TOOLBAR.CLEAR')"
-          @click="clearFilters"
-        />
-      </template>
-    </EmptyStateLayout>
+      <!-- Filtros sem resultado -->
+      <EmptyStateLayout
+        v-else-if="records.length && !filteredRecords.length"
+        class="flex-1 min-h-0"
+        :title="t('KANBAN.EMPTY_STATE.NO_RESULTS_TITLE')"
+        :subtitle="t('KANBAN.EMPTY_STATE.NO_RESULTS_SUBTITLE')"
+        :show-backdrop="false"
+      >
+        <template #actions>
+          <Button
+            color="slate"
+            variant="outline"
+            size="sm"
+            :label="t('KANBAN.TOOLBAR.CLEAR')"
+            @click="clearFilters"
+          />
+        </template>
+      </EmptyStateLayout>
 
-    <!-- Board -->
-    <KanbanBoard
-      v-else
-      class="flex-1 min-h-0"
-      :records="filteredRecords"
-      :inbox-names="inboxNames"
+      <!-- Board -->
+      <KanbanBoard
+        v-else
+        class="flex-1 min-h-0"
+        :records="filteredRecords"
+        :stages="stages"
+        :inbox-names="inboxNames"
+      />
+    </template>
+
+    <!-- Aba: Dashboard SDR -->
+    <SdrDashboard
+      v-else-if="activeTab === 'dashboard'"
+      :default-inbox-id="activeInboxId"
+    />
+
+    <!-- Aba: Histórico -->
+    <KanbanHistoryView v-else :inbox-id="activeInboxId" />
+
+    <StageManagerDialog
+      ref="stageManagerRef"
+      :inbox-id="activeInboxId"
+      :stages="stages"
     />
   </section>
 </template>

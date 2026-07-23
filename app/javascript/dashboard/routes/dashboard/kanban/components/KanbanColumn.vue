@@ -23,7 +23,14 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['change', 'drag-start', 'drag-end', 'open']);
+const emit = defineEmits([
+  'change',
+  'drag-start',
+  'drag-end',
+  'open',
+  'won',
+  'lost',
+]);
 
 const accentClass = {
   slate: 'bg-n-slate-9',
@@ -75,6 +82,8 @@ const inboxNameFor = card => props.inboxNames[card.inbox_id] || '';
             :conversation="element"
             :inbox-name="inboxNameFor(element)"
             @open="emit('open', $event)"
+            @won="emit('won', $event)"
+            @lost="emit('lost', $event)"
           />
         </template>
         <template #footer>

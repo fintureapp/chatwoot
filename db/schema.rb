@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_07_21_120100) do
+ActiveRecord::Schema[7.1].define(version: 2026_07_23_120100) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -861,6 +861,21 @@ ActiveRecord::Schema[7.1].define(version: 2026_07_21_120100) do
     t.index ["due_at"], name: "index_finture_follow_ups_open_due", where: "(completed_at IS NULL)"
   end
 
+  create_table "finture_pipeline_stages", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "inbox_id", null: false
+    t.string "name", null: false
+    t.string "slug", null: false
+    t.integer "position", default: 0, null: false
+    t.string "color", default: "slate", null: false
+    t.boolean "locked", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_finture_pipeline_stages_on_account_id"
+    t.index ["inbox_id", "position"], name: "index_finture_pipeline_stages_on_inbox_id_and_position"
+    t.index ["inbox_id", "slug"], name: "index_finture_pipeline_stages_on_inbox_id_and_slug", unique: true
+  end
+
   create_table "finture_quotes", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "conversation_id", null: false
@@ -872,6 +887,26 @@ ActiveRecord::Schema[7.1].define(version: 2026_07_21_120100) do
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_finture_quotes_on_account_id"
     t.index ["conversation_id"], name: "index_finture_quotes_on_conversation_id", unique: true
+  end
+
+  create_table "finture_stage_transitions", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "inbox_id"
+    t.bigint "user_id"
+    t.string "from_stage"
+    t.string "to_stage", null: false
+    t.string "to_stage_label"
+    t.string "kind", default: "stage_change", null: false
+    t.string "reason"
+    t.text "comment"
+    t.string "source", default: "agent", null: false
+    t.datetime "occurred_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "inbox_id", "occurred_at"], name: "index_finture_stage_transitions_on_acct_inbox_occurred"
+    t.index ["account_id", "to_stage"], name: "index_finture_stage_transitions_on_acct_to_stage"
+    t.index ["conversation_id", "occurred_at"], name: "index_finture_stage_transitions_on_conv_occurred"
   end
 
   create_table "folders", force: :cascade do |t|
@@ -1376,8 +1411,14 @@ ActiveRecord::Schema[7.1].define(version: 2026_07_21_120100) do
   add_foreign_key "finture_follow_ups", "accounts", on_delete: :cascade
   add_foreign_key "finture_follow_ups", "conversations", on_delete: :cascade
   add_foreign_key "finture_follow_ups", "users", on_delete: :nullify
+  add_foreign_key "finture_pipeline_stages", "accounts", on_delete: :cascade
+  add_foreign_key "finture_pipeline_stages", "inboxes", on_delete: :cascade
   add_foreign_key "finture_quotes", "accounts", on_delete: :cascade
   add_foreign_key "finture_quotes", "conversations", on_delete: :cascade
+  add_foreign_key "finture_stage_transitions", "accounts", on_delete: :cascade
+  add_foreign_key "finture_stage_transitions", "conversations", on_delete: :cascade
+  add_foreign_key "finture_stage_transitions", "inboxes", on_delete: :nullify
+  add_foreign_key "finture_stage_transitions", "users", on_delete: :nullify
   add_foreign_key "inboxes", "portals"
   add_foreign_key "user_sessions", "users"
   create_trigger("accounts_after_insert_row_tr", :generated => true, :compatibility => 1).

@@ -3,21 +3,20 @@ import { ref, computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
-import {
-  KANBAN_STAGES,
-  WON_STAGE,
-  LOST_STAGE,
-  resolveStage,
-} from 'dashboard/routes/dashboard/kanban/config/stages';
+import { resolveStage } from 'dashboard/routes/dashboard/kanban/config/stages';
 
 import KanbanColumn from './KanbanColumn.vue';
-import LostReasonDialog from './LostReasonDialog.vue';
 import KanbanCardDrawer from './KanbanCardDrawer.vue';
-import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
+import LostReasonDialog from './LostReasonDialog.vue';
 
 const props = defineProps({
   // Registros já filtrados/ordenados pela toolbar da página.
   records: {
+    type: Array,
+    default: () => [],
+  },
+  // Etapas da caixa ativa (Fase B): [{ id, name, slug, color, position, locked }].
+  stages: {
     type: Array,
     default: () => [],
   },
@@ -33,38 +32,43 @@ const { t } = useI18n();
 const localColumns = ref([]);
 const isDragging = ref(false);
 
+// Desfecho (ganho/perdido) marcado dentro do card.
 const lostDialogRef = ref(null);
-const wonDialogRef = ref(null);
 const pendingLost = ref(null);
-const pendingWon = ref(null);
-const wonConfirmed = ref(false);
 
 // Estado do drawer de detalhe.
 const selectedConversationId = ref(null);
 const drawerIntent = ref('detail');
 const isDrawerOpen = ref(false);
 
+const stageSlugs = computed(() => props.stages.map(stage => stage.slug));
+
 const rebuildColumns = () => {
-  localColumns.value = KANBAN_STAGES.map(stage => ({
-    stage,
-    cards: props.records.filter(record => resolveStage(record) === stage.value),
+  const slugs = stageSlugs.value;
+  localColumns.value = props.stages.map(stage => ({
+    stage: { value: stage.slug, label: stage.name, color: stage.color },
+    cards: props.records.filter(
+      record => resolveStage(record, slugs) === stage.slug
+    ),
   }));
 };
 
-// Reconstrói apenas quando o conjunto/ordem de registros muda (fetch, filtro,
-// ordenação), nunca em atualização de atributo em memória — evita "piscar" o card
-// após o drop (o SortableJS já moveu o DOM).
-const columnsSignature = computed(() =>
-  props.records.map(record => record.id).join(',')
+// Reconstrói quando as etapas OU o conjunto/ordem de registros mudam (fetch,
+// filtro, ordenação, reconfiguração de etapas, desfecho), nunca em atualização
+// de atributo em memória — evita "piscar" o card após o drop.
+const columnsSignature = computed(
+  () =>
+    `${stageSlugs.value.join(',')}|${props.records
+      .map(record => record.id)
+      .join(',')}`
 );
 watch(columnsSignature, rebuildColumns, { immediate: true });
 
-const persistStage = async (conversation, stage, extra = {}) => {
+const persistStage = async (conversation, stage) => {
   try {
-    await store.dispatch('kanban/updateStage', {
+    await store.dispatch('kanban/changeStage', {
       conversationId: conversation.id,
       stage,
-      ...extra,
     });
   } catch {
     rebuildColumns();
@@ -75,46 +79,36 @@ const persistStage = async (conversation, stage, extra = {}) => {
 const handleChange = (stageValue, event) => {
   // Só reagimos ao card que ENTRA numa coluna (destino).
   if (!event.added) return;
-  const conversation = event.added.element;
+  persistStage(event.added.element, stageValue);
+};
 
-  if (stageValue === LOST_STAGE) {
-    pendingLost.value = conversation;
-    lostDialogRef.value.open();
-    return;
+const markOutcome = async (conversation, kind, extra = {}) => {
+  try {
+    await store.dispatch('kanban/markOutcome', {
+      conversationId: conversation.id,
+      kind,
+      ...extra,
+    });
+  } catch {
+    useAlert(t('KANBAN.ERRORS.UPDATE_OUTCOME'));
   }
-  if (stageValue === WON_STAGE) {
-    pendingWon.value = conversation;
-    wonConfirmed.value = false;
-    wonDialogRef.value.open();
-    return;
-  }
-  persistStage(conversation, stageValue);
+};
+
+const onWon = conversation => markOutcome(conversation, 'won');
+
+const onLost = conversation => {
+  pendingLost.value = conversation;
+  lostDialogRef.value.open();
 };
 
 const onLostSubmit = ({ reason, comment }) => {
   const conversation = pendingLost.value;
   pendingLost.value = null;
-  persistStage(conversation, LOST_STAGE, {
-    lostReason: reason,
-    lostComment: comment,
-  });
+  markOutcome(conversation, 'lost', { reason, comment });
 };
 
 const onLostCancel = () => {
   pendingLost.value = null;
-  rebuildColumns();
-};
-
-const onWonConfirm = () => {
-  wonConfirmed.value = true;
-  const conversation = pendingWon.value;
-  pendingWon.value = null;
-  wonDialogRef.value.close();
-  persistStage(conversation, WON_STAGE);
-};
-
-const onWonClose = () => {
-  if (!wonConfirmed.value) rebuildColumns();
 };
 
 const openDrawer = ({ conversation, intent }) => {
@@ -126,7 +120,7 @@ const openDrawer = ({ conversation, intent }) => {
 
 <template>
   <div class="flex flex-col min-h-0">
-    <div class="flex flex-1 gap-4 px-6 py-4 overflow-x-auto min-h-0">
+    <div class="flex flex-1 gap-3 px-3 py-3 overflow-x-auto min-h-0">
       <KanbanColumn
         v-for="column in localColumns"
         :key="column.stage.value"
@@ -138,6 +132,8 @@ const openDrawer = ({ conversation, intent }) => {
         @drag-start="isDragging = true"
         @drag-end="isDragging = false"
         @open="openDrawer"
+        @won="onWon"
+        @lost="onLost"
       />
     </div>
 
@@ -145,16 +141,6 @@ const openDrawer = ({ conversation, intent }) => {
       ref="lostDialogRef"
       @submit="onLostSubmit"
       @cancel="onLostCancel"
-    />
-
-    <Dialog
-      ref="wonDialogRef"
-      type="edit"
-      :title="t('KANBAN.WON_DIALOG.TITLE')"
-      :description="t('KANBAN.WON_DIALOG.DESCRIPTION')"
-      :confirm-button-label="t('KANBAN.WON_DIALOG.CONFIRM')"
-      @confirm="onWonConfirm"
-      @close="onWonClose"
     />
 
     <KanbanCardDrawer
