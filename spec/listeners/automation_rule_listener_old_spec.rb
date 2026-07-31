@@ -14,7 +14,10 @@ describe AutomationRuleListener do
   let(:contact) { create(:contact, account: account, identifier: '123') }
   let(:conversation) { create(:conversation, inbox: inbox, account: account) }
   let!(:automation_rule) { create(:automation_rule, account: account, name: 'Test Automation Rule') }
-  let(:team) { create(:team, account: account) }
+  # Pelo mesmo motivo, o time não pode auto-atribuir: definir o time dispara
+  # AssignmentHandler#ensure_assignee_is_from_team, um caminho independente do
+  # enable_auto_assignment do inbox.
+  let(:team) { create(:team, account: account, allow_auto_assign: false) }
   let(:user_1) { create(:user, role: 0) }
   let(:user_2) { create(:user, role: 0) }
 
