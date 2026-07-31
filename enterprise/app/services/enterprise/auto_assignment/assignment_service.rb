@@ -15,7 +15,7 @@ module Enterprise::AutoAssignment::AssignmentService
 
   # Extend agent finding to add capacity checks
   def find_available_agent(conversation = nil)
-    agents = filter_agents_by_team(inbox.available_agents, conversation)
+    agents = filter_agents_by_team(inbox.assignment_eligible_members, conversation)
     return nil if agents.nil?
 
     agents = filter_agents_by_rate_limit(agents)
@@ -24,7 +24,8 @@ module Enterprise::AutoAssignment::AssignmentService
 
     # Use balanced selector only if advanced_assignment feature is enabled
     selector = policy&.balanced? && account.feature_enabled?('advanced_assignment') ? balanced_selector : round_robin_selector
-    selector.select_agent(agents)
+    # Presence is applied last: online only while someone is online, eligible offline agents otherwise.
+    selector.select_agent(inbox.prioritize_online_agents(agents))
   end
 
   def filter_agents_by_capacity(agents)

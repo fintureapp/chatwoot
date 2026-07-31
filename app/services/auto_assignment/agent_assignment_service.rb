@@ -5,7 +5,7 @@ class AutoAssignment::AgentAssignmentService
   pattr_initialize [:conversation!, :allowed_agent_ids!]
 
   def find_assignee
-    round_robin_manage_service.available_agent(allowed_agent_ids: allowed_online_agent_ids)
+    round_robin_manage_service.available_agent(allowed_agent_ids: assignment_candidate_ids)
   end
 
   def perform
@@ -15,17 +15,33 @@ class AutoAssignment::AgentAssignmentService
 
   private
 
+  # Round robin over the online agents whenever at least one is online. When
+  # nobody is online we still distribute, using the eligible offline agents,
+  # so conversations don't sit unassigned outside working hours.
+  def assignment_candidate_ids
+    allowed_online_agent_ids.presence || allowed_eligible_agent_ids
+  end
+
   def online_agent_ids
     online_agents = OnlineStatusTracker.get_available_users(conversation.account_id)
-    online_agents.select { |_key, value| value.eql?('online') }.keys if online_agents.present?
+    return [] if online_agents.blank?
+
+    online_agents.select { |_key, value| value.eql?('online') }.keys
+  end
+
+  # Agents that may be assigned regardless of presence. Intersected here rather
+  # than trusted from the caller so the eligibility rules hold on every path.
+  def allowed_eligible_agent_ids
+    # the ids are compared as strings, since the online ids come from redis
+    @allowed_eligible_agent_ids ||= eligible_agent_ids & allowed_agent_ids.to_a.map(&:to_s)
+  end
+
+  def eligible_agent_ids
+    conversation.inbox.assignment_eligible_members.map { |member| member.user_id.to_s }
   end
 
   def allowed_online_agent_ids
-    # We want to perform roundrobin only over online agents
-    # Hence taking an intersection of online agents and allowed member ids
-
-    # the online user ids are string, since its from redis, allowed member ids are integer, since its from active record
-    @allowed_online_agent_ids ||= online_agent_ids & allowed_agent_ids&.map(&:to_s)
+    @allowed_online_agent_ids ||= online_agent_ids & allowed_eligible_agent_ids
   end
 
   def round_robin_manage_service

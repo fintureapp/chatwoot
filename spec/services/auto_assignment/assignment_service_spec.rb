@@ -47,21 +47,22 @@ RSpec.describe AutoAssignment::AssignmentService do
         expect(conv.reload.assignee).to eq(agent)
       end
 
-      it 'returns 0 when no agents are online' do
+      it 'falls back to the eligible offline agents when no agent is online' do
         allow(OnlineStatusTracker).to receive(:get_available_users).and_return({})
+        conversation.update!(assignee_id: nil)
 
         assigned_count = service.perform_bulk_assignment(limit: 1)
 
-        expect(assigned_count).to eq(0)
-        expect(conversation.reload.assignee).to be_nil
+        expect(assigned_count).to eq(1)
+        expect(conversation.reload.assignee).to eq(agent)
       end
 
-      it 'short-circuits without iterating conversations when no agents are online' do
+      it 'short-circuits without iterating conversations when there are no eligible agents' do
         3.times do
           conv = create(:conversation, inbox: inbox, status: 'open')
           conv.update!(assignee_id: nil)
         end
-        allow(OnlineStatusTracker).to receive(:get_available_users).and_return({})
+        inbox.inbox_members.destroy_all
 
         expect(service).not_to receive(:perform_for_conversation)
 

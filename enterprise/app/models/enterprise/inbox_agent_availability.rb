@@ -2,12 +2,11 @@ module Enterprise::InboxAgentAvailability
   extend ActiveSupport::Concern
 
   def member_ids_with_assignment_capacity
-    return member_ids unless capacity_filtering_enabled?
+    return super unless capacity_filtering_enabled?
 
-    # Get online agents with capacity
-    agents = available_agents
-    agents = filter_by_capacity(agents)
-    agents.map(&:user_id)
+    # Eligible agents with capacity. Presence is applied later by the assignment
+    # service, so offline agents stay available as a fallback.
+    filter_by_capacity(assignment_eligible_members).map(&:user_id)
   end
 
   private
