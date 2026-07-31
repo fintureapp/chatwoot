@@ -354,10 +354,17 @@ RSpec.describe 'Api::V1::Accounts::MacrosController', type: :request do
 
   describe 'POST /api/v1/accounts/{account.id}/macros/{macro.id}/execute' do
     let!(:macro) { create(:macro, account: account, created_by: administrator, updated_by: administrator) }
-    let(:inbox) { create(:inbox, account: account) }
+    # Estas specs cobrem execução de macro, não auto-atribuição. Com ela ligada, a
+    # conversa já nasce com responsável (user_1 é membro do inbox e elegível mesmo
+    # offline) e a pré-condição `assignee` nula deixaria de valer.
+    let(:inbox) { create(:inbox, account: account, enable_auto_assignment: false) }
     let(:contact) { create(:contact, account: account, identifier: '123') }
     let(:conversation) { create(:conversation, inbox: inbox, account: account, status: :open) }
-    let(:team) { create(:team, account: account) }
+    # Pelo mesmo motivo, o time não pode auto-atribuir: a ação assign_team da macro
+    # dispara AssignmentHandler#ensure_assignee_is_from_team, um caminho independente
+    # do enable_auto_assignment. Ele atribuiria user_1 antes do assign_agent, que
+    # viraria no-op, e a última atividade seria "via team" em vez da esperada.
+    let(:team) { create(:team, account: account, allow_auto_assign: false) }
     let(:user_1) { create(:user, role: 0) }
 
     before do
