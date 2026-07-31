@@ -7,7 +7,7 @@ class AutoAssignment::AssignmentService
 
     conversations = unassigned_conversations(limit).to_a
     return 0 if conversations.empty?
-    return 0 if inbox.available_agents.empty?
+    return 0 if inbox.assignment_eligible_members.empty?
 
     assigned_count = 0
     conversations.each do |conversation|
@@ -46,14 +46,17 @@ class AutoAssignment::AssignmentService
     scope.limit(limit)
   end
 
+  # Team and rate limit narrow the eligible pool first; presence is applied last
+  # so that "online only" is evaluated within the pool that can actually take the
+  # conversation, and the offline fallback still respects those constraints.
   def find_available_agent(conversation = nil)
-    agents = filter_agents_by_team(inbox.available_agents, conversation)
+    agents = filter_agents_by_team(inbox.assignment_eligible_members, conversation)
     return nil if agents.nil?
 
     agents = filter_agents_by_rate_limit(agents)
     return nil if agents.empty?
 
-    round_robin_selector.select_agent(agents)
+    round_robin_selector.select_agent(inbox.prioritize_online_agents(agents))
   end
 
   def filter_agents_by_team(agents, conversation)

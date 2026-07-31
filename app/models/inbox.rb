@@ -199,8 +199,10 @@ class Inbox < ApplicationRecord
     end
   end
 
+  # Mirrors InboxAgentAvailability#member_ids_with_assignment_capacity, which this
+  # definition shadows in the ancestor chain. Both must stay on the eligible pool.
   def member_ids_with_assignment_capacity
-    members.ids
+    assignment_eligible_members.map(&:user_id)
   end
 
   def auto_assignment_v2_enabled?
