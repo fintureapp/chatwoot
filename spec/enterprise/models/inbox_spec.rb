@@ -6,10 +6,12 @@ RSpec.describe Inbox do
   let!(:inbox) { create(:inbox) }
 
   describe 'member_ids_with_assignment_capacity' do
-    let!(:inbox_member_1) { create(:inbox_member, inbox: inbox) }
-    let!(:inbox_member_2) { create(:inbox_member, inbox: inbox) }
-    let!(:inbox_member_3) { create(:inbox_member, inbox: inbox) }
-    let!(:inbox_member_4) { create(:inbox_member, inbox: inbox) }
+    # Os membros precisam ser agentes da conta do inbox: member_ids_with_assignment_capacity
+    # parte do pool elegível, que exclui quem não tem vínculo com a conta.
+    let!(:inbox_member_1) { create(:inbox_member, inbox: inbox, user: create(:user, account: inbox.account)) }
+    let!(:inbox_member_2) { create(:inbox_member, inbox: inbox, user: create(:user, account: inbox.account)) }
+    let!(:inbox_member_3) { create(:inbox_member, inbox: inbox, user: create(:user, account: inbox.account)) }
+    let!(:inbox_member_4) { create(:inbox_member, inbox: inbox, user: create(:user, account: inbox.account)) }
 
     before do
       create(:conversation, inbox: inbox, assignee: inbox_member_1.user)
