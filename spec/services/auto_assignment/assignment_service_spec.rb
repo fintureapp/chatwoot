@@ -359,8 +359,17 @@ RSpec.describe AutoAssignment::AssignmentService do
         expect(conversation_with_team.reload.assignee).to be_nil
       end
 
-      it 'skips assignment when no team members are available' do
+      it 'falls back to the offline team members when no one is online' do
         allow(OnlineStatusTracker).to receive(:get_available_users).and_return({})
+        conversation_with_team = create(:conversation, inbox: inbox, team: team, assignee: nil)
+
+        service.perform_bulk_assignment(limit: 1)
+
+        expect(conversation_with_team.reload.assignee).to eq(team_member)
+      end
+
+      it 'skips assignment when the team has no eligible member in the inbox' do
+        inbox.inbox_members.find_by(user_id: team_member.id).destroy!
         conversation_with_team = create(:conversation, inbox: inbox, team: team, assignee: nil)
 
         service.perform_bulk_assignment(limit: 1)
