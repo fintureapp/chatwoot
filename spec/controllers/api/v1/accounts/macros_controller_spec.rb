@@ -354,7 +354,10 @@ RSpec.describe 'Api::V1::Accounts::MacrosController', type: :request do
 
   describe 'POST /api/v1/accounts/{account.id}/macros/{macro.id}/execute' do
     let!(:macro) { create(:macro, account: account, created_by: administrator, updated_by: administrator) }
-    let(:inbox) { create(:inbox, account: account) }
+    # Estas specs cobrem execução de macro, não auto-atribuição. Com ela ligada, a
+    # conversa já nasce com responsável (user_1 é membro do inbox e elegível mesmo
+    # offline) e a pré-condição `assignee` nula deixaria de valer.
+    let(:inbox) { create(:inbox, account: account, enable_auto_assignment: false) }
     let(:contact) { create(:contact, account: account, identifier: '123') }
     let(:conversation) { create(:conversation, inbox: inbox, account: account, status: :open) }
     let(:team) { create(:team, account: account) }

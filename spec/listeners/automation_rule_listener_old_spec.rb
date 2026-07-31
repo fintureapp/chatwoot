@@ -7,7 +7,10 @@ require 'rails_helper'
 describe AutomationRuleListener do
   let(:listener) { described_class.instance }
   let!(:account) { create(:account) }
-  let(:inbox) { create(:inbox, account: account) }
+  # Estas specs cobrem regras de automação, não auto-atribuição. Com ela ligada, a
+  # conversa já nasce com responsável (os membros do inbox são elegíveis mesmo
+  # offline) e as pré-condições `assignee` nula deixariam de valer.
+  let(:inbox) { create(:inbox, account: account, enable_auto_assignment: false) }
   let(:contact) { create(:contact, account: account, identifier: '123') }
   let(:conversation) { create(:conversation, inbox: inbox, account: account) }
   let!(:automation_rule) { create(:automation_rule, account: account, name: 'Test Automation Rule') }
