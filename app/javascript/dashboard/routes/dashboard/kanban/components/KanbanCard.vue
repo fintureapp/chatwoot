@@ -97,59 +97,13 @@ const openConversation = e => {
 
 <template>
   <div
-    class="relative flex flex-col gap-2 p-3 mb-2 transition-shadow group bg-n-solid-2 rounded-xl outline outline-1 -outline-offset-1 outline-n-container cursor-grab hover:shadow-md"
+    class="relative flex flex-col gap-2 p-3 mb-2 transition-shadow bg-n-solid-2 rounded-xl outline outline-1 -outline-offset-1 outline-n-container cursor-grab hover:shadow-md"
     role="button"
     tabindex="0"
     @click="open('detail')"
     @keydown.enter="open('detail')"
   >
-    <!-- Ações rápidas (discretas, aparecem no hover). Param stop em click E pointerdown
-         para não iniciar drag nem abrir o detalhe ao usá-las. -->
-    <div
-      class="absolute z-10 items-center hidden gap-0.5 top-2 ltr:right-2 rtl:left-2 group-hover:flex"
-    >
-      <button
-        class="flex items-center justify-center rounded-md size-6 text-n-teal-11 hover:bg-n-teal-3"
-        :title="$t('KANBAN.CARD.MARK_WON')"
-        @click.stop="emit('won', conversation)"
-        @pointerdown.stop
-      >
-        <Icon icon="i-lucide-trophy" class="size-4" />
-      </button>
-      <button
-        class="flex items-center justify-center rounded-md size-6 text-n-ruby-11 hover:bg-n-ruby-3"
-        :title="$t('KANBAN.CARD.MARK_LOST')"
-        @click.stop="emit('lost', conversation)"
-        @pointerdown.stop
-      >
-        <Icon icon="i-lucide-circle-x" class="size-4" />
-      </button>
-      <button
-        class="flex items-center justify-center rounded-md size-6 text-n-slate-11 hover:bg-n-alpha-2 hover:text-n-slate-12"
-        :title="$t('KANBAN.CARD.ADD_NOTE')"
-        @click.stop="open('note')"
-        @pointerdown.stop
-      >
-        <Icon icon="i-lucide-sticky-note" class="size-4" />
-      </button>
-      <button
-        class="flex items-center justify-center rounded-md size-6 text-n-slate-11 hover:bg-n-alpha-2 hover:text-n-slate-12"
-        :title="$t('KANBAN.CARD.EDIT_NEXT_ACTION')"
-        @click.stop="open('next-action')"
-        @pointerdown.stop
-      >
-        <Icon icon="i-lucide-list-checks" class="size-4" />
-      </button>
-      <button
-        class="flex items-center justify-center rounded-md size-6 text-n-slate-11 hover:bg-n-alpha-2 hover:text-n-slate-12"
-        :title="$t('KANBAN.CARD.OPEN_CONVERSATION')"
-        @click.stop="openConversation"
-        @pointerdown.stop
-      >
-        <Icon icon="i-lucide-external-link" class="size-4" />
-      </button>
-    </div>
-    <div class="flex items-start gap-2 ltr:pr-6 rtl:pl-6">
+    <div class="flex items-start gap-2">
       <Avatar
         :name="contactName"
         :src="contactThumbnail"
@@ -198,10 +152,62 @@ const openConversation = e => {
     <!-- Dica de próxima ação, quando existir (discreta, no rodapé do card). -->
     <div
       v-if="nextAction"
-      class="flex items-center gap-1 pt-1 mt-1 border-t border-n-weak text-n-slate-11"
+      class="flex items-center gap-1 pt-1 mt-1 text-n-slate-11"
     >
       <Icon icon="i-lucide-arrow-right-circle" class="size-3 shrink-0" />
       <span class="text-xs truncate">{{ nextAction }}</span>
+    </div>
+    <!-- Barra de ações fixa: sempre visível e autoexplicativa. Ganho/Perdido com
+         rótulo (decisão do SDR); ações utilitárias como ícones com tooltip.
+         stop em click E pointerdown para não iniciar drag nem abrir o detalhe. -->
+    <div
+      class="flex items-center gap-1 pt-2 mt-1 border-t border-n-weak"
+      @click.stop
+    >
+      <button
+        class="inline-flex items-center gap-1 h-7 px-2 rounded-lg text-xs font-medium text-n-teal-11 bg-n-teal-3 hover:bg-n-teal-4 transition-colors"
+        :title="$t('KANBAN.CARD.MARK_WON')"
+        @click.stop="emit('won', conversation)"
+        @pointerdown.stop
+      >
+        <Icon icon="i-lucide-trophy" class="size-3.5 shrink-0" />
+        {{ $t('KANBAN.OUTCOME.WON') }}
+      </button>
+      <button
+        class="inline-flex items-center gap-1 h-7 px-2 rounded-lg text-xs font-medium text-n-ruby-11 bg-n-ruby-3 hover:bg-n-ruby-4 transition-colors"
+        :title="$t('KANBAN.CARD.MARK_LOST')"
+        @click.stop="emit('lost', conversation)"
+        @pointerdown.stop
+      >
+        <Icon icon="i-lucide-circle-x" class="size-3.5 shrink-0" />
+        {{ $t('KANBAN.OUTCOME.LOST') }}
+      </button>
+      <div class="flex items-center gap-0.5 ltr:ml-auto rtl:mr-auto">
+        <button
+          class="flex items-center justify-center rounded-lg size-7 text-n-slate-11 bg-n-alpha-1 hover:bg-n-alpha-2 hover:text-n-slate-12 transition-colors"
+          :title="$t('KANBAN.CARD.ADD_NOTE')"
+          @click.stop="open('note')"
+          @pointerdown.stop
+        >
+          <Icon icon="i-lucide-sticky-note" class="size-4" />
+        </button>
+        <button
+          class="flex items-center justify-center rounded-lg size-7 text-n-slate-11 bg-n-alpha-1 hover:bg-n-alpha-2 hover:text-n-slate-12 transition-colors"
+          :title="$t('KANBAN.CARD.EDIT_NEXT_ACTION')"
+          @click.stop="open('next-action')"
+          @pointerdown.stop
+        >
+          <Icon icon="i-lucide-list-checks" class="size-4" />
+        </button>
+        <button
+          class="flex items-center justify-center rounded-lg size-7 text-n-slate-11 bg-n-alpha-1 hover:bg-n-alpha-2 hover:text-n-slate-12 transition-colors"
+          :title="$t('KANBAN.CARD.OPEN_CONVERSATION')"
+          @click.stop="openConversation"
+          @pointerdown.stop
+        >
+          <Icon icon="i-lucide-external-link" class="size-4" />
+        </button>
+      </div>
     </div>
   </div>
 </template>
