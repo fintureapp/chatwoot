@@ -20,6 +20,7 @@ import {
 } from './helper/pushHelper';
 import ReconnectService from 'dashboard/helper/ReconnectService';
 import { useUISettings } from 'dashboard/composables/useUISettings';
+import { initUnreadFaviconBadge } from './helper/AudioAlerts/faviconHelper';
 
 export default {
   name: 'App',
@@ -118,6 +119,10 @@ export default {
       vueActionCable.init(this.store, pubsubToken);
       this.reconnectService = new ReconnectService(this.store, this.router);
       window.reconnectService = this.reconnectService;
+
+      // Shows an unread-count badge on the favicon and tab title (WhatsApp
+      // Web style) for messages arriving in conversations assigned to me.
+      initUnreadFaviconBadge(this.store);
 
       verifyServiceWorkerExistence(registration =>
         registration.pushManager.getSubscription().then(subscription => {

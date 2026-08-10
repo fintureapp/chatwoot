@@ -1,6 +1,4 @@
 import { MESSAGE_TYPE } from 'shared/constants/messages';
-import { showBadgeOnFavicon } from './faviconHelper';
-import { initFaviconSwitcher } from './faviconHelper';
 
 import { EVENT_TYPES } from 'dashboard/routes/dashboard/settings/profile/constants.js';
 import GlobalStore from 'dashboard/store';
@@ -92,7 +90,6 @@ export class DashboardAudioNotificationHelper {
       this.intializeAudio();
     }
 
-    initFaviconSwitcher();
     this.clearRecurringTimer();
     this.playAudioEvery30Seconds();
   };
@@ -107,7 +104,6 @@ export class DashboardAudioNotificationHelper {
   executeRecurringNotification = () => {
     if (this.store.hasUnreadConversation() && this.shouldPlayAlert()) {
       this.playAudioAlert();
-      showBadgeOnFavicon();
     }
     this.resetRecurringTimer();
   };
@@ -209,7 +205,6 @@ export class DashboardAudioNotificationHelper {
     }
 
     this.playAudioAlert();
-    showBadgeOnFavicon();
     this.playAudioEvery30Seconds();
   };
 }
