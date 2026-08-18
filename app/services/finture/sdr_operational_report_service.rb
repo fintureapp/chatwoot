@@ -1,29 +1,35 @@
 # Métricas da VISÃO OPERACIONAL do Dashboard SDR. Foco em execução do time e
 # higiene do funil — o que precisa de ação agora e onde está o gargalo. Escopo
 # por caixa (inbox_id) ou geral. Algumas métricas são snapshot (estado atual:
-# carga, aging, não atribuídos, parados) e outras são do período [since,
-# until_at] (follow-ups concluídos, SLA de 1º contato).
+# carga, não atribuídos, parados) e outras são do período [since, until_at]
+# (follow-ups concluídos, SLA de 1º contato humano).
 #
 # Nenhum dado novo é necessário — tudo já existe no sistema:
 # - follow-ups   → finture_follow_ups (due_at / completed_at)
-# - SLA          → conversations.first_reply_created_at (nativo)
+# - SLA          → first_reply_created_at (1ª resposta humana) menos o instante
+#                  em que a label atendimento_humano foi aplicada (taggings)
 # - não atrib.   → conversations.assignee_id
 # - parados      → conversations.last_activity_at
-# - aging/carga  → conversations.created_at / custom_attributes.sdr_stage
+# - carga        → conversations.created_at / custom_attributes.sdr_stage
 # - gargalo      → finture_stage_transitions (+ tempo na etapa atual, sem viés)
 class Finture::SdrOperationalReportService
-  pattr_initialize [:account!, :inbox_id, :since, :until_at]
+  include Finture::SdrShared
+
+  pattr_initialize [:account!, :current_user, :inbox_id, :since, :until_at]
 
   STALLED_AFTER = 7.days
   STALLED_LIMIT = 12
+  # Tempo-alvo até o 1º contato humano (minutos). Referência exibida no card SLA.
+  SLA_TARGET_MINUTES = 45
+  HUMAN_LABEL = 'atendimento_humano'.freeze
 
   def perform
     {
       kpis: kpis,
       follow_ups: follow_ups,
+      my_follow_ups: my_follow_ups,
       sla: sla,
       load: funnel_load,
-      aging: aging,
       stage_time: stage_time,
       stalled: stalled
     }
@@ -93,25 +99,51 @@ class Finture::SdrOperationalReportService
     end
   end
 
-  # ---- SLA de 1º contato ----------------------------------------------------
+  # ---- SLA de 1º contato humano ---------------------------------------------
+  # Conta do momento em que a conversa entra em atendimento humano (label
+  # atendimento_humano aplicada) até a 1ª resposta de um agente humano
+  # (first_reply_created_at só é setado por sender User — bot/AgentBot não
+  # contam). Conversas sem a tag, ou cuja resposta veio antes dela, ficam de
+  # fora. Quebra por área = Time da conversa.
   def sla
     @sla ||= begin
       rows = conversations_scope.where(created_at: range)
                                 .where.not(first_reply_created_at: nil)
-                                .pluck(:created_at, :first_reply_created_at,
-                                       Arel.sql("custom_attributes ->> 'produto_interesse'"))
+                                .pluck(:id, :first_reply_created_at, :team_id)
+      tag_times = human_label_times(rows.map(&:first))
+
+      durations = []
+      by_team = Hash.new { |hash, key| hash[key] = [] }
+      rows.each do |conv_id, replied, team_id|
+        tagged_at = tag_times[conv_id]
+        next if tagged_at.nil?
+
+        seconds = replied - tagged_at
+        next if seconds.negative?
+
+        durations << seconds
+        by_team[team_name(team_id)] << seconds
+      end
+
       {
-        avg_minutes: avg_minutes(rows.map { |created, replied, _| replied - created }),
-        by_product: sla_by_product(rows)
+        avg_minutes: avg_minutes(durations),
+        target_minutes: SLA_TARGET_MINUTES,
+        by_product: by_team.map { |team, seconds| { product: team, minutes: avg_minutes(seconds) } }
+                           .sort_by { |row| row[:minutes] || Float::INFINITY }
       }
     end
   end
 
-  def sla_by_product(rows)
-    buckets = Hash.new { |hash, key| hash[key] = [] }
-    rows.each { |created, replied, product| buckets[product.presence || 'Não informado'] << (replied - created) }
-    buckets.map { |product, seconds| { product: product, minutes: avg_minutes(seconds) } }
-           .sort_by { |row| row[:minutes] }
+  # {conversation_id => 1ª aplicação da label atendimento_humano}.
+  def human_label_times(conversation_ids)
+    return {} if conversation_ids.blank?
+
+    tag = ActsAsTaggableOn::Tag.find_by(name: HUMAN_LABEL)
+    return {} if tag.nil?
+
+    ActsAsTaggableOn::Tagging
+      .where(tag_id: tag.id, taggable_type: 'Conversation', context: 'labels', taggable_id: conversation_ids)
+      .group(:taggable_id).minimum(:created_at)
   end
 
   def avg_minutes(seconds)
@@ -129,16 +161,6 @@ class Finture::SdrOperationalReportService
       count += raw[nil].to_i if stage[:slug] == Finture::PipelineStage::DEFAULT_SLUG
       { slug: stage[:slug], name: stage[:name], count: count }
     end
-  end
-
-  # ---- Aging (idade dos leads em aberto) ------------------------------------
-  def aging
-    days = open_leads_scope.pluck(:created_at).map { |created| ((now - created) / 86_400.0) }
-    {
-      fresh: days.count { |d| d <= 3 },       # 0–3 dias
-      warm: days.count { |d| d > 3 && d <= 7 }, # 4–7 dias
-      stale: days.count { |d| d > 7 }           # +7 dias
-    }
   end
 
   # ---- Gargalo: tempo médio por etapa (com a etapa atual, sem viés) ---------
@@ -191,7 +213,7 @@ class Finture::SdrOperationalReportService
       {
         id: conversation.display_id,
         contact: conversation.contact&.name,
-        product: attrs['produto_interesse'],
+        product: team_name(conversation.team_id),
         stage: stage_names[slug] || slug,
         days: ((now - conversation.last_activity_at) / 86_400.0).floor,
         assignee: conversation.assignee&.name

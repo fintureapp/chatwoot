@@ -19,6 +19,7 @@ class Api::V1::Accounts::FintureSdrDashboardController < Api::V1::Accounts::Base
     when 'commercial'
       Finture::SdrCommercialReportService.new(
         account: Current.account,
+        current_user: Current.user,
         inbox_id: params[:inbox_id].presence,
         since: params[:since].presence,
         until_at: params[:until].presence,
@@ -28,6 +29,7 @@ class Api::V1::Accounts::FintureSdrDashboardController < Api::V1::Accounts::Base
     when 'operational'
       Finture::SdrOperationalReportService.new(
         account: Current.account,
+        current_user: Current.user,
         inbox_id: params[:inbox_id].presence,
         since: params[:since].presence,
         until_at: params[:until].presence

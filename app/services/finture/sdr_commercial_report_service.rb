@@ -9,13 +9,15 @@
 # - kpis:         conversão, leads, ganhos e ciclo médio (valor + janela de
 #                 comparação + delta)
 # - funnel:       nº de leads que alcançaram cada etapa no período (+ Ganho)
-# - mix:          leads por produto (custom_attributes.produto_interesse), top 6
+# - mix:          leads por área (Time da conversa, ex.: crédito pj), top 6
 # - loss_reasons: motivos de perda (transições kind=lost), do mais frequente
 # - trend:        série temporal de leads e ganhos (bucket diário ou semanal) +
 #                 série de leads da janela de comparação (linha fantasma)
 # - velocity:     dias até ganho (geral e por produto)
 class Finture::SdrCommercialReportService
-  pattr_initialize [:account!, :inbox_id, :since, :until_at, :compare_since, :compare_until]
+  include Finture::SdrShared
+
+  pattr_initialize [:account!, :current_user, :inbox_id, :since, :until_at, :compare_since, :compare_until]
 
   TOP_PRODUCTS = 6
 
@@ -26,7 +28,8 @@ class Finture::SdrCommercialReportService
       mix: mix,
       loss_reasons: loss_reasons,
       trend: trend,
-      velocity: velocity
+      velocity: velocity,
+      my_follow_ups: my_follow_ups
     }
   end
 
@@ -149,13 +152,14 @@ class Finture::SdrCommercialReportService
     end
   end
 
-  # ---- Mix por produto ------------------------------------------------------
+  # ---- Mix por área (Time) --------------------------------------------------
+  # Agrupado pelo Time da conversa — a área grande para onde a triagem roteia
+  # (consórcio, crédito pj, saúde...). Fonte confiável; o número do menu do bot
+  # não é persistido, então não dá para separar sub-produtos do mesmo time.
   def mix
-    raw = conversations_scope.where(created_at: range)
-                             .group(Arel.sql("custom_attributes ->> 'produto_interesse'"))
-                             .count
-    rows = raw.map { |product, count| { product: product.presence || 'Não informado', count: count } }
-                .sort_by { |row| -row[:count] }
+    raw = conversations_scope.where(created_at: range).group(:team_id).count
+    rows = raw.map { |team_id, count| { product: team_name(team_id), count: count } }
+              .sort_by { |row| -row[:count] }
     return rows if rows.size <= TOP_PRODUCTS
 
     rest = rows.drop(TOP_PRODUCTS).sum { |row| row[:count] }
@@ -222,12 +226,11 @@ class Finture::SdrCommercialReportService
     map = won_latest_map(range)
     return [] if map.empty?
 
-    rows = conversations_scope.where(id: map.keys)
-                              .pluck(:id, :created_at, Arel.sql("custom_attributes ->> 'produto_interesse'"))
+    rows = conversations_scope.where(id: map.keys).pluck(:id, :created_at, :team_id)
     buckets = Hash.new { |hash, key| hash[key] = [] }
-    rows.each do |conv_id, created_at, product|
+    rows.each do |conv_id, created_at, team_id|
       won_at = map[conv_id]
-      buckets[product.presence || 'Não informado'] << (won_at - created_at) if won_at && created_at
+      buckets[team_name(team_id)] << (won_at - created_at) if won_at && created_at
     end
 
     buckets.map { |product, seconds| { product: product, days: (seconds.sum / seconds.size / 86_400.0).round(1) } }

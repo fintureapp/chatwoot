@@ -12,7 +12,7 @@ import MetricTile from './dashboard/MetricTile.vue';
 import TrendChart from './dashboard/TrendChart.vue';
 import FunnelChart from './dashboard/FunnelChart.vue';
 import BarList from './dashboard/BarList.vue';
-import AgingBar from './dashboard/AgingBar.vue';
+import FollowUpList from './dashboard/FollowUpList.vue';
 import { lostReasonLabel } from '../config/stages';
 
 const props = defineProps({
@@ -209,9 +209,19 @@ const formatDuration = seconds => {
 
 const hasOpData = computed(() => Boolean(dashboard.value?.follow_ups));
 const opFollowUps = computed(() => dashboard.value?.follow_ups || null);
-const opAging = computed(() => dashboard.value?.aging || null);
 const opStalled = computed(() => dashboard.value?.stalled || []);
 const opSlaAvg = computed(() => dashboard.value?.sla?.avg_minutes);
+const opSlaTarget = computed(() => dashboard.value?.sla?.target_minutes ?? 45);
+// Verde quando a média bate a meta, vermelho quando estoura; neutro sem dado.
+const opSlaTone = computed(() => {
+  if (opSlaAvg.value == null) return 'text-n-slate-12';
+  return opSlaAvg.value <= opSlaTarget.value
+    ? 'text-n-teal-11'
+    : 'text-n-ruby-11';
+});
+
+// Follow-ups do agente logado — presente nas duas visões (comercial/operacional).
+const myFollowUps = computed(() => dashboard.value?.my_follow_ups || []);
 const opOnTimePct = computed(() =>
   opFollowUps.value?.on_time_pct == null
     ? '—'
@@ -568,6 +578,11 @@ const views = computed(() => [
               {{ t('KANBAN.DASHBOARD.LOSS_EMPTY') }}
             </p>
           </div>
+
+          <!-- Meus follow-ups -->
+          <div class="md:col-span-12">
+            <FollowUpList :items="myFollowUps" />
+          </div>
         </div>
       </template>
     </template>
@@ -701,31 +716,9 @@ const views = computed(() => [
             </p>
           </div>
 
-          <!-- Aging -->
+          <!-- SLA por área -->
           <div
             class="flex flex-col gap-4 p-4 md:col-span-6 rounded-xl bg-n-solid-1 outline outline-1 -outline-offset-1 outline-n-weak"
-          >
-            <div>
-              <div
-                class="text-[10.5px] font-bold uppercase tracking-wider text-n-slate-10"
-              >
-                {{ t('KANBAN.DASHBOARD.AGING_EYEBROW') }}
-              </div>
-              <h3 class="text-sm font-medium text-n-slate-12">
-                {{ t('KANBAN.DASHBOARD.AGING_TITLE') }}
-              </h3>
-            </div>
-            <AgingBar
-              v-if="opAging"
-              :fresh="opAging.fresh"
-              :warm="opAging.warm"
-              :stale="opAging.stale"
-            />
-          </div>
-
-          <!-- SLA por produto -->
-          <div
-            class="flex flex-col gap-4 p-4 md:col-span-5 rounded-xl bg-n-solid-1 outline outline-1 -outline-offset-1 outline-n-weak"
           >
             <div>
               <div
@@ -739,12 +732,13 @@ const views = computed(() => [
             </div>
             <div class="flex items-baseline gap-2">
               <span
-                class="text-3xl font-semibold text-n-slate-12 tabular-nums leading-none"
+                class="text-3xl font-semibold tabular-nums leading-none"
+                :class="opSlaTone"
               >
                 {{ fmtMinutes(opSlaAvg) }}
               </span>
               <span class="text-xs text-n-slate-11">{{
-                t('KANBAN.DASHBOARD.VELOCITY_OVERALL')
+                t('KANBAN.DASHBOARD.SLA_META', { count: opSlaTarget })
               }}</span>
             </div>
             <BarList v-if="slaRows.length" :rows="slaRows" tone="brand" />
@@ -752,7 +746,7 @@ const views = computed(() => [
 
           <!-- Leads parados -->
           <div
-            class="flex flex-col gap-4 p-4 md:col-span-7 rounded-xl bg-n-solid-1 outline outline-1 -outline-offset-1 outline-n-weak"
+            class="flex flex-col gap-4 p-4 md:col-span-12 rounded-xl bg-n-solid-1 outline outline-1 -outline-offset-1 outline-n-weak"
           >
             <div class="flex items-baseline justify-between gap-3">
               <div>
@@ -833,6 +827,11 @@ const views = computed(() => [
             <p v-else class="text-sm text-n-slate-10">
               {{ t('KANBAN.DASHBOARD.STALLED_EMPTY') }}
             </p>
+          </div>
+
+          <!-- Meus follow-ups -->
+          <div class="md:col-span-12">
+            <FollowUpList :items="myFollowUps" />
           </div>
         </div>
       </template>
