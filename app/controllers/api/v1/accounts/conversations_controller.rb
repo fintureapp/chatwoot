@@ -56,6 +56,7 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
     ActiveRecord::Base.transaction do
       @conversation = ConversationBuilder.new(params: params, contact_inbox: @contact_inbox).perform
       Messages::MessageBuilder.new(Current.user, @conversation, params[:message]).perform if params[:message].present?
+      mark_conversation_as_human_handled
     end
   end
 
@@ -161,6 +162,19 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   end
 
   private
+
+  # Conversa aberta por um agente humano (não por bot) já nasce em atendimento humano.
+  # Gravamos os dois sinais que o bot (n8n) lê no guard "Avaliar Estado" para se calar:
+  # a label `atendimento_humano` e o custom attribute `modo_atendimento = humano`. Sem
+  # isso, o bot voltava a responder o lead assim que ele respondia à mensagem do agente.
+  def mark_conversation_as_human_handled
+    return unless Current.user.is_a?(User)
+
+    @conversation.add_labels(['atendimento_humano'])
+    @conversation.update!(
+      custom_attributes: (@conversation.custom_attributes || {}).merge('modo_atendimento' => 'humano')
+    )
+  end
 
   def permitted_update_params
     # TODO: Move the other conversation attributes to this method and remove specific endpoints for each attribute

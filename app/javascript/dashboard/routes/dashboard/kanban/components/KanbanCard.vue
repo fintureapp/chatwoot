@@ -93,6 +93,23 @@ const openConversation = e => {
   }
   router.push({ path });
 };
+
+// Histórico do número: atendimentos anteriores colapsados neste card (o card é
+// a conversa mais recente; estes são os demais). Mostra os 3 mais recentes;
+// cada linha abre aquela conversa antiga.
+const HISTORY_PREVIEW = 3;
+const history = computed(() => props.conversation?.groupHistory || []);
+const visibleHistory = computed(() => history.value.slice(0, HISTORY_PREVIEW));
+const extraHistoryCount = computed(() =>
+  Math.max(0, history.value.length - HISTORY_PREVIEW)
+);
+
+const openHistory = entry => {
+  const path = frontendURL(
+    conversationUrl({ accountId: route.params.accountId, id: entry.id })
+  );
+  router.push({ path });
+};
 </script>
 
 <template>
@@ -156,6 +173,48 @@ const openConversation = e => {
     >
       <Icon icon="i-lucide-arrow-right-circle" class="size-3 shrink-0" />
       <span class="text-xs truncate">{{ nextAction }}</span>
+    </div>
+    <!-- Histórico do número: atendimentos anteriores (colapsados neste card).
+         Cada linha abre a conversa antiga; stop no click/pointerdown para não
+         iniciar drag nem abrir o detalhe do card. -->
+    <div
+      v-if="conversation.groupCount > 1"
+      class="pt-2 mt-1 border-t border-n-weak"
+      @click.stop
+    >
+      <div class="flex items-center gap-1 mb-1 text-n-slate-10">
+        <Icon icon="i-lucide-history" class="size-3 shrink-0" />
+        <span class="text-[11px] font-medium uppercase tracking-wide">
+          {{
+            $t('KANBAN.CARD.HISTORY_TITLE', {
+              count: conversation.groupCount - 1,
+            })
+          }}
+        </span>
+      </div>
+      <ul class="flex flex-col gap-0.5">
+        <li v-for="entry in visibleHistory" :key="entry.id">
+          <button
+            type="button"
+            class="flex items-center w-full gap-1 text-xs text-left transition-colors rounded text-n-slate-11 hover:text-n-slate-12"
+            :title="$t('KANBAN.CARD.HISTORY_OPEN_ENTRY')"
+            @click.stop="openHistory(entry)"
+            @pointerdown.stop
+          >
+            <Icon icon="i-lucide-corner-down-right" class="size-3 shrink-0" />
+            <span class="truncate">{{ entry.label }}</span>
+          </button>
+        </li>
+      </ul>
+      <button
+        v-if="extraHistoryCount"
+        type="button"
+        class="mt-0.5 text-[11px] text-n-slate-10 hover:text-n-slate-11"
+        @click.stop="open('detail')"
+        @pointerdown.stop
+      >
+        {{ $t('KANBAN.CARD.HISTORY_MORE', { count: extraHistoryCount }) }}
+      </button>
     </div>
     <!-- Barra de ações fixa: sempre visível e autoexplicativa. Ganho/Perdido com
          rótulo (decisão do SDR); ações utilitárias como ícones com tooltip.
