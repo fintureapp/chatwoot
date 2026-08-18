@@ -1,5 +1,7 @@
 <script setup>
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useToggle } from '@vueuse/core';
 import { useRoute, useRouter } from 'vue-router';
 import { frontendURL, conversationUrl } from 'dashboard/helper/URLHelper';
 import {
@@ -14,6 +16,7 @@ import {
 
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
+import DropdownMenu from 'dashboard/components-next/dropdown-menu/DropdownMenu.vue';
 import KanbanCardField from './KanbanCardField.vue';
 
 const props = defineProps({
@@ -29,6 +32,7 @@ const props = defineProps({
 
 const emit = defineEmits(['open', 'won', 'lost']);
 
+const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 
@@ -76,39 +80,45 @@ const fieldValue = field =>
 const open = (intent = 'detail') =>
   emit('open', { conversation: props.conversation, intent });
 
-const openConversation = e => {
+const goToConversation = () => {
   const path = frontendURL(
     conversationUrl({
       accountId: route.params.accountId,
       id: props.conversation.id,
     })
   );
-  if (e.metaKey || e.ctrlKey) {
-    window.open(
-      window.chatwootConfig.hostURL + path,
-      '_blank',
-      'noopener noreferrer nofollow'
-    );
-    return;
-  }
   router.push({ path });
 };
 
-// Histórico do número: atendimentos anteriores colapsados neste card (o card é
-// a conversa mais recente; estes são os demais). Mostra os 3 mais recentes;
-// cada linha abre aquela conversa antiga.
-const HISTORY_PREVIEW = 3;
-const history = computed(() => props.conversation?.groupHistory || []);
-const visibleHistory = computed(() => history.value.slice(0, HISTORY_PREVIEW));
-const extraHistoryCount = computed(() =>
-  Math.max(0, history.value.length - HISTORY_PREVIEW)
-);
+// Ações utilitárias do card, agora recolhidas num menu discreto ("⋯") no canto
+// superior direito — antes eram 3 botões fixos poluindo o rodapé do card.
+const [isMenuOpen, toggleMenu] = useToggle(false);
+const menuItems = computed(() => [
+  {
+    icon: 'i-lucide-sticky-note',
+    label: t('KANBAN.CARD.ADD_NOTE'),
+    action: 'note',
+    value: 'note',
+  },
+  {
+    icon: 'i-lucide-list-checks',
+    label: t('KANBAN.CARD.EDIT_NEXT_ACTION'),
+    action: 'next-action',
+    value: 'next-action',
+  },
+  {
+    icon: 'i-lucide-external-link',
+    label: t('KANBAN.CARD.OPEN_CONVERSATION'),
+    action: 'open-conversation',
+    value: 'open-conversation',
+  },
+]);
 
-const openHistory = entry => {
-  const path = frontendURL(
-    conversationUrl({ accountId: route.params.accountId, id: entry.id })
-  );
-  router.push({ path });
+const onMenuAction = ({ action }) => {
+  toggleMenu(false);
+  if (action === 'note') open('note');
+  else if (action === 'next-action') open('next-action');
+  else if (action === 'open-conversation') goToConversation();
 };
 </script>
 
@@ -120,7 +130,32 @@ const openHistory = entry => {
     @click="open('detail')"
     @keydown.enter="open('detail')"
   >
-    <div class="flex items-start gap-2">
+    <!-- Menu discreto de ações (⋯) no canto superior direito. stop no click E
+         pointerdown para não iniciar drag nem abrir o detalhe do card. -->
+    <div
+      v-on-clickaway="() => toggleMenu(false)"
+      class="absolute z-10 ltr:right-2 rtl:left-2 top-2"
+      @click.stop
+      @pointerdown.stop
+    >
+      <button
+        type="button"
+        class="flex items-center justify-center rounded-lg size-7 text-n-slate-10 hover:bg-n-alpha-2 hover:text-n-slate-12 transition-colors"
+        :class="{ 'bg-n-alpha-2 text-n-slate-12': isMenuOpen }"
+        :title="$t('KANBAN.CARD.MORE_ACTIONS')"
+        @click.stop="toggleMenu()"
+      >
+        <Icon icon="i-lucide-more-horizontal" class="size-4" />
+      </button>
+      <DropdownMenu
+        v-if="isMenuOpen"
+        :menu-items="menuItems"
+        class="mt-1 ltr:right-0 rtl:left-0 top-full"
+        @action="onMenuAction"
+      />
+    </div>
+
+    <div class="flex items-start gap-2 ltr:pr-7 rtl:pl-7">
       <Avatar
         :name="contactName"
         :src="contactThumbnail"
@@ -174,51 +209,9 @@ const openHistory = entry => {
       <Icon icon="i-lucide-arrow-right-circle" class="size-3 shrink-0" />
       <span class="text-xs truncate">{{ nextAction }}</span>
     </div>
-    <!-- Histórico do número: atendimentos anteriores (colapsados neste card).
-         Cada linha abre a conversa antiga; stop no click/pointerdown para não
-         iniciar drag nem abrir o detalhe do card. -->
-    <div
-      v-if="conversation.groupCount > 1"
-      class="pt-2 mt-1 border-t border-n-weak"
-      @click.stop
-    >
-      <div class="flex items-center gap-1 mb-1 text-n-slate-10">
-        <Icon icon="i-lucide-history" class="size-3 shrink-0" />
-        <span class="text-[11px] font-medium uppercase tracking-wide">
-          {{
-            $t('KANBAN.CARD.HISTORY_TITLE', {
-              count: conversation.groupCount - 1,
-            })
-          }}
-        </span>
-      </div>
-      <ul class="flex flex-col gap-0.5">
-        <li v-for="entry in visibleHistory" :key="entry.id">
-          <button
-            type="button"
-            class="flex items-center w-full gap-1 text-xs text-left transition-colors rounded text-n-slate-11 hover:text-n-slate-12"
-            :title="$t('KANBAN.CARD.HISTORY_OPEN_ENTRY')"
-            @click.stop="openHistory(entry)"
-            @pointerdown.stop
-          >
-            <Icon icon="i-lucide-corner-down-right" class="size-3 shrink-0" />
-            <span class="truncate">{{ entry.label }}</span>
-          </button>
-        </li>
-      </ul>
-      <button
-        v-if="extraHistoryCount"
-        type="button"
-        class="mt-0.5 text-[11px] text-n-slate-10 hover:text-n-slate-11"
-        @click.stop="open('detail')"
-        @pointerdown.stop
-      >
-        {{ $t('KANBAN.CARD.HISTORY_MORE', { count: extraHistoryCount }) }}
-      </button>
-    </div>
-    <!-- Barra de ações fixa: sempre visível e autoexplicativa. Ganho/Perdido com
-         rótulo (decisão do SDR); ações utilitárias como ícones com tooltip.
-         stop em click E pointerdown para não iniciar drag nem abrir o detalhe. -->
+    <!-- Barra de desfecho: Ganho/Perdido com rótulo (decisão do SDR). As ações
+         utilitárias foram para o menu "⋯" no topo. stop em click E pointerdown
+         para não iniciar drag nem abrir o detalhe. -->
     <div
       class="flex items-center gap-1 pt-2 mt-1 border-t border-n-weak"
       @click.stop
@@ -241,32 +234,6 @@ const openHistory = entry => {
         <Icon icon="i-lucide-circle-x" class="size-3.5 shrink-0" />
         {{ $t('KANBAN.OUTCOME.LOST') }}
       </button>
-      <div class="flex items-center gap-0.5 ltr:ml-auto rtl:mr-auto">
-        <button
-          class="flex items-center justify-center rounded-lg size-7 text-n-slate-11 bg-n-alpha-1 hover:bg-n-alpha-2 hover:text-n-slate-12 transition-colors"
-          :title="$t('KANBAN.CARD.ADD_NOTE')"
-          @click.stop="open('note')"
-          @pointerdown.stop
-        >
-          <Icon icon="i-lucide-sticky-note" class="size-4" />
-        </button>
-        <button
-          class="flex items-center justify-center rounded-lg size-7 text-n-slate-11 bg-n-alpha-1 hover:bg-n-alpha-2 hover:text-n-slate-12 transition-colors"
-          :title="$t('KANBAN.CARD.EDIT_NEXT_ACTION')"
-          @click.stop="open('next-action')"
-          @pointerdown.stop
-        >
-          <Icon icon="i-lucide-list-checks" class="size-4" />
-        </button>
-        <button
-          class="flex items-center justify-center rounded-lg size-7 text-n-slate-11 bg-n-alpha-1 hover:bg-n-alpha-2 hover:text-n-slate-12 transition-colors"
-          :title="$t('KANBAN.CARD.OPEN_CONVERSATION')"
-          @click.stop="openConversation"
-          @pointerdown.stop
-        >
-          <Icon icon="i-lucide-external-link" class="size-4" />
-        </button>
-      </div>
     </div>
   </div>
 </template>

@@ -197,6 +197,14 @@ export const actions = {
     }
   },
 
+  // Exclui o card (conversa) de vez. Só admins passam na policy `destroy?`; o
+  // backend enfileira a remoção (DeleteService) e responde 200. Removemos o
+  // registro localmente para o card sumir do board na hora.
+  async deleteConversation({ commit }, { conversationId }) {
+    await ConversationApi.delete(conversationId);
+    commit('REMOVE_RECORD', conversationId);
+  },
+
   async fetchHistory({ commit }, { inboxId }) {
     if (!inboxId) return;
     commit('SET_HISTORY_UI_FLAG', { isFetching: true, hasError: false });

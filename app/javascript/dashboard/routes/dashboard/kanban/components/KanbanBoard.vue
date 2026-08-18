@@ -40,6 +40,10 @@ const pendingLost = ref(null);
 const selectedConversationId = ref(null);
 const drawerIntent = ref('detail');
 const isDrawerOpen = ref(false);
+// Histórico do número (atendimentos anteriores) do card selecionado: fica no
+// registro agrupado do board, não no store, então o levamos para o drawer.
+const selectedGroupHistory = ref([]);
+const selectedGroupCount = ref(1);
 
 const stageSlugs = computed(() => props.stages.map(stage => stage.slug));
 
@@ -113,6 +117,8 @@ const onLostCancel = () => {
 
 const openDrawer = ({ conversation, intent }) => {
   selectedConversationId.value = conversation.id;
+  selectedGroupHistory.value = conversation.groupHistory || [];
+  selectedGroupCount.value = conversation.groupCount || 1;
   drawerIntent.value = intent || 'detail';
   isDrawerOpen.value = true;
 };
@@ -148,6 +154,8 @@ const openDrawer = ({ conversation, intent }) => {
       :conversation-id="selectedConversationId"
       :intent="drawerIntent"
       :inbox-names="inboxNames"
+      :group-history="selectedGroupHistory"
+      :group-count="selectedGroupCount"
     />
   </div>
 </template>
