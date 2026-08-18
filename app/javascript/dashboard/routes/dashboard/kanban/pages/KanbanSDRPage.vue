@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { resolveStage } from 'dashboard/routes/dashboard/kanban/config/stages';
+import { groupRecordsByContact } from 'dashboard/routes/dashboard/kanban/helper/grouping';
 import { downloadKanbanCsv } from 'dashboard/routes/dashboard/kanban/helper/csv';
 
 import KanbanInboxFilter from '../components/KanbanInboxFilter.vue';
@@ -128,32 +129,96 @@ const sorters = {
   volume_desc: (a, b) => volumeOf(b) - volumeOf(a),
 };
 
-const filteredRecords = computed(() => {
+// Filtros por conversa que NÃO dependem de etapa (aplicados antes de agrupar,
+// para que o histórico do card não seja recortado pelo filtro de etapa).
+const passesBaseFilters = record => {
+  if (!matchesQuery(record)) return false;
+  if (
+    filters.product &&
+    record.custom_attributes?.produto_interesse !== filters.product
+  ) {
+    return false;
+  }
+  if (
+    filters.assigneeId &&
+    String(record.meta?.assignee?.id) !== filters.assigneeId
+  ) {
+    return false;
+  }
   const createdFrom = toSeconds(filters.createdFrom);
   const createdTo = toSeconds(filters.createdTo, true);
+  if (createdFrom && (record.created_at || 0) < createdFrom) return false;
+  if (createdTo && (record.created_at || 0) > createdTo) return false;
+  return true;
+};
+
+// Lista "crua" (1 linha por conversa) — usada só na exportação CSV, onde cada
+// atendimento deve virar uma linha. Aplica todos os filtros, inclusive etapa.
+const filteredRecords = computed(() => {
   const slugs = stageSlugs.value;
-  const result = records.value.filter(record => {
-    if (!matchesQuery(record)) return false;
-    if (
-      filters.product &&
-      record.custom_attributes?.produto_interesse !== filters.product
-    ) {
-      return false;
-    }
-    if (filters.stage && resolveStage(record, slugs) !== filters.stage) {
-      return false;
-    }
-    if (
-      filters.assigneeId &&
-      String(record.meta?.assignee?.id) !== filters.assigneeId
-    ) {
-      return false;
-    }
-    if (createdFrom && (record.created_at || 0) < createdFrom) return false;
-    if (createdTo && (record.created_at || 0) > createdTo) return false;
-    return true;
+  return records.value
+    .filter(passesBaseFilters)
+    .filter(
+      record => !filters.stage || resolveStage(record, slugs) === filters.stage
+    )
+    .sort(sorters[sortBy.value] || sorters.last_activity_desc);
+});
+
+// Nome da etapa por slug (para rotular o histórico do card).
+const stageNameBySlug = computed(() => {
+  const map = {};
+  stages.value.forEach(stage => {
+    map[stage.slug] = stage.name;
   });
-  return result.sort(sorters[sortBy.value] || sorters.last_activity_desc);
+  return map;
+});
+
+const historyDateFmt = new Intl.DateTimeFormat('pt-BR', {
+  day: '2-digit',
+  month: '2-digit',
+});
+
+// Rótulo de cada atendimento anterior: "18/08 · Ganho" / "18/08 · Reunião Marcada".
+const historyEntryLabel = entry => {
+  const datePart = entry.at
+    ? historyDateFmt.format(new Date(entry.at * 1000))
+    : '';
+  let statusPart;
+  if (entry.outcome === 'won') statusPart = t('KANBAN.OUTCOME.WON');
+  else if (entry.outcome === 'lost') statusPart = t('KANBAN.OUTCOME.LOST');
+  else {
+    statusPart =
+      stageNameBySlug.value[entry.stage] ||
+      entry.stage ||
+      t('KANBAN.CARD.HISTORY_OPEN');
+  }
+  return [datePart, statusPart].filter(Boolean).join(' · ');
+};
+
+const decorateGroup = record => {
+  if (!record.groupHistory?.length) return record;
+  return {
+    ...record,
+    groupHistory: record.groupHistory.map(entry => ({
+      ...entry,
+      label: historyEntryLabel(entry),
+    })),
+  };
+};
+
+// Cards do board: 1 por contato. Agrupa após os filtros base e só então aplica
+// o filtro de etapa (pela conversa primária, a mais recente), preservando o
+// histórico completo do número no card.
+const boardRecords = computed(() => {
+  const slugs = stageSlugs.value;
+  const grouped = groupRecordsByContact(
+    records.value.filter(passesBaseFilters)
+  ).map(decorateGroup);
+  return grouped
+    .filter(
+      record => !filters.stage || resolveStage(record, slugs) === filters.stage
+    )
+    .sort(sorters[sortBy.value] || sorters.last_activity_desc);
 });
 
 const clearFilters = () => {
@@ -365,7 +430,7 @@ onMounted(async () => {
 
       <!-- Filtros sem resultado -->
       <EmptyStateLayout
-        v-else-if="records.length && !filteredRecords.length"
+        v-else-if="records.length && !boardRecords.length"
         class="flex-1 min-h-0"
         :title="t('KANBAN.EMPTY_STATE.NO_RESULTS_TITLE')"
         :subtitle="t('KANBAN.EMPTY_STATE.NO_RESULTS_SUBTITLE')"
@@ -386,7 +451,7 @@ onMounted(async () => {
       <KanbanBoard
         v-else
         class="flex-1 min-h-0"
-        :records="filteredRecords"
+        :records="boardRecords"
         :stages="stages"
         :inbox-names="inboxNames"
       />

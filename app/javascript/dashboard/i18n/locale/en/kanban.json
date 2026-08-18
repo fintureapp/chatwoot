@@ -26,7 +26,11 @@
       "ADD_NOTE": "Adicionar nota",
       "EDIT_NEXT_ACTION": "Editar próxima ação",
       "MARK_WON": "Marcar como ganho",
-      "MARK_LOST": "Marcar como perdido"
+      "MARK_LOST": "Marcar como perdido",
+      "HISTORY_TITLE": "Atendimentos anteriores ({count})",
+      "HISTORY_MORE": "+{count} anteriores",
+      "HISTORY_OPEN": "Em aberto",
+      "HISTORY_OPEN_ENTRY": "Abrir este atendimento"
     },
     "OUTCOME": {
       "WON": "Ganho",
