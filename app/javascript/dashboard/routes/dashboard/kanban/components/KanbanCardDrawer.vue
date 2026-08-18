@@ -1,9 +1,11 @@
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRoute, useRouter } from 'vue-router';
 import { onKeyStroke } from '@vueuse/core';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
+import { frontendURL, conversationUrl } from 'dashboard/helper/URLHelper';
 import {
   resolveStage,
   stageLabel,
@@ -38,16 +40,34 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  // Atendimentos anteriores do mesmo número (agrupados no card do board). Vêm
+  // já rotulados (`label`) da página; aqui só listamos e abrimos cada um.
+  groupHistory: {
+    type: Array,
+    default: () => [],
+  },
+  groupCount: {
+    type: Number,
+    default: 1,
+  },
 });
 
 const emit = defineEmits(['update:open']);
 
 const store = useStore();
 const { t } = useI18n();
+const route = useRoute();
+const router = useRouter();
 
 const getRecordById = useMapGetter('kanban/getRecordById');
 const getNotes = useMapGetter('kanban/getNotes');
 const notesUiFlags = useMapGetter('kanban/getNotesUIFlags');
+const currentRole = useMapGetter('getCurrentRole');
+const isAdmin = computed(() => currentRole.value === 'administrator');
+
+// Exclusão do card (só admin): confirmação inline em duas etapas.
+const isDeleting = ref(false);
+const confirmingDelete = ref(false);
 
 const record = computed(() =>
   props.conversationId ? getRecordById.value(props.conversationId) : null
@@ -192,6 +212,39 @@ const history = computed(() => {
 // ---- Ações ----------------------------------------------------------------
 const close = () => emit('update:open', false);
 
+// Abre um atendimento anterior (conversa antiga do mesmo número).
+const openPrevious = entry => {
+  if (!entry?.id) return;
+  const path = frontendURL(
+    conversationUrl({ accountId: route.params.accountId, id: entry.id })
+  );
+  router.push({ path });
+};
+
+// Exclui o card: remove a conversa primária e todos os atendimentos anteriores
+// do mesmo número (é o que o card representa). Só admins chegam aqui.
+const deleteCard = async () => {
+  if (!props.conversationId || isDeleting.value) return;
+  isDeleting.value = true;
+  try {
+    const ids = [
+      props.conversationId,
+      ...props.groupHistory.map(entry => entry.id).filter(Boolean),
+    ];
+    await Promise.all(
+      ids.map(id =>
+        store.dispatch('kanban/deleteConversation', { conversationId: id })
+      )
+    );
+    confirmingDelete.value = false;
+    close();
+  } catch {
+    useAlert(t('KANBAN.ERRORS.DELETE'));
+  } finally {
+    isDeleting.value = false;
+  }
+};
+
 const startEditNextAction = async () => {
   nextActionDraft.value = nextAction.value;
   nextActionEditing.value = true;
@@ -243,6 +296,7 @@ watch(
     });
     nextActionEditing.value = false;
     noteDraft.value = '';
+    confirmingDelete.value = false;
     nextTick(() => {
       if (props.intent === 'note') noteInputRef.value?.focus();
       if (props.intent === 'next-action') startEditNextAction();
@@ -480,6 +534,96 @@ watch(
                 </div>
               </li>
             </ul>
+          </section>
+
+          <!-- Atendimentos anteriores: histórico do número (o card agrupa as
+               conversas do mesmo contato). Cada linha abre aquele atendimento. -->
+          <section
+            v-if="groupCount > 1 && groupHistory.length"
+            class="flex flex-col gap-2"
+          >
+            <h3
+              class="text-xs font-semibold tracking-wide uppercase text-n-slate-10"
+            >
+              {{ $t('KANBAN.CARD.HISTORY_TITLE', { count: groupCount - 1 }) }}
+            </h3>
+            <ul class="flex flex-col gap-1">
+              <li v-for="entry in groupHistory" :key="entry.id">
+                <button
+                  type="button"
+                  class="flex items-center w-full gap-2 px-2 py-1.5 text-sm text-left transition-colors rounded-lg text-n-slate-11 hover:bg-n-alpha-1 hover:text-n-slate-12"
+                  :title="$t('KANBAN.DRAWER.PREVIOUS_OPEN')"
+                  @click="openPrevious(entry)"
+                >
+                  <Icon
+                    icon="i-lucide-corner-down-right"
+                    class="size-3.5 shrink-0 text-n-slate-10"
+                  />
+                  <span class="truncate">{{ entry.label }}</span>
+                </button>
+              </li>
+            </ul>
+          </section>
+
+          <!-- Zona de risco: exclusão do card (só admin). Confirmação inline em
+               duas etapas para não excluir sem querer. -->
+          <section v-if="isAdmin" class="flex flex-col gap-2">
+            <h3
+              class="text-xs font-semibold tracking-wide uppercase text-n-slate-10"
+            >
+              {{ $t('KANBAN.DRAWER.SECTIONS.DANGER') }}
+            </h3>
+            <div
+              class="flex items-center gap-3 p-3 rounded-lg bg-n-ruby-2 outline outline-1 -outline-offset-1 outline-n-ruby-4"
+            >
+              <div class="flex flex-col min-w-0 gap-0.5">
+                <span class="text-sm font-medium text-n-slate-12">
+                  {{ $t('KANBAN.DRAWER.DANGER_DELETE_TITLE') }}
+                </span>
+                <span class="text-xs text-n-slate-11">
+                  {{
+                    groupCount > 1
+                      ? $t('KANBAN.DRAWER.DANGER_DELETE_DESC_GROUP', {
+                          count: groupCount,
+                        })
+                      : $t('KANBAN.DRAWER.DANGER_DELETE_DESC')
+                  }}
+                </span>
+              </div>
+              <button
+                v-if="!confirmingDelete"
+                type="button"
+                class="h-8 px-3 text-sm font-medium transition-colors rounded-lg ltr:ml-auto rtl:mr-auto shrink-0 text-n-ruby-11 bg-n-ruby-3 hover:bg-n-ruby-4"
+                @click="confirmingDelete = true"
+              >
+                {{ $t('KANBAN.DRAWER.DELETE') }}
+              </button>
+              <div
+                v-else
+                class="flex items-center gap-2 ltr:ml-auto rtl:mr-auto shrink-0"
+              >
+                <button
+                  type="button"
+                  class="h-8 px-3 text-sm transition-colors rounded-lg text-n-slate-11 hover:bg-n-alpha-2 disabled:opacity-50"
+                  :disabled="isDeleting"
+                  @click="confirmingDelete = false"
+                >
+                  {{ $t('KANBAN.DRAWER.DELETE_CANCEL') }}
+                </button>
+                <button
+                  type="button"
+                  class="h-8 px-3 text-sm font-medium text-white transition-colors rounded-lg bg-n-ruby-9 hover:bg-n-ruby-10 disabled:opacity-50"
+                  :disabled="isDeleting"
+                  @click="deleteCard"
+                >
+                  {{
+                    isDeleting
+                      ? $t('KANBAN.DRAWER.DELETING')
+                      : $t('KANBAN.DRAWER.DELETE_CONFIRM')
+                  }}
+                </button>
+              </div>
+            </div>
           </section>
         </div>
       </aside>

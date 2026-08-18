@@ -27,6 +27,7 @@
       "EDIT_NEXT_ACTION": "Editar próxima ação",
       "MARK_WON": "Marcar como ganho",
       "MARK_LOST": "Marcar como perdido",
+      "MORE_ACTIONS": "Mais ações",
       "HISTORY_TITLE": "Atendimentos anteriores ({count})",
       "HISTORY_MORE": "+{count} anteriores",
       "HISTORY_OPEN": "Em aberto",
@@ -185,11 +186,20 @@
       "NOTE_PLACEHOLDER": "Escreva uma nota sobre este lead",
       "NO_NOTES": "Nenhuma nota registrada.",
       "NOTES_ERROR": "Não foi possível carregar as notas.",
+      "PREVIOUS_OPEN": "Abrir este atendimento",
+      "DANGER_DELETE_TITLE": "Excluir card",
+      "DANGER_DELETE_DESC": "Remove o card e todo o seu conteúdo. Não dá para desfazer.",
+      "DANGER_DELETE_DESC_GROUP": "Remove o card e os {count} atendimentos deste contato. Não dá para desfazer.",
+      "DELETE": "Excluir",
+      "DELETE_CANCEL": "Cancelar",
+      "DELETE_CONFIRM": "Confirmar exclusão",
+      "DELETING": "Excluindo…",
       "SECTIONS": {
         "DETAILS": "Detalhes",
         "NEXT_ACTION": "Próxima ação",
         "NOTES": "Notas",
-        "HISTORY": "Histórico"
+        "HISTORY": "Histórico",
+        "DANGER": "Zona de risco"
       },
       "FIELDS": {
         "CLIENT": "Cliente",
@@ -236,7 +246,8 @@
       "UPDATE_STAGE": "Não foi possível atualizar a etapa do lead. Tente novamente.",
       "UPDATE_OUTCOME": "Não foi possível atualizar o desfecho do lead. Tente novamente.",
       "UPDATE_NEXT_ACTION": "Não foi possível salvar a próxima ação. Tente novamente.",
-      "ADD_NOTE": "Não foi possível salvar a nota. Tente novamente."
+      "ADD_NOTE": "Não foi possível salvar a nota. Tente novamente.",
+      "DELETE": "Não foi possível excluir o card. Tente novamente."
     },
     "QUOTE": {
       "TITLE": "Cotação",
