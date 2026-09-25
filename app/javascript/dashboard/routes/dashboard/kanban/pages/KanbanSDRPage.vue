@@ -37,6 +37,12 @@ const stages = computed(() =>
 );
 const stageSlugs = computed(() => stages.value.map(stage => stage.slug));
 
+// Classificação da caixa ativa: define a mecânica do board (comercial usa
+// ganho/perdido; operacional sai ao resolver) e a visão padrão do dashboard.
+const kanbanType = computed(() =>
+  store.getters['kanban/getInboxType'](activeInboxId.value)
+);
+
 const inboxNames = computed(() => {
   const map = {};
   inboxes.value.forEach(inbox => {
@@ -254,6 +260,7 @@ const applySelection = (ids, { updateQuery = true } = {}) => {
   store.dispatch('kanban/fetchBoard');
   if (single.length) {
     store.dispatch('kanban/fetchStages', { inboxId: single[0] });
+    store.dispatch('kanban/fetchInboxConfig', { inboxId: single[0] });
   }
 };
 
@@ -454,6 +461,7 @@ onMounted(async () => {
         :records="boardRecords"
         :stages="stages"
         :inbox-names="inboxNames"
+        :kanban-type="kanbanType"
       />
     </template>
 
@@ -461,10 +469,15 @@ onMounted(async () => {
     <SdrDashboard
       v-else-if="activeTab === 'dashboard'"
       :default-inbox-id="activeInboxId"
+      :default-view="kanbanType === 'operacional' ? 'operational' : 'commercial'"
     />
 
     <!-- Aba: Histórico -->
-    <KanbanHistoryView v-else :inbox-id="activeInboxId" />
+    <KanbanHistoryView
+      v-else
+      :inbox-id="activeInboxId"
+      :kanban-type="kanbanType"
+    />
 
     <StageManagerDialog
       ref="stageManagerRef"

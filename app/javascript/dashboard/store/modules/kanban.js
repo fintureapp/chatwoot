@@ -23,6 +23,9 @@ export const state = {
     isSaving: false,
     hasError: false,
   },
+  // Classificação de negócio por caixa ('comercial' | 'operacional'), carregada
+  // do backend (Finture::InboxConfig). Sem entrada => 'comercial'.
+  inboxTypeByInbox: {},
   // Histórico de leads fechados (ganho/perdido) por caixa (Fase C).
   historyByInbox: {},
   historyUiFlags: {
@@ -63,6 +66,8 @@ export const getters = {
   getUIFlags: $state => $state.uiFlags,
   getRecordById: $state => id => $state.records.find(item => item.id === id),
   getStagesForInbox: $state => inboxId => $state.stagesByInbox[inboxId] || [],
+  getInboxType: $state => inboxId =>
+    $state.inboxTypeByInbox[inboxId] || 'comercial',
   getStagesUIFlags: $state => $state.stagesUiFlags,
   getHistoryForInbox: $state => inboxId => $state.historyByInbox[inboxId] || [],
   getHistoryUIFlags: $state => $state.historyUiFlags,
@@ -102,6 +107,31 @@ export const actions = {
     } finally {
       commit('SET_UI_FLAG', { isFetching: false });
     }
+  },
+
+  // ---- Classificação da caixa (comercial/operacional) -----------------------
+  async fetchInboxConfig({ commit }, { inboxId }) {
+    if (!inboxId) return;
+    try {
+      const response = await FintureCrmApi.getInboxConfig(inboxId);
+      commit('SET_INBOX_TYPE', {
+        inboxId,
+        kanbanType: response.data?.kanban_type || 'comercial',
+      });
+    } catch {
+      commit('SET_INBOX_TYPE', { inboxId, kanbanType: 'comercial' });
+    }
+  },
+
+  // Altera a classificação (admin). O backend pode semear o funil daquele tipo,
+  // então recarregamos as etapas em seguida.
+  async updateInboxConfig({ commit, dispatch }, { inboxId, kanbanType }) {
+    const response = await FintureCrmApi.updateInboxConfig(inboxId, kanbanType);
+    commit('SET_INBOX_TYPE', {
+      inboxId,
+      kanbanType: response.data?.kanban_type || kanbanType,
+    });
+    await dispatch('fetchStages', { inboxId });
   },
 
   // ---- Etapas do funil (Fase B) ---------------------------------------------
@@ -428,6 +458,12 @@ export const mutations = {
   },
   SET_STAGES($state, { inboxId, stages }) {
     $state.stagesByInbox = { ...$state.stagesByInbox, [inboxId]: stages };
+  },
+  SET_INBOX_TYPE($state, { inboxId, kanbanType }) {
+    $state.inboxTypeByInbox = {
+      ...$state.inboxTypeByInbox,
+      [inboxId]: kanbanType,
+    };
   },
   SET_STAGES_UI_FLAG($state, uiFlag) {
     $state.stagesUiFlags = { ...$state.stagesUiFlags, ...uiFlag };

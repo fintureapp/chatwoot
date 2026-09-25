@@ -77,6 +77,20 @@ class FintureCrmApi extends ApiClient {
     });
   }
 
+  // ---- Classificação da caixa (comercial/operacional) ----------------------
+  getInboxConfig(inboxId) {
+    return axios.get(`${this.baseUrl()}/finture_inbox_config`, {
+      params: { inbox_id: inboxId },
+    });
+  }
+
+  updateInboxConfig(inboxId, kanbanType) {
+    return axios.put(`${this.baseUrl()}/finture_inbox_config`, {
+      inbox_id: inboxId,
+      kanban_type: kanbanType,
+    });
+  }
+
   // ---- Mudança de etapa do card (server-side, registra a transição) ---------
   changeStage(conversationId, payload) {
     return axios.patch(`${this.url}/${conversationId}/finture_stage`, payload);

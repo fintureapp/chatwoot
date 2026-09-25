@@ -40,14 +40,18 @@
     },
     "HISTORY": {
       "COUNT": "{count} lead(s) fechado(s)",
+      "COUNT_OP": "{count} demanda(s) resolvida(s)",
       "REFRESH": "Atualizar",
       "EMPTY_TITLE": "Nenhum lead fechado",
       "EMPTY_SUBTITLE": "Leads marcados como ganho ou perdido aparecem aqui — com valor, motivo e data.",
+      "EMPTY_TITLE_OP": "Nenhuma demanda resolvida",
+      "EMPTY_SUBTITLE_OP": "Demandas resolvidas aparecem aqui, com o resumo do atendimento gerado automaticamente.",
       "COL_LEAD": "Lead",
       "COL_OUTCOME": "Desfecho",
       "COL_VALUE": "Valor",
       "COL_REASON": "Motivo",
-      "COL_DATE": "Fechado em"
+      "COL_DATE": "Fechado em",
+      "SUMMARY_PENDING": "Resumo em processamento…"
     },
     "DASHBOARD": {
       "ALL_INBOXES": "Visão geral (todas as caixas)",

@@ -24,6 +24,11 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  // 'comercial' | 'operacional' — repassado às colunas/cards.
+  kanbanType: {
+    type: String,
+    default: 'comercial',
+  },
 });
 
 const store = useStore();
@@ -133,6 +138,7 @@ const openDrawer = ({ conversation, intent }) => {
         :stage="column.stage"
         :cards="column.cards"
         :inbox-names="inboxNames"
+        :kanban-type="kanbanType"
         :is-dragging="isDragging"
         @change="handleChange(column.stage.value, $event)"
         @drag-start="isDragging = true"

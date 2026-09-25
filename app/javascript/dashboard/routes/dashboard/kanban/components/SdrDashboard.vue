@@ -17,13 +17,22 @@ import { lostReasonLabel } from '../config/stages';
 
 const props = defineProps({
   defaultInboxId: { type: [Number, String], default: null },
+  // Visão inicial conforme a classificação da caixa ('commercial' | 'operational').
+  defaultView: { type: String, default: 'commercial' },
 });
 
 const store = useStore();
 const { t } = useI18n();
 const inboxes = useMapGetter('inboxes/getInboxes');
 
-const activeView = ref('commercial'); // 'commercial' | 'operational'
+const activeView = ref(props.defaultView); // 'commercial' | 'operational'
+// Ao trocar de caixa (nova classificação), acompanha a visão padrão.
+watch(
+  () => props.defaultView,
+  view => {
+    activeView.value = view;
+  }
+);
 const selectedInboxId = ref(
   props.defaultInboxId ? String(props.defaultInboxId) : ''
 );
