@@ -21,6 +21,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  kanbanType: {
+    type: String,
+    default: 'comercial',
+  },
 });
 
 const emit = defineEmits([
@@ -81,6 +85,7 @@ const inboxNameFor = card => props.inboxNames[card.inbox_id] || '';
           <KanbanCard
             :conversation="element"
             :inbox-name="inboxNameFor(element)"
+            :kanban-type="kanbanType"
             @open="emit('open', $event)"
             @won="emit('won', $event)"
             @lost="emit('lost', $event)"

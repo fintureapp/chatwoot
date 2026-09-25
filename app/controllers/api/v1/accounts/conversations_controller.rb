@@ -264,19 +264,40 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
 
   def kanban_conversations
     # Board ativo: exclui os leads já fechados (sdr_outcome presente) — eles
-    # passam a viver no Histórico (endpoint kanban_history).
-    kanban_scope
-      .where("conversations.custom_attributes ->> 'sdr_outcome' IS NULL")
-      .order(last_activity_at: :desc)
-      .limit(KANBAN_RESULTS_CAP)
+    # passam a viver no Histórico (endpoint kanban_history). Em caixas
+    # OPERACIONAIS não há ganho/perdido: a demanda sai do board ao ser resolvida
+    # (status resolved), então também excluímos as resolvidas.
+    scope = kanban_scope
+            .where("conversations.custom_attributes ->> 'sdr_outcome' IS NULL")
+    scope = scope.where.not(status: :resolved) if kanban_operational?
+    scope.order(last_activity_at: :desc).limit(KANBAN_RESULTS_CAP)
   end
 
   def kanban_history_conversations
-    # Histórico: só os leads fechados (ganho/perdido), do mais recente ao mais antigo.
+    # Histórico: leads fechados, do mais recente ao mais antigo. Comercial fecha
+    # por desfecho (sdr_outcome); operacional fecha ao resolver (status resolved),
+    # com o resumo da demanda em custom_attributes.sdr_resumo (gerado pelo n8n).
+    if kanban_operational?
+      return kanban_scope
+             .where(status: :resolved)
+             .order(last_activity_at: :desc)
+             .limit(KANBAN_RESULTS_CAP)
+    end
+
     kanban_scope
       .where("conversations.custom_attributes ->> 'sdr_outcome' IS NOT NULL")
       .order(Arel.sql("(conversations.custom_attributes ->> 'sdr_outcome_at')::bigint DESC NULLS LAST"))
       .limit(KANBAN_RESULTS_CAP)
+  end
+
+  # Board/histórico operam sobre UMA caixa; considera operacional quando toda
+  # caixa selecionada está classificada como 'operacional' (Finture::InboxConfig).
+  def kanban_operational?
+    inbox_ids = Array(params[:inbox_id]).map(&:to_i).reject(&:zero?)
+    return false if inbox_ids.blank?
+
+    types = Finture::InboxConfig.where(inbox_id: inbox_ids).pluck(:inbox_id, :kanban_type).to_h
+    inbox_ids.all? { |id| types[id] == 'operacional' }
   end
 
   # Base comum do board/histórico: caixas do usuário (assigned_inboxes resolve
