@@ -240,4 +240,82 @@ describe NotificationListener do
       end
     end
   end
+
+  describe 'team_changed' do
+    let(:event_name) { :'team.changed' }
+    let!(:team) { create(:team, account: account) }
+    let!(:team_member) { create(:user, account: account) }
+
+    before do
+      create(:team_member, team: team, user: team_member)
+      create(:inbox_member, user: team_member, inbox: inbox)
+    end
+
+    it 'creates a team_assignment notification for every team member' do
+      conversation.update!(team: team)
+
+      event = Events::Base.new(event_name, Time.zone.now, conversation: conversation)
+      listener.team_changed(event)
+
+      expect(team_member.notifications.where(notification_type: 'team_assignment').count).to eq(1)
+    end
+
+    it 'does not create notifications when the conversation has no team' do
+      conversation.update!(team: nil)
+
+      event = Events::Base.new(event_name, Time.zone.now, conversation: conversation)
+      listener.team_changed(event)
+
+      expect(team_member.notifications.count).to eq(0)
+    end
+  end
+
+  describe 'conversation_updated - human handoff label' do
+    let(:event_name) { :'conversation.updated' }
+
+    before do
+      notification_setting = first_agent.notification_settings.first
+      notification_setting.selected_email_flags = [:email_conversation_creation]
+      notification_setting.selected_push_flags = []
+      notification_setting.save!
+      create(:inbox_member, user: first_agent, inbox: inbox)
+    end
+
+    it 'notifies inbox members when atendimento_humano is added without a team' do
+      conversation.update!(team: nil, assignee: nil)
+
+      event = Events::Base.new(
+        event_name, Time.zone.now,
+        conversation: conversation,
+        changed_attributes: { 'label_list' => [[], ['atendimento_humano']] }
+      )
+      listener.conversation_updated(event)
+
+      expect(first_agent.notifications.where(notification_type: 'conversation_creation').count).to eq(1)
+    end
+
+    it 'does not notify when a team is already assigned' do
+      conversation.update!(team: create(:team, account: account))
+
+      event = Events::Base.new(
+        event_name, Time.zone.now,
+        conversation: conversation,
+        changed_attributes: { 'label_list' => [[], ['atendimento_humano']] }
+      )
+      listener.conversation_updated(event)
+
+      expect(first_agent.notifications.count).to eq(0)
+    end
+
+    it 'does not notify when the handoff label was not added' do
+      event = Events::Base.new(
+        event_name, Time.zone.now,
+        conversation: conversation,
+        changed_attributes: { 'label_list' => [[], ['outra_label']] }
+      )
+      listener.conversation_updated(event)
+
+      expect(first_agent.notifications.count).to eq(0)
+    end
+  end
 end

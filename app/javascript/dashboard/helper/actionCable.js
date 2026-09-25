@@ -252,6 +252,9 @@ class ActionCableConnector extends BaseActionCableConnector {
 
   onNotificationCreated = data => {
     this.app.$store.dispatch('notifications/addNotification', data);
+    DashboardAudioNotificationHelper.onAssignmentNotification(
+      data.notification
+    );
   };
 
   onNotificationDeleted = data => {

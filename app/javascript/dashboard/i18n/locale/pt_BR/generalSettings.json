@@ -121,6 +121,24 @@
       "FEATURES": {
         "INBOUND_EMAIL_ENABLED": "A continuidade das conversas com e-mails está ativada para sua conta.",
         "CUSTOM_EMAIL_DOMAIN_ENABLED": "Você pode receber e-mails em seu domínio personalizado agora."
+      },
+      "CHANNEL_GROUPS": {
+        "TITLE": "Grupos de canais",
+        "NOTE": "Agrupe cada caixa de entrada como WhatsApp ou E-mail para que os agentes possam alternar entre canais na lista de conversas. Deixe em \"Automático\" para usar o tipo de canal nativo da caixa de entrada.",
+        "AUTO_NONE": "Sem grupo",
+        "EMPTY": "Nenhuma caixa de entrada encontrada. Crie uma caixa de entrada primeiro para agrupá-la por canal.",
+        "SELECT_ARIA": "Grupo de canal para {inbox}",
+        "UPDATE_BUTTON": "Atualizar",
+        "OPTIONS": {
+          "AUTO": "Automático",
+          "AUTO_WITH_HINT": "Automático ({hint})",
+          "WHATSAPP": "WhatsApp",
+          "EMAIL": "E-mail"
+        },
+        "API": {
+          "SUCCESS": "Grupos de canais atualizados com sucesso",
+          "ERROR": "Falha ao atualizar os grupos de canais"
+        }
       }
     },
     "UPDATE_CHATWOOT": "Uma atualização {latestChatwootVersion} para o Chatwoot está disponível. Por favor, atualize sua instância.",

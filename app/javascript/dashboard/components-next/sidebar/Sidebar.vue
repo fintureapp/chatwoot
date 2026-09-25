@@ -19,6 +19,7 @@ import SidebarChangelogButton from './SidebarChangelogButton.vue';
 import ChannelLeaf from './ChannelLeaf.vue';
 import ChannelIcon from 'next/icon/ChannelIcon.vue';
 import SidebarAccountSwitcher from './SidebarAccountSwitcher.vue';
+import SidebarNotificationBell from './SidebarNotificationBell.vue';
 import Logo from 'next/icon/Logo.vue';
 import ComposeConversation from 'dashboard/components-next/NewConversation/ComposeConversation.vue';
 import {
@@ -317,8 +318,8 @@ const menuItems = computed(() => {
   return [
     {
       name: 'Inbox',
-      label: t('SIDEBAR.INBOX'),
-      icon: 'i-lucide-inbox',
+      label: t('SIDEBAR.NOTIFICATIONS'),
+      icon: 'i-lucide-bell',
       to: accountScopedRoute('inbox_view'),
       activeOn: ['inbox_view', 'inbox_view_conversation'],
       getterKeys: {
@@ -948,6 +949,7 @@ const menuItems = computed(() => {
             />
           </template>
         </ComposeConversation>
+        <SidebarNotificationBell :is-collapsed="isEffectivelyCollapsed" />
       </div>
     </section>
     <nav

@@ -16,6 +16,12 @@ const ALERT_DURATION = 10000;
 const ALERT_PATH_PREFIX = '/audio/dashboard/';
 const DEFAULT_TONE = 'ding';
 const DEFAULT_ALERT_TYPE = ['none'];
+// Notification types that should always alert the recipient (sound + toast),
+// independent of the message audio-alert configuration and tab visibility.
+const ASSIGNMENT_NOTIFICATION_TYPES = [
+  'conversation_assignment',
+  'team_assignment',
+];
 
 export class DashboardAudioNotificationHelper {
   constructor(store) {
@@ -162,6 +168,30 @@ export class DashboardAudioNotificationHelper {
     }
 
     return shouldPlayAudio.some(Boolean);
+  };
+
+  // Assignment notifications (agent or team) should ring the configured tone and
+  // surface a toast even when the tab is in the background, so a handoff is noticed
+  // within seconds. Push notifications cover the case where the tab is fully closed.
+  onAssignmentNotification = notification => {
+    if (!notification) return;
+    if (
+      !ASSIGNMENT_NOTIFICATION_TYPES.includes(notification.notification_type)
+    ) {
+      return;
+    }
+
+    if (notification.push_message_title) {
+      useAlert(notification.push_message_title);
+    }
+
+    // Respect a user who has muted audio alerts entirely.
+    if (this.notificationConfig.audioAlertType.includes('none')) return;
+
+    if (!this.audioConfig.audio) {
+      this.intializeAudio();
+    }
+    this.playAudioAlert();
   };
 
   onNewMessage = message => {

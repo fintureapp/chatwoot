@@ -845,6 +845,12 @@
       "REMOVE": "Remove Help Center",
       "SUB_TEXT": "Attach a Help Center with the inbox"
     },
+    "KANBAN_CLASSIFICATION": {
+      "LABEL": "Classificação do Kanban",
+      "HELP_TEXT": "Define a estrutura do Kanban e a visão padrão do Dashboard desta caixa. Comercial usa o funil de vendas (ganho/perdido); Operacional usa o funil de atendimento e a demanda sai do board ao ser resolvida.",
+      "COMMERCIAL": "Comercial",
+      "OPERATIONAL": "Operacional"
+    },
     "AUTO_ASSIGNMENT": {
       "MAX_ASSIGNMENT_LIMIT": "Auto assignment limit",
       "MAX_ASSIGNMENT_LIMIT_RANGE_ERROR": "Please enter a value greater than 0",

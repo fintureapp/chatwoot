@@ -9,14 +9,22 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import EmptyStateLayout from 'dashboard/components-next/EmptyStateLayout.vue';
 
-// Histórico dos leads fechados (ganho/perdido) da caixa ativa. Fonte: endpoint
-// conversations/kanban_history (só cards com sdr_outcome). Permite reabrir.
+// Histórico da caixa ativa. No COMERCIAL, leads fechados por desfecho
+// (ganho/perdido), com opção de reabrir. No OPERACIONAL, demandas resolvidas
+// (status resolved) com o resumo da demanda gerado pela IA (sdr_resumo). Fonte:
+// endpoint conversations/kanban_history.
 const props = defineProps({
   inboxId: {
     type: [Number, String],
     default: null,
   },
+  kanbanType: {
+    type: String,
+    default: 'comercial',
+  },
 });
+
+const isOperational = computed(() => props.kanbanType === 'operacional');
 
 const store = useStore();
 const { t } = useI18n();
@@ -63,6 +71,15 @@ const reasonOf = record =>
     ? ''
     : lostReasonLabel(record.custom_attributes?.sdr_lost_reason);
 
+// ---- Operacional ----------------------------------------------------------
+// Resumo da demanda gravado pela IA (n8n) no resolve; ausente enquanto o fluxo
+// ainda processa.
+const resumoOf = record => record.custom_attributes?.sdr_resumo || '';
+const resolvedAt = record =>
+  record.last_activity_at
+    ? dateFormatter.format(new Date(record.last_activity_at * 1000))
+    : '';
+
 const reopen = async record => {
   try {
     await store.dispatch('kanban/reopenLead', {
@@ -79,7 +96,11 @@ const reopen = async record => {
   <div class="flex flex-col flex-1 min-h-0 px-4 py-3">
     <div class="flex items-center justify-between mb-3">
       <p class="text-sm text-n-slate-11">
-        {{ t('KANBAN.HISTORY.COUNT', { count: items.length }) }}
+        {{
+          isOperational
+            ? t('KANBAN.HISTORY.COUNT_OP', { count: items.length })
+            : t('KANBAN.HISTORY.COUNT', { count: items.length })
+        }}
       </p>
       <Button
         color="slate"
@@ -95,10 +116,50 @@ const reopen = async record => {
     <EmptyStateLayout
       v-if="!items.length"
       class="flex-1 min-h-0"
-      :title="t('KANBAN.HISTORY.EMPTY_TITLE')"
-      :subtitle="t('KANBAN.HISTORY.EMPTY_SUBTITLE')"
+      :title="
+        isOperational
+          ? t('KANBAN.HISTORY.EMPTY_TITLE_OP')
+          : t('KANBAN.HISTORY.EMPTY_TITLE')
+      "
+      :subtitle="
+        isOperational
+          ? t('KANBAN.HISTORY.EMPTY_SUBTITLE_OP')
+          : t('KANBAN.HISTORY.EMPTY_SUBTITLE')
+      "
       :show-backdrop="false"
     />
+
+    <!-- Operacional: demandas resolvidas com o resumo gerado pela IA. -->
+    <div
+      v-else-if="isOperational"
+      class="flex flex-col flex-1 min-h-0 gap-2 overflow-y-auto"
+    >
+      <div
+        v-for="record in items"
+        :key="record.id"
+        class="flex flex-col gap-1.5 p-3 rounded-xl bg-n-solid-1 outline outline-1 -outline-offset-1 outline-n-weak"
+      >
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-sm font-medium text-n-slate-12">
+            {{ contactName(record) }}
+          </span>
+          <span class="text-xs text-n-slate-10">{{ resolvedAt(record) }}</span>
+        </div>
+        <p
+          v-if="resumoOf(record)"
+          class="text-sm whitespace-pre-line text-n-slate-11"
+        >
+          {{ resumoOf(record) }}
+        </p>
+        <p
+          v-else
+          class="flex items-center gap-1.5 text-xs italic text-n-slate-10"
+        >
+          <Icon icon="i-lucide-loader" class="size-3.5" />
+          {{ t('KANBAN.HISTORY.SUMMARY_PENDING') }}
+        </p>
+      </div>
+    </div>
 
     <div v-else class="flex-1 min-h-0 overflow-y-auto">
       <table class="w-full text-sm border-collapse">

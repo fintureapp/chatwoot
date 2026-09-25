@@ -28,6 +28,13 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  // 'comercial' | 'operacional'. No operacional não há ganho/perdido — a demanda
+  // sai do board ao resolver a conversa (botão nativo), então a barra de desfecho
+  // não aparece.
+  kanbanType: {
+    type: String,
+    default: 'comercial',
+  },
 });
 
 const emit = defineEmits(['open', 'won', 'lost']);
@@ -43,6 +50,8 @@ const enrichedConversation = computed(() => ({
   ...props.conversation,
   inbox: { name: props.inboxName },
 }));
+
+const isOperational = computed(() => props.kanbanType === 'operacional');
 
 const contactName = computed(() => props.conversation?.meta?.sender?.name);
 const contactThumbnail = computed(
@@ -211,8 +220,10 @@ const onMenuAction = ({ action }) => {
     </div>
     <!-- Barra de desfecho: Ganho/Perdido com rótulo (decisão do SDR). As ações
          utilitárias foram para o menu "⋯" no topo. stop em click E pointerdown
-         para não iniciar drag nem abrir o detalhe. -->
+         para não iniciar drag nem abrir o detalhe. Só no funil COMERCIAL — no
+         operacional a demanda sai do board ao resolver a conversa. -->
     <div
+      v-if="!isOperational"
       class="flex items-center gap-1 pt-2 mt-1 border-t border-n-weak"
       @click.stop
     >

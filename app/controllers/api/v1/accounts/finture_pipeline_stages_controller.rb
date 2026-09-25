@@ -9,7 +9,9 @@ class Api::V1::Accounts::FinturePipelineStagesController < Api::V1::Accounts::Ba
   before_action :set_stage, only: [:update, :destroy]
 
   def index
-    Finture::PipelineStage.seed_defaults!(@inbox) unless scoped_stages.exists?
+    unless scoped_stages.exists?
+      Finture::PipelineStage.seed_defaults!(@inbox, Finture::InboxConfig.type_for(@inbox))
+    end
     render json: { payload: scoped_stages.map { |stage| serialize(stage) } }
   end
 

@@ -121,6 +121,24 @@
       "FEATURES": {
         "INBOUND_EMAIL_ENABLED": "Conversation continuity with emails is enabled for your account.",
         "CUSTOM_EMAIL_DOMAIN_ENABLED": "You can receive emails in your custom domain now."
+      },
+      "CHANNEL_GROUPS": {
+        "TITLE": "Channel groups",
+        "NOTE": "Group each inbox as WhatsApp or Email so agents can switch between channels in the conversations list. Leave an inbox on \"Automatic\" to use its native channel type.",
+        "AUTO_NONE": "Not grouped",
+        "EMPTY": "No inboxes found. Create an inbox first to group it by channel.",
+        "SELECT_ARIA": "Channel group for {inbox}",
+        "UPDATE_BUTTON": "Update",
+        "OPTIONS": {
+          "AUTO": "Automatic",
+          "AUTO_WITH_HINT": "Automatic ({hint})",
+          "WHATSAPP": "WhatsApp",
+          "EMAIL": "Email"
+        },
+        "API": {
+          "SUCCESS": "Channel groups updated successfully",
+          "ERROR": "Failed to update channel groups"
+        }
       }
     },
     "UPDATE_CHATWOOT": "An update {latestChatwootVersion} for Chatwoot is available. Please update your instance.",
@@ -162,6 +180,7 @@
     "TYPE_LABEL": {
       "conversation_creation": "New conversation",
       "conversation_assignment": "Conversation Assigned",
+      "team_assignment": "Assigned to Team",
       "assigned_conversation_new_message": "New Message",
       "participating_conversation_new_message": "New Message",
       "conversation_mention": "Mention",

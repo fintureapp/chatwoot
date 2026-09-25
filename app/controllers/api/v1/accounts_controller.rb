@@ -110,7 +110,10 @@ class Api::V1::AccountsController < Api::BaseController
   end
 
   def custom_attributes_params
-    params.permit(:industry, :company_size, :timezone, :referral_source, :user_role, :website)
+    # `channel_groups` maps an inbox_id to a channel group ("whatsapp"/"email") so the
+    # conversations list can offer a WhatsApp/Email/All toggle. Permitted as an open hash
+    # because its keys are inbox ids that vary per account.
+    params.permit(:industry, :company_size, :timezone, :referral_source, :user_role, :website, channel_groups: {})
   end
 
   def settings_params
