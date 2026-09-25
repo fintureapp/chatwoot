@@ -311,6 +311,18 @@ RSpec.describe 'Accounts API', type: :request do
         expect(account.reload.custom_attributes['onboarding_step']).to be_nil
       end
 
+      it 'persists channel_groups in custom attributes and serializes them back' do
+        inbox = create(:inbox, account: account)
+        patch "/api/v1/accounts/#{account.id}",
+              params: params.merge(channel_groups: { inbox.id.to_s => 'whatsapp' }),
+              headers: admin.create_new_auth_token,
+              as: :json
+
+        expect(response).to have_http_status(:success)
+        expect(account.reload.custom_attributes['channel_groups']).to eq(inbox.id.to_s => 'whatsapp')
+        expect(response.parsed_body.dig('custom_attributes', 'channel_groups')).to eq(inbox.id.to_s => 'whatsapp')
+      end
+
       it 'Throws error 422' do
         params[:name] = 'test' * 999
 

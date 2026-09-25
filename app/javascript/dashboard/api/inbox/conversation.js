@@ -8,6 +8,7 @@ class ConversationApi extends ApiClient {
 
   get({
     inboxId,
+    channelInboxIds,
     status,
     assigneeType,
     page,
@@ -19,7 +20,9 @@ class ConversationApi extends ApiClient {
   }) {
     return axios.get(this.url, {
       params: {
-        inbox_id: inboxId,
+        // When the channel toggle is active (WhatsApp/Email) we filter by the
+        // group's inbox ids. `inboxId` (a single inbox) always wins when set.
+        inbox_id: inboxId || channelInboxIds,
         team_id: teamId,
         status,
         assignee_type: assigneeType,
@@ -104,10 +107,18 @@ class ConversationApi extends ApiClient {
     return axios.post(`${this.url}/${conversationId}/unmute`);
   }
 
-  meta({ inboxId, status, assigneeType, labels, teamId, conversationType }) {
+  meta({
+    inboxId,
+    channelInboxIds,
+    status,
+    assigneeType,
+    labels,
+    teamId,
+    conversationType,
+  }) {
     return axios.get(`${this.url}/meta`, {
       params: {
-        inbox_id: inboxId,
+        inbox_id: inboxId || channelInboxIds,
         status,
         assignee_type: assigneeType,
         labels,

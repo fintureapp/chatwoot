@@ -19,6 +19,7 @@ import TeleportWithDirection from 'dashboard/components-next/TeleportWithDirecti
 import ConversationResolveAttributesModal from 'dashboard/components-next/ConversationWorkflow/ConversationResolveAttributesModal.vue';
 
 import { useUISettings } from 'dashboard/composables/useUISettings';
+import { useAccount } from 'dashboard/composables/useAccount';
 import { useAlert } from 'dashboard/composables';
 import { useBulkActions } from 'dashboard/composables/chatlist/useBulkActions';
 import { useFilter } from 'shared/composables/useFilter';
@@ -52,6 +53,7 @@ import {
 import { matchesFilters } from '../store/modules/conversations/helpers/filterHelpers';
 import { CONVERSATION_EVENTS } from '../helper/AnalyticsHelper/events';
 import { ASSIGNEE_TYPE_TAB_PERMISSIONS } from 'dashboard/constants/permissions.js';
+import { getInboxIdsForChannelGroup } from 'dashboard/helper/channelGroupHelper';
 
 const props = defineProps({
   conversationInbox: { type: [String, Number], default: 0 },
@@ -65,6 +67,7 @@ const props = defineProps({
 
 const emit = defineEmits(['conversationLoad']);
 const { uiSettings } = useUISettings();
+const { currentAccount } = useAccount();
 const { t } = useI18n();
 const router = useRouter();
 const route = useRoute();
@@ -75,6 +78,9 @@ const resolveAttributesModalRef = ref(null);
 const activeAssigneeTab = ref(wootConstants.ASSIGNEE_TYPE.ME);
 const activeStatus = ref(wootConstants.STATUS_TYPE.OPEN);
 const activeSortBy = ref(wootConstants.SORT_BY_TYPE.LAST_ACTIVITY_AT_DESC);
+// null = "All". Otherwise a value from CHANNEL_GROUPS (whatsapp/email).
+// Intentionally not persisted: the toggle always starts on "All".
+const activeChannelType = ref(null);
 const showAdvancedFilters = ref(false);
 // chatsOnView is to store the chats that are currently visible on the screen,
 // which mirrors the conversationList.
@@ -246,9 +252,34 @@ const conversationListPagination = computed(() => {
   return currentPage.value + 1;
 });
 
+// Map of inbox_id -> channel group, manually classified by an admin and stored
+// on the account. Drives the WhatsApp/Email/All toggle grouping.
+const channelGroupsMap = computed(
+  () => currentAccount.value?.custom_attributes?.channel_groups || {}
+);
+
+// The toggle only makes sense on the general conversation views. Inside a
+// specific inbox the channel is already fixed, so we hide it.
+const showChannelFilter = computed(() => !props.conversationInbox);
+
+// Inbox ids belonging to the selected channel group. `undefined` means "All"
+// (no channel filtering). An empty group falls back to a sentinel id so the
+// list correctly shows nothing instead of everything.
+const channelInboxIds = computed(() => {
+  if (!activeChannelType.value || props.conversationInbox) return undefined;
+  const ids =
+    getInboxIdsForChannelGroup(
+      inboxesList.value,
+      channelGroupsMap.value,
+      activeChannelType.value
+    ) || [];
+  return ids.length ? ids : [0];
+});
+
 const conversationFilters = computed(() => {
   return {
     inboxId: props.conversationInbox ? props.conversationInbox : undefined,
+    channelInboxIds: channelInboxIds.value,
     assigneeType: activeAssigneeTab.value,
     status: activeStatus.value,
     sortBy: activeSortBy.value,
@@ -623,6 +654,16 @@ function onBasicFilterChange(value, type) {
   resetAndFetchData();
 }
 
+function onChannelFilterChange(value) {
+  if (activeChannelType.value === value) return;
+  resetBulkActions();
+  emitter.emit('clearSearchInput');
+  activeChannelType.value = value;
+  resetAndFetchData();
+  // Refresh the assignee tab counts (Mine / Unassigned / All) for the channel.
+  store.dispatch('conversationStats/get', conversationFilters.value);
+}
+
 function openLastSavedItemInFolder() {
   const lastItemOfFolder = folders.value[folders.value.length - 1];
   const lastItemId = lastItemOfFolder.id;
@@ -899,11 +940,14 @@ watch(conversationFilters, (newVal, oldVal) => {
       :is-on-expanded-layout="isOnExpandedLayout"
       :conversation-stats="conversationStats"
       :is-list-loading="chatListLoading && !conversationList.length"
+      :show-channel-filter="showChannelFilter"
+      :channel-filter="activeChannelType"
       @add-folders="onClickOpenAddFoldersModal"
       @delete-folders="onClickOpenDeleteFoldersModal"
       @filters-modal="onToggleAdvanceFiltersModal"
       @reset-filters="resetAndFetchData"
       @basic-filter-change="onBasicFilterChange"
+      @channel-filter-change="onChannelFilterChange"
     />
 
     <TeleportWithDirection

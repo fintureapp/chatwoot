@@ -10,6 +10,12 @@
     "TAB_HEADING": "Conversas",
     "MENTION_HEADING": "Menções",
     "UNATTENDED_HEADING": "Não Atendidas",
+    "CHANNEL_FILTER": {
+      "ARIA_LABEL": "Filtrar conversas por canal",
+      "ALL": "Todos os canais",
+      "WHATSAPP": "WhatsApp",
+      "EMAIL": "E-mail"
+    },
     "SEARCH": {
       "INPUT": "Pesquisar pessoas, conversas, respostas salvas .."
     },
