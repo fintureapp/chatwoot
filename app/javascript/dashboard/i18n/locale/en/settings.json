@@ -166,6 +166,7 @@
         "TYPES": {
           "CONVERSATION_CREATED": "A new conversation is created",
           "CONVERSATION_ASSIGNED": "A conversation is assigned to you",
+          "TEAM_ASSIGNMENT": "A conversation is assigned to your team",
           "CONVERSATION_MENTION": "You are mentioned in a conversation",
           "ASSIGNED_CONVERSATION_NEW_MESSAGE": "A new message is created in an assigned conversation",
           "PARTICIPATING_CONVERSATION_NEW_MESSAGE": "A new message is created in a participating conversation",
@@ -312,6 +313,7 @@
     "INBOX_VIEW": "Inbox View",
     "CONVERSATIONS": "Conversations",
     "INBOX": "My Inbox",
+    "NOTIFICATIONS": "Notifications",
     "KANBAN": "Kanban SDR AI",
     "ALL_CONVERSATIONS": "All Conversations",
     "MENTIONED_CONVERSATIONS": "Mentions",

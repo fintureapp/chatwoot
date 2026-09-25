@@ -20,6 +20,17 @@ class AgentNotifications::ConversationNotificationsMailer < ApplicationMailer
     send_mail_with_liquid(to: @agent.email, subject: subject) and return
   end
 
+  def team_assignment(conversation, agent, _user)
+    return unless smtp_config_set_or_development?
+
+    @agent = agent
+    @conversation = conversation
+    team_name = @conversation.team&.name
+    subject = "#{@agent.available_name}, A new conversation [ID - #{@conversation.display_id}] has been assigned to your team #{team_name}."
+    @action_url = app_account_conversation_url(account_id: @conversation.account_id, id: @conversation.display_id)
+    send_mail_with_liquid(to: @agent.email, subject: subject) and return
+  end
+
   def conversation_mention(conversation, agent, message)
     return unless smtp_config_set_or_development?
 
