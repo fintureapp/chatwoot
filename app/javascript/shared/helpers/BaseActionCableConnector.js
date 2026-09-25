@@ -45,6 +45,17 @@ class BaseActionCableConnector {
       }, presenceInterval);
     };
     this.triggerPresenceInterval();
+
+    // Send presence immediately when the tab regains focus/visibility instead of
+    // waiting for the next interval tick, so the agent returns to online right away
+    // after a background freeze, browser suspension or a temporary network drop.
+    this.handlePresenceRefocus = () => {
+      if (!document.hidden) {
+        this.subscription.updatePresence();
+      }
+    };
+    document.addEventListener('visibilitychange', this.handlePresenceRefocus);
+    window.addEventListener('focus', this.handlePresenceRefocus);
   }
 
   checkConnection() {
@@ -81,6 +92,13 @@ class BaseActionCableConnector {
   onDisconnected = () => {};
 
   disconnect() {
+    if (this.handlePresenceRefocus) {
+      document.removeEventListener(
+        'visibilitychange',
+        this.handlePresenceRefocus
+      );
+      window.removeEventListener('focus', this.handlePresenceRefocus);
+    }
     this.consumer.disconnect();
   }
 

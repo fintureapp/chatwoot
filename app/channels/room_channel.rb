@@ -1,4 +1,12 @@
 class RoomChannel < ApplicationCable::Channel
+  # Server-side heartbeat: renews presence while the WebSocket connection is alive,
+  # independent of the browser tab being visible/foreground. This prevents an agent
+  # from expiring in Redis (and dropping out of routing) when the tab throttles its
+  # own timers in the background.
+  PRESENCE_HEARTBEAT_INTERVAL = ENV.fetch('PRESENCE_HEARTBEAT_INTERVAL', 15).to_i.seconds
+
+  periodically :refresh_presence, every: PRESENCE_HEARTBEAT_INTERVAL
+
   def subscribed
     # TODO: should we only do ensure stream  if current account is present?
     # for now going ahead with guard clauses in update_subscription and broadcast_presence
@@ -15,6 +23,16 @@ class RoomChannel < ApplicationCable::Channel
   end
 
   private
+
+  # Runs on the server timer for as long as the connection is subscribed. Renewing the
+  # Redis presence score is enough to keep the agent online; connected peers pick up the
+  # refreshed presence on their next heartbeat snapshot. Scoped to agents so contact
+  # presence keeps relying on the widget ping window as before.
+  def refresh_presence
+    return unless @current_user.is_a?(User)
+
+    update_subscription
+  end
 
   def broadcast_presence
     return if @current_account.blank?
