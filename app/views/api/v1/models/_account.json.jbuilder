@@ -12,6 +12,7 @@ if resource.custom_attributes.present?
     json.timezone resource.custom_attributes['timezone'] if resource.custom_attributes['timezone'].present?
     json.logo resource.custom_attributes['logo'] if resource.custom_attributes['logo'].present?
     json.referral_source resource.custom_attributes['referral_source'] if resource.custom_attributes['referral_source'].present?
+    json.channel_groups resource.custom_attributes['channel_groups'] if resource.custom_attributes['channel_groups'].present?
     json.brand_info resource.custom_attributes['brand_info'] if resource.custom_attributes['brand_info'].present?
     json.onboarding_step resource.onboarding_step if resource.onboarding_step.present?
     if resource.custom_attributes['help_center_generation_id'].present?

@@ -15,6 +15,19 @@ export const filterByInbox = (shouldFilter, inboxId, chatInboxId) => {
   return inboxId ? isOnInbox && shouldFilter : shouldFilter;
 };
 
+// Keeps the conversation list consistent with the WhatsApp/Email/All channel
+// toggle for realtime (websocket) updates. `channelInboxIds` is the set of
+// inbox ids that belong to the selected channel group; when it is undefined the
+// toggle is on "All" and no channel filtering is applied.
+export const filterByChannelType = (
+  shouldFilter,
+  channelInboxIds,
+  chatInboxId
+) => {
+  if (!channelInboxIds) return shouldFilter;
+  return channelInboxIds.includes(chatInboxId) && shouldFilter;
+};
+
 export const filterByTeam = (shouldFilter, teamId, chatTeamId) => {
   const isOnTeam = Number(teamId) === chatTeamId;
   return teamId ? isOnTeam && shouldFilter : shouldFilter;
@@ -36,7 +49,14 @@ export const filterByUnattended = (
 };
 
 export const applyPageFilters = (conversation, filters) => {
-  const { inboxId, status, labels = [], teamId, conversationType } = filters;
+  const {
+    inboxId,
+    status,
+    labels = [],
+    teamId,
+    conversationType,
+    channelInboxIds,
+  } = filters;
   const {
     status: chatStatus,
     inbox_id: chatInboxId,
@@ -50,6 +70,11 @@ export const applyPageFilters = (conversation, filters) => {
 
   let shouldFilter = filterByStatus(chatStatus, status);
   shouldFilter = filterByInbox(shouldFilter, inboxId, chatInboxId);
+  shouldFilter = filterByChannelType(
+    shouldFilter,
+    channelInboxIds,
+    chatInboxId
+  );
   shouldFilter = filterByTeam(shouldFilter, teamId, chatTeamId);
   shouldFilter = filterByLabel(shouldFilter, labels, chatLabels);
   shouldFilter = filterByUnattended(

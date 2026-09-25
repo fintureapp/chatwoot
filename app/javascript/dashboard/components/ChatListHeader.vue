@@ -5,6 +5,7 @@ import { formatNumber } from '@chatwoot/utils';
 import wootConstants from 'dashboard/constants/globals';
 
 import ConversationBasicFilter from './widgets/conversation/ConversationBasicFilter.vue';
+import ConversationChannelFilter from './widgets/conversation/ConversationChannelFilter.vue';
 import SwitchLayout from 'dashboard/routes/dashboard/conversation/search/SwitchLayout.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 
@@ -16,6 +17,8 @@ const props = defineProps({
   isOnExpandedLayout: { type: Boolean, required: true },
   conversationStats: { type: Object, required: true },
   isListLoading: { type: Boolean, required: true },
+  showChannelFilter: { type: Boolean, default: false },
+  channelFilter: { type: String, default: null },
 });
 
 const emit = defineEmits([
@@ -23,6 +26,7 @@ const emit = defineEmits([
   'deleteFolders',
   'resetFilters',
   'basicFilterChange',
+  'channelFilterChange',
   'filtersModal',
 ]);
 
@@ -30,6 +34,10 @@ const { uiSettings, updateUISettings } = useUISettings();
 
 const onBasicFilterChange = (value, type) => {
   emit('basicFilterChange', value, type);
+};
+
+const onChannelFilterChange = value => {
+  emit('channelFilterChange', value);
 };
 
 const hasAppliedFiltersOrActiveFolders = computed(() => {
@@ -154,6 +162,11 @@ const toggleConversationLayout = () => {
           :class="{ 'ltr:right-0 rtl:left-0': isOnExpandedLayout }"
         />
       </div>
+      <ConversationChannelFilter
+        v-if="showChannelFilter && !hasAppliedFiltersOrActiveFolders"
+        :model-value="channelFilter"
+        @update:model-value="onChannelFilterChange"
+      />
       <ConversationBasicFilter
         v-if="!hasAppliedFiltersOrActiveFolders"
         :is-on-expanded-layout="isOnExpandedLayout"

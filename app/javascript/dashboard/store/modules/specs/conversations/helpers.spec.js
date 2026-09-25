@@ -2,6 +2,7 @@ import {
   findPendingMessageIndex,
   applyPageFilters,
   filterByInbox,
+  filterByChannelType,
   filterByTeam,
   filterByLabel,
   filterByUnattended,
@@ -91,6 +92,38 @@ describe('#applyPageFilters', () => {
     });
   });
 
+  describe('#filter-channel-type', () => {
+    it('keeps only conversations whose inbox is in the selected channel group', () => {
+      const filters = {
+        status: 'open',
+        channelInboxIds: [2],
+      };
+      // conversationList[0] is on inbox 2 -> kept
+      expect(applyPageFilters(conversationList[0], filters)).toEqual(true);
+    });
+    it('filters out conversations whose inbox is not in the selected channel group', () => {
+      const filters = {
+        status: 'pending',
+        channelInboxIds: [2],
+      };
+      // conversationList[3] is on inbox 4 -> filtered out
+      expect(applyPageFilters(conversationList[3], filters)).toEqual(false);
+    });
+    it('does not apply channel filtering when channelInboxIds is undefined (All)', () => {
+      const filters = {
+        status: 'open',
+      };
+      expect(applyPageFilters(conversationList[0], filters)).toEqual(true);
+    });
+    it('filters out everything when the group is empty (sentinel)', () => {
+      const filters = {
+        status: 'open',
+        channelInboxIds: [0],
+      };
+      expect(applyPageFilters(conversationList[0], filters)).toEqual(false);
+    });
+  });
+
   describe('#filter-labels', () => {
     it('returns true if conversation has labels and labels filter is active', () => {
       const filters = {
@@ -134,6 +167,22 @@ describe('#filterByInbox', () => {
     const inboxId = '1';
     const chatInboxId = 13;
     expect(filterByInbox(true, inboxId, chatInboxId)).toEqual(false);
+  });
+});
+
+describe('#filterByChannelType', () => {
+  it('returns the incoming shouldFilter untouched when no channel group is set', () => {
+    expect(filterByChannelType(true, undefined, 5)).toEqual(true);
+    expect(filterByChannelType(false, undefined, 5)).toEqual(false);
+  });
+  it('returns true when the chat inbox is in the channel group', () => {
+    expect(filterByChannelType(true, [1, 2, 3], 2)).toEqual(true);
+  });
+  it('returns false when the chat inbox is not in the channel group', () => {
+    expect(filterByChannelType(true, [1, 2, 3], 9)).toEqual(false);
+  });
+  it('respects the incoming shouldFilter even when the inbox matches', () => {
+    expect(filterByChannelType(false, [1, 2, 3], 2)).toEqual(false);
   });
 });
 
