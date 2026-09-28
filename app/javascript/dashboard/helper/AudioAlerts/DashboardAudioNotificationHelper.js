@@ -185,9 +185,9 @@ export class DashboardAudioNotificationHelper {
       useAlert(notification.push_message_title);
     }
 
-    // Respect a user who has muted audio alerts entirely.
-    if (this.notificationConfig.audioAlertType.includes('none')) return;
-
+    // Product decision (Finture): an assignment is a mandatory alert. The tone
+    // plays even when the agent muted message audio alerts ("none"), using the
+    // tone configured in the profile (or the default one).
     if (!this.audioConfig.audio) {
       this.intializeAudio();
     }

@@ -13,18 +13,31 @@ RSpec.describe Notification::RemoveOldNotificationJob do
   end
 
   describe 'removing old notifications' do
-    it 'removes notifications older than 1 month' do
+    it 'removes notifications older than 7 days by default' do
       create(:notification, user: user, notification_type: 'conversation_creation', primary_actor: conversation,
                             created_at: 2.months.ago)
       create(:notification, user: user, notification_type: 'conversation_creation', primary_actor: conversation,
-                            created_at: 1.month.ago)
+                            created_at: 8.days.ago)
       create(:notification, user: user, notification_type: 'conversation_creation', primary_actor: conversation,
-                            created_at: 1.day.ago)
+                            created_at: 6.days.ago)
       create(:notification, user: user, notification_type: 'conversation_creation', primary_actor: conversation,
                             created_at: 1.hour.ago)
 
       described_class.perform_now
       expect(Notification.count).to eq(2)
+    end
+
+    it 'honours NOTIFICATION_RETENTION_DAYS' do
+      create(:notification, user: user, notification_type: 'conversation_creation', primary_actor: conversation,
+                            created_at: 20.days.ago)
+      create(:notification, user: user, notification_type: 'conversation_creation', primary_actor: conversation,
+                            created_at: 40.days.ago)
+
+      with_modified_env NOTIFICATION_RETENTION_DAYS: '30' do
+        described_class.perform_now
+      end
+
+      expect(Notification.count).to eq(1)
     end
   end
 
@@ -59,7 +72,7 @@ RSpec.describe Notification::RemoveOldNotificationJob do
 
       # All old notifications removed, remaining trimmed to 300
       expect(Notification.where(user_id: user.id).count).to eq(250)
-      expect(Notification.where('created_at < ?', 1.month.ago)).to be_empty
+      expect(Notification.where('created_at < ?', 7.days.ago)).to be_empty
     end
   end
 end

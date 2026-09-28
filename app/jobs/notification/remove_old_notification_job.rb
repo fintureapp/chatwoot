@@ -2,17 +2,23 @@ class Notification::RemoveOldNotificationJob < ApplicationJob
   queue_as :purgable
 
   NOTIFICATION_LIMIT = 300
-  OLD_NOTIFICATION_THRESHOLD = 1.month
+  # Finture: the bell keeps a rolling history of the last 7 days by default.
+  # Override with NOTIFICATION_RETENTION_DAYS if a longer window is needed.
+  DEFAULT_RETENTION_DAYS = 7
 
   def perform
     remove_old_notifications
     trim_user_notifications
   end
 
+  def self.retention_threshold
+    ENV.fetch('NOTIFICATION_RETENTION_DAYS', DEFAULT_RETENTION_DAYS).to_i.days
+  end
+
   private
 
   def remove_old_notifications
-    Notification.where('created_at < ?', OLD_NOTIFICATION_THRESHOLD.ago)
+    Notification.where('created_at < ?', self.class.retention_threshold.ago)
                 .delete_all
   end
 

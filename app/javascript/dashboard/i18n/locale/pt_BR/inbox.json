@@ -30,6 +30,7 @@
     "TYPES_NEXT": {
       "CONVERSATION_MENTION": "Mencionado",
       "CONVERSATION_ASSIGNMENT": "Atribuídas a você",
+      "TEAM_ASSIGNMENT": "Atribuída ao seu time",
       "CONVERSATION_CREATION": "Nova conversa",
       "SLA_MISSED_FIRST_RESPONSE": "Quebra SLA",
       "SLA_MISSED_NEXT_RESPONSE": "Quebra SLA",
@@ -90,6 +91,17 @@
         "COOKIES": "_Cookies_ de terceiros devem estar habilitados",
         "ADMIN_ACCESS": "Você precisa de acesso de administrador na conta do WhatsApp Business"
       }
+    },
+    "POPOVER": {
+      "TITLE": "Notificações",
+      "UNREAD": "Não lidas",
+      "HISTORY": "Últimos 7 dias",
+      "EMPTY_UNREAD": "Nenhuma notificação não lida.",
+      "EMPTY_HISTORY": "Nenhuma notificação nos últimos 7 dias.",
+      "VIEW_ALL": "Ver todas",
+      "LOAD_MORE": "Carregar mais",
+      "SNOOZE": "Adiar",
+      "MARK_ALL_READ": "Marcar todas como lidas"
     }
   }
 }

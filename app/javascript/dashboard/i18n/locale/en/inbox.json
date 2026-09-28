@@ -30,6 +30,7 @@
     "TYPES_NEXT": {
       "CONVERSATION_MENTION": "Mentioned",
       "CONVERSATION_ASSIGNMENT": "Assigned to you",
+      "TEAM_ASSIGNMENT": "Assigned to your team",
       "CONVERSATION_CREATION": "New Conversation",
       "SLA_MISSED_FIRST_RESPONSE": "SLA breach",
       "SLA_MISSED_NEXT_RESPONSE": "SLA breach",
@@ -90,6 +91,17 @@
         "COOKIES": "Third-party cookies must be enabled",
         "ADMIN_ACCESS": "You need admin access to the WhatsApp Business Account"
       }
+    },
+    "POPOVER": {
+      "TITLE": "Notificações",
+      "UNREAD": "Não lidas",
+      "HISTORY": "Últimos 7 dias",
+      "EMPTY_UNREAD": "Nenhuma notificação não lida.",
+      "EMPTY_HISTORY": "Nenhuma notificação nos últimos 7 dias.",
+      "VIEW_ALL": "Ver todas",
+      "LOAD_MORE": "Carregar mais",
+      "SNOOZE": "Adiar",
+      "MARK_ALL_READ": "Marcar todas como lidas"
     }
   }
 }

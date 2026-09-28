@@ -63,7 +63,7 @@ describe('DashboardAudioNotificationHelper#onAssignmentNotification', () => {
     expect(helper.playAudioAlert).not.toHaveBeenCalled();
   });
 
-  it('shows the toast but skips the sound when audio alerts are muted', () => {
+  it('plays the tone even when message audio alerts are muted', () => {
     helper.notificationConfig.audioAlertType = ['none'];
 
     helper.onAssignmentNotification({
@@ -72,6 +72,18 @@ describe('DashboardAudioNotificationHelper#onAssignmentNotification', () => {
     });
 
     expect(useAlert).toHaveBeenCalled();
-    expect(helper.playAudioAlert).not.toHaveBeenCalled();
+    expect(helper.playAudioAlert).toHaveBeenCalled();
+  });
+
+  it('initializes the audio element lazily before playing', () => {
+    helper.audioConfig.audio = null;
+
+    helper.onAssignmentNotification({
+      notification_type: 'team_assignment',
+      push_message_title: 'A conversation (#1) has been assigned to your team',
+    });
+
+    expect(helper.intializeAudio).toHaveBeenCalled();
+    expect(helper.playAudioAlert).toHaveBeenCalled();
   });
 });
