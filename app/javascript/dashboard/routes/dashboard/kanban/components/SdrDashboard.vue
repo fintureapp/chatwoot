@@ -17,27 +17,47 @@ import { lostReasonLabel } from '../config/stages';
 
 const props = defineProps({
   defaultInboxId: { type: [Number, String], default: null },
-  // Visão inicial conforme a classificação da caixa ('commercial' | 'operational').
-  defaultView: { type: String, default: 'commercial' },
 });
 
 const store = useStore();
 const { t } = useI18n();
 const inboxes = useMapGetter('inboxes/getInboxes');
 
-const activeView = ref(props.defaultView); // 'commercial' | 'operational'
-// Ao trocar de caixa (nova classificação), acompanha a visão padrão.
-watch(
-  () => props.defaultView,
-  view => {
-    activeView.value = view;
-  }
-);
 const selectedInboxId = ref(
   props.defaultInboxId ? String(props.defaultInboxId) : ''
 );
 const period = ref('30'); // dias
 const compareWith = ref('previous'); // 'previous' | 'year'
+
+// ---- Visão (Comercial / Operacional) -------------------------------------
+// A visão é definida pela classificação da caixa selecionada AQUI (não pela
+// caixa do header): com uma caixa específica, a visão é travada no tipo dela
+// (Finture::InboxConfig) e o seletor some; só a "Visão geral (todas as caixas)"
+// deixa o operador alternar. Isso evita a escolha manual a cada uso.
+const inboxType = computed(() =>
+  selectedInboxId.value
+    ? store.getters['kanban/getInboxType'](selectedInboxId.value)
+    : null
+);
+const isViewLocked = computed(() => Boolean(selectedInboxId.value));
+const lockedView = computed(() =>
+  inboxType.value === 'operacional' ? 'operational' : 'commercial'
+);
+const manualView = ref('commercial'); // usado só na visão geral
+const activeView = computed({
+  get: () => (isViewLocked.value ? lockedView.value : manualView.value),
+  set: view => {
+    manualView.value = view;
+  },
+});
+
+watch(
+  selectedInboxId,
+  inboxId => {
+    if (inboxId) store.dispatch('kanban/fetchInboxConfig', { inboxId });
+  },
+  { immediate: true }
+);
 
 const dashboard = computed(() => store.getters['kanban/getDashboard']);
 const uiFlags = computed(() => store.getters['kanban/getDashboardUIFlags']);
@@ -320,9 +340,12 @@ const views = computed(() => [
 
 <template>
   <div class="flex flex-col flex-1 min-h-0 gap-4 px-4 py-3 overflow-y-auto">
-    <!-- Seletor de visão + nota -->
+    <!-- Seletor de visão + nota. Com caixa específica selecionada a visão é
+         travada pela classificação da caixa (badge só-leitura); o seletor só
+         aparece na visão geral. -->
     <div class="flex flex-wrap items-center gap-3">
       <div
+        v-if="!isViewLocked"
         class="inline-flex gap-0.5 p-0.5 rounded-lg bg-n-alpha-1 outline outline-1 -outline-offset-1 outline-n-weak"
         role="tablist"
       >
@@ -343,12 +366,27 @@ const views = computed(() => [
           {{ view.label }}
         </button>
       </div>
+      <span
+        v-else
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium rounded-lg bg-n-solid-1 text-n-slate-12 outline outline-1 -outline-offset-1 outline-n-weak"
+        :title="t('KANBAN.DASHBOARD.VIEW_LOCKED_NOTE')"
+      >
+        <Icon icon="i-lucide-lock" class="size-3.5 text-n-slate-10" />
+        {{
+          activeView === 'commercial'
+            ? t('KANBAN.DASHBOARD.VIEW_COMMERCIAL')
+            : t('KANBAN.DASHBOARD.VIEW_OPERATIONAL')
+        }}
+      </span>
       <span class="text-[12.5px] text-n-slate-11">
         {{
           activeView === 'commercial'
             ? t('KANBAN.DASHBOARD.VIEW_COMMERCIAL_NOTE')
             : t('KANBAN.DASHBOARD.VIEW_OPERATIONAL_NOTE')
         }}
+        <template v-if="isViewLocked">
+          · {{ t('KANBAN.DASHBOARD.VIEW_LOCKED_NOTE') }}
+        </template>
       </span>
     </div>
 

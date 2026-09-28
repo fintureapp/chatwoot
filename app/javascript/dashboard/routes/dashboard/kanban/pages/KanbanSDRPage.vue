@@ -469,7 +469,6 @@ onMounted(async () => {
     <SdrDashboard
       v-else-if="activeTab === 'dashboard'"
       :default-inbox-id="activeInboxId"
-      :default-view="kanbanType === 'operacional' ? 'operational' : 'commercial'"
     />
 
     <!-- Aba: Histórico -->

@@ -52,4 +52,33 @@ class Finture::PipelineStage < ApplicationRecord
       stage.save!
     end
   end
+
+  # Garante o funil padrão do tipo numa caixa que JÁ tem etapas (troca de
+  # classificação ou backfill). Não apaga nada e não muda slug — cards nunca
+  # ficam órfãos:
+  #   - a etapa travada (1ª) é renomeada para o rótulo da 1ª etapa do tipo
+  #     ("Chamada Iniciada" no operacional, "Lead Identificado" no comercial);
+  #   - as etapas padrão não travadas do tipo que faltam são criadas logo após
+  #     a travada; as demais colunas seguem depois, com position sequencial.
+  # Idempotente. Sem etapas, cai no seed_defaults!.
+  def self.ensure_stages_for_type!(inbox, kanban_type)
+    scope = where(inbox_id: inbox.id)
+    return seed_defaults!(inbox, kanban_type) unless scope.exists?
+
+    defaults = default_stages_for(kanban_type)
+    transaction do
+      locked = scope.where(locked: true).ordered.first || scope.ordered.first
+      locked.update!(name: defaults.first[:name]) if locked.name != defaults.first[:name]
+
+      others = scope.ordered.to_a - [locked]
+      missing = defaults.reject { |attrs| attrs[:locked] || scope.exists?(slug: attrs[:slug]) }
+      created = missing.map do |attrs|
+        create!(attrs.merge(account_id: inbox.account_id, inbox_id: inbox.id, position: 0))
+      end
+
+      ([locked] + created + others).each_with_index do |stage, index|
+        stage.update!(position: index) if stage.position != index
+      end
+    end
+  end
 end

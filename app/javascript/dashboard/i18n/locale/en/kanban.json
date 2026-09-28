@@ -71,6 +71,7 @@
       "VIEW_OPERATIONAL": "Operacional",
       "VIEW_COMMERCIAL_NOTE": "Resultado do funil: conversão, perdas, mix, tendência e velocidade.",
       "VIEW_OPERATIONAL_NOTE": "Execução do time: follow-ups, SLA, gargalos e aging.",
+      "VIEW_LOCKED_NOTE": "Visão definida pela classificação da caixa (Configurações → Caixas de entrada).",
       "COMPARE_LABEL": "Comparar com",
       "COMPARE_PREV": "período anterior",
       "COMPARE_YEAR": "ano anterior",

@@ -7,11 +7,12 @@ class Notification::RemoveDuplicateNotificationJob < ApplicationJob
     user_id = notification.user_id
     primary_actor_id = notification.primary_actor_id
 
-    # Find older notifications with the same user and primary_actor_id
-    duplicate_notifications = Notification.where(user_id: user_id, primary_actor_id: primary_actor_id)
-                                          .order(created_at: :desc)
-
-    # Skip the first one (the latest notification) and destroy the rest
-    duplicate_notifications.offset(1).each(&:destroy)
+    # Find older UNREAD notifications with the same user and primary_actor_id.
+    # Read notifications are kept as history (Finture: 7-day bell history);
+    # only the unread ones are collapsed so the bell shows one live item per
+    # conversation.
+    Notification.where(user_id: user_id, primary_actor_id: primary_actor_id, read_at: nil)
+                .where.not(id: notification.id)
+                .find_each(&:destroy)
   end
 end
