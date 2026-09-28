@@ -1,10 +1,9 @@
 # Classificação de negócio da caixa (comercial/operacional) do Kanban SDR.
 # Leitura liberada a agentes (o board/dashboard precisam do tipo); alterar é
-# restrito a administradores. Ao definir o tipo, semeia o funil padrão daquele
-# tipo caso a caixa ainda não tenha etapas — assim uma caixa operacional nova já
-# nasce com "Chamada Iniciada → Em Triagem → Em Atendimento". Se a caixa já tem
-# funil configurado, o tipo muda sem mexer nas colunas (use o gerenciador de
-# etapas para ajustá-las).
+# restrito a administradores. Ao mudar o tipo, garante o funil padrão daquele
+# tipo na caixa (Finture::PipelineStage.ensure_stages_for_type!): caixa sem
+# etapas nasce com o funil completo; caixa que já tem etapas ganha o rótulo da
+# etapa travada e as etapas padrão que faltam, sem perder colunas nem cards.
 class Api::V1::Accounts::FintureInboxConfigsController < Api::V1::Accounts::BaseController
   before_action :check_admin_authorization?, only: [:update]
   before_action :set_inbox
@@ -18,11 +17,12 @@ class Api::V1::Accounts::FintureInboxConfigsController < Api::V1::Accounts::Base
     return render_error('Tipo inválido.') unless Finture::InboxConfig::KANBAN_TYPES.include?(kanban_type)
 
     config = Finture::InboxConfig.find_or_initialize_by(inbox_id: @inbox.id)
+    type_changed = config.new_record? || config.kanban_type != kanban_type
     config.account_id = Current.account.id
     config.kanban_type = kanban_type
     config.save!
 
-    seed_stages_for_type(kanban_type)
+    ensure_stages_for_type(kanban_type) if type_changed || stages_missing?
     render json: { kanban_type: config.kanban_type }
   end
 
@@ -32,10 +32,12 @@ class Api::V1::Accounts::FintureInboxConfigsController < Api::V1::Accounts::Base
     @inbox = Current.account.inboxes.find(params[:inbox_id])
   end
 
-  def seed_stages_for_type(kanban_type)
-    return if Finture::PipelineStage.where(inbox_id: @inbox.id).exists?
+  def stages_missing?
+    !Finture::PipelineStage.where(inbox_id: @inbox.id).exists?
+  end
 
-    Finture::PipelineStage.seed_defaults!(@inbox, kanban_type)
+  def ensure_stages_for_type(kanban_type)
+    Finture::PipelineStage.ensure_stages_for_type!(@inbox, kanban_type)
   end
 
   def render_error(message)
