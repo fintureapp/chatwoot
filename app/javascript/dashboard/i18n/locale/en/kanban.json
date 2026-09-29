@@ -14,12 +14,14 @@
     "STAGE_MANAGER": {
       "MANAGE": "Gerenciar etapas",
       "TITLE": "Etapas do funil",
-      "SUBTITLE": "A 1ª etapa (Lead Identificado) é fixa. Adicione, renomeie, recolora e reordene as demais — as mudanças valem para esta caixa.",
+      "SUBTITLE": "A 1ª etapa é fixa. Adicione, renomeie, recolora e reordene as demais — as mudanças valem para esta caixa. \"Conta no tempo médio\" define se a etapa entra no tempo médio por etapa do Dashboard.",
       "FIXED": "Fixa",
       "ADD": "Adicionar",
       "NEW_PLACEHOLDER": "Nome da nova etapa",
       "CLOSE": "Fechar",
-      "SAVE_ERROR": "Não foi possível salvar as etapas. Tente novamente."
+      "SAVE_ERROR": "Não foi possível salvar as etapas. Tente novamente.",
+      "COUNTS_IN_STAGE_TIME": "Conta no tempo médio",
+      "COUNTS_IN_STAGE_TIME_HINT": "Inclui esta etapa no \"Tempo médio na etapa\" do Dashboard. Desligue nas etapas de espera do cliente — o tempo ali não mede o atendimento."
     },
     "CARD": {
       "OPEN_CONVERSATION": "Abrir conversa",
@@ -125,7 +127,7 @@
       "SLA_META": "Meta {count} min · média geral",
       "STALLED_EYEBROW": "Ação",
       "STALLED_TITLE": "Leads parados",
-      "STALLED_NOTE": "sem atividade há +7 dias",
+      "STALLED_NOTE": "sem atividade há +7 dias · só não resolvidos",
       "STALLED_EMPTY": "Nenhum lead parado no momento.",
       "COL_CONTACT": "Contato",
       "COL_PRODUCT": "Área",
@@ -142,7 +144,11 @@
       "FILTER_INBOX": "Caixa",
       "MY_FOLLOWUPS_EYEBROW": "Agenda",
       "MY_FOLLOWUPS_TITLE": "Meus follow-ups",
-      "MY_FOLLOWUPS_EMPTY": "Você não tem follow-ups em aberto."
+      "MY_FOLLOWUPS_EMPTY": "Você não tem follow-ups em aberto.",
+      "OP_IN_PERIOD": "no período",
+      "GARGALO_EXCLUDED": "Fora da conta: {stages}. O tempo nessas etapas depende do cliente responder, não do atendimento — ajuste em Gerenciar etapas.",
+      "SLA_SAMPLE": "{measured}/{total}",
+      "SLA_COVERAGE": "{measured} de {total} conversas do período têm 1º contato mensurável (precisam da label atendimento_humano antes da 1ª resposta)."
     },
     "COLUMN": {
       "EMPTY": "Nenhum lead nesta etapa"

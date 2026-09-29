@@ -51,4 +51,42 @@ RSpec.describe Finture::PipelineStage do
       end
     end
   end
+
+  # As etapas de espera do cliente não entram no "Tempo médio na etapa" do
+  # Dashboard Operacional — lá o relógio corre por conta do lead, não do time.
+  describe 'counts_in_stage_time' do
+    def counts_by_slug
+      described_class.where(inbox_id: inbox.id).pluck(:slug, :counts_in_stage_time).to_h
+    end
+
+    it 'seeds the operational waiting stages switched off' do
+      described_class.seed_defaults!(inbox, 'operacional')
+
+      expect(counts_by_slug).to eq('chamada_iniciada' => false, 'em_triagem' => false, 'em_atendimento' => true)
+    end
+
+    it 'seeds every commercial stage switched on' do
+      described_class.seed_defaults!(inbox, 'comercial')
+
+      expect(counts_by_slug.values).to all(be(true))
+    end
+
+    it 'defaults a stage created by hand to counting' do
+      stage = described_class.create!(account: account, inbox: inbox, slug: 'aguardando_cliente',
+                                      name: 'Aguardando cliente', color: 'amber', position: 1)
+
+      expect(stage.counts_in_stage_time).to be(true)
+    end
+
+    it 'follows the locked stage across a classification switch' do
+      described_class.seed_defaults!(inbox, 'comercial')
+      locked = described_class.find_by(inbox_id: inbox.id, locked: true)
+
+      described_class.ensure_stages_for_type!(inbox, 'operacional')
+      expect(locked.reload.counts_in_stage_time).to be(false)
+
+      described_class.ensure_stages_for_type!(inbox, 'comercial')
+      expect(locked.reload.counts_in_stage_time).to be(true)
+    end
+  end
 end
