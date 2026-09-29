@@ -281,6 +281,7 @@ const opKpis = computed(() => {
       icon: 'i-lucide-user-x',
       value: fmtNum(k.unassigned),
       emphasis: 'warn',
+      delta: { text: t('KANBAN.DASHBOARD.OP_IN_PERIOD'), tone: 'neutral' },
     },
     {
       key: 'stalled',
@@ -288,6 +289,7 @@ const opKpis = computed(() => {
       icon: 'i-lucide-timer-off',
       value: fmtNum(k.stalled),
       emphasis: 'warn',
+      delta: { text: t('KANBAN.DASHBOARD.OP_IN_PERIOD'), tone: 'neutral' },
     },
     {
       key: 'sla',
@@ -305,19 +307,40 @@ const loadRows = computed(() =>
     display: fmtNum(row.count),
   }))
 );
+// Toda área com volume no período entra na lista, mesmo sem nenhuma conversa
+// mensurável (minutes null => "—"). Antes a área sumia inteira e a tela dava a
+// impressão de que só existiam duas. O `sub` mostra o tamanho da amostra: sem
+// ele, "1 min" de uma única conversa parece o resultado do time inteiro.
 const slaRows = computed(() =>
   (dashboard.value?.sla?.by_product || []).map(row => ({
     label: row.product,
     value: row.minutes || 0,
-    display: fmtMinutes(row.minutes),
+    display: row.minutes == null ? '—' : fmtMinutes(row.minutes),
+    sub: t('KANBAN.DASHBOARD.SLA_SAMPLE', {
+      measured: row.measured,
+      total: row.total,
+    }),
   }))
 );
+const slaCoverage = computed(() => {
+  const sla = dashboard.value?.sla;
+  if (!sla?.total) return '';
+  return t('KANBAN.DASHBOARD.SLA_COVERAGE', {
+    measured: sla.measured,
+    total: sla.total,
+  });
+});
+
 const stageTimeRows = computed(() =>
-  (dashboard.value?.stage_time || []).map(row => ({
+  (dashboard.value?.stage_time?.stages || []).map(row => ({
     label: row.name,
     value: row.seconds,
     display: formatDuration(row.seconds),
   }))
+);
+// Etapas de espera do cliente, tiradas da conta na config do funil da caixa.
+const stageTimeExcluded = computed(
+  () => dashboard.value?.stage_time?.excluded || []
 );
 
 // Select compacto com largura própria. O CSS global do app força width:100% e um
@@ -761,6 +784,13 @@ const views = computed(() => [
             <p v-else class="text-sm text-n-slate-10">
               {{ t('KANBAN.DASHBOARD.EMPTY_BLOCK') }}
             </p>
+            <p v-if="stageTimeExcluded.length" class="text-xs text-n-slate-10">
+              {{
+                t('KANBAN.DASHBOARD.GARGALO_EXCLUDED', {
+                  stages: stageTimeExcluded.join(', '),
+                })
+              }}
+            </p>
           </div>
 
           <!-- SLA por área -->
@@ -789,6 +819,12 @@ const views = computed(() => [
               }}</span>
             </div>
             <BarList v-if="slaRows.length" :rows="slaRows" tone="brand" />
+            <p v-else class="text-sm text-n-slate-10">
+              {{ t('KANBAN.DASHBOARD.EMPTY_BLOCK') }}
+            </p>
+            <p v-if="slaCoverage" class="text-xs text-n-slate-10">
+              {{ slaCoverage }}
+            </p>
           </div>
 
           <!-- Leads parados -->

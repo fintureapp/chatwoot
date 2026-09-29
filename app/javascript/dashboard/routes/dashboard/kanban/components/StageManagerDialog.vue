@@ -85,6 +85,19 @@ const recolorStage = (stage, color) => {
   });
 };
 
+// Liga/desliga a etapa no "Tempo médio na etapa" do Dashboard Operacional. Nas
+// etapas de espera do cliente (Chamada Iniciada, Em Triagem) o relógio corre por
+// conta do lead responder — medi-las junto mascara o gargalo do atendimento.
+const toggleStageTime = stage => {
+  const counts = !stage.counts_in_stage_time;
+  stage.counts_in_stage_time = counts;
+  runAction('kanban/updateStageConfig', {
+    inboxId: props.inboxId,
+    stageId: stage.id,
+    changes: { counts_in_stage_time: counts },
+  });
+};
+
 const removeStage = stage =>
   runAction('kanban/deleteStage', {
     inboxId: props.inboxId,
@@ -132,6 +145,25 @@ const inputClass =
         <Icon icon="i-lucide-lock" class="size-4 text-n-slate-10" />
         <span class="rounded-full size-2.5" :class="colorClass[stage.color]" />
         <span class="flex-1 text-sm text-n-slate-12">{{ stage.name }}</span>
+        <button
+          type="button"
+          class="flex items-center gap-1 text-xs"
+          :class="
+            stage.counts_in_stage_time ? 'text-n-teal-11' : 'text-n-slate-10'
+          "
+          :title="t('KANBAN.STAGE_MANAGER.COUNTS_IN_STAGE_TIME_HINT')"
+          @click="toggleStageTime(stage)"
+        >
+          <Icon
+            :icon="
+              stage.counts_in_stage_time
+                ? 'i-lucide-toggle-right'
+                : 'i-lucide-toggle-left'
+            "
+            class="size-4"
+          />
+          {{ t('KANBAN.STAGE_MANAGER.COUNTS_IN_STAGE_TIME') }}
+        </button>
         <span class="text-xs text-n-slate-10">
           {{ t('KANBAN.STAGE_MANAGER.FIXED') }}
         </span>
@@ -174,6 +206,27 @@ const inputClass =
               :class="inputClass"
               @change="renameStage(stage)"
             />
+            <button
+              type="button"
+              class="flex items-center gap-1 text-xs whitespace-nowrap"
+              :class="
+                stage.counts_in_stage_time
+                  ? 'text-n-teal-11'
+                  : 'text-n-slate-10'
+              "
+              :title="t('KANBAN.STAGE_MANAGER.COUNTS_IN_STAGE_TIME_HINT')"
+              @click="toggleStageTime(stage)"
+            >
+              <Icon
+                :icon="
+                  stage.counts_in_stage_time
+                    ? 'i-lucide-toggle-right'
+                    : 'i-lucide-toggle-left'
+                "
+                class="size-4"
+              />
+              {{ t('KANBAN.STAGE_MANAGER.COUNTS_IN_STAGE_TIME') }}
+            </button>
             <button
               type="button"
               class="text-n-slate-10 hover:text-n-ruby-11"

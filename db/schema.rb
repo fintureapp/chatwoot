@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_07_23_120100) do
+ActiveRecord::Schema[7.1].define(version: 2026_09_29_130000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -861,6 +861,16 @@ ActiveRecord::Schema[7.1].define(version: 2026_07_23_120100) do
     t.index ["due_at"], name: "index_finture_follow_ups_open_due", where: "(completed_at IS NULL)"
   end
 
+  create_table "finture_inbox_configs", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "inbox_id", null: false
+    t.string "kanban_type", default: "comercial", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_finture_inbox_configs_on_account_id"
+    t.index ["inbox_id"], name: "index_finture_inbox_configs_on_inbox_id", unique: true
+  end
+
   create_table "finture_pipeline_stages", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "inbox_id", null: false
@@ -869,6 +879,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_07_23_120100) do
     t.integer "position", default: 0, null: false
     t.string "color", default: "slate", null: false
     t.boolean "locked", default: false, null: false
+    t.boolean "counts_in_stage_time", default: true, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_finture_pipeline_stages_on_account_id"
@@ -1411,6 +1422,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_07_23_120100) do
   add_foreign_key "finture_follow_ups", "accounts", on_delete: :cascade
   add_foreign_key "finture_follow_ups", "conversations", on_delete: :cascade
   add_foreign_key "finture_follow_ups", "users", on_delete: :nullify
+  add_foreign_key "finture_inbox_configs", "accounts", on_delete: :cascade
+  add_foreign_key "finture_inbox_configs", "inboxes", on_delete: :cascade
   add_foreign_key "finture_pipeline_stages", "accounts", on_delete: :cascade
   add_foreign_key "finture_pipeline_stages", "inboxes", on_delete: :cascade
   add_foreign_key "finture_quotes", "accounts", on_delete: :cascade

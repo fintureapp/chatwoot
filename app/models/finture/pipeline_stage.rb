@@ -17,11 +17,13 @@ class Finture::PipelineStage < ApplicationRecord
   ].freeze
 
   # Funil operacional (atendimento): não tem ganho/perdido — a demanda sai do
-  # board ao ser resolvida. A 1ª etapa (Chamada Iniciada) é travada.
+  # board ao ser resolvida. A 1ª etapa (Chamada Iniciada) é travada. As duas
+  # primeiras nascem FORA do "Tempo médio na etapa": o relógio ali corre por
+  # conta do cliente (responder / ser triado), não do nosso atendimento.
   OPERATIONAL_DEFAULT_STAGES = [
-    { slug: 'chamada_iniciada', name: 'Chamada Iniciada', color: 'slate', locked: true },
-    { slug: 'em_triagem', name: 'Em Triagem', color: 'blue', locked: false },
-    { slug: 'em_atendimento', name: 'Em Atendimento', color: 'teal', locked: false }
+    { slug: 'chamada_iniciada', name: 'Chamada Iniciada', color: 'slate', locked: true, counts_in_stage_time: false },
+    { slug: 'em_triagem', name: 'Em Triagem', color: 'blue', locked: false, counts_in_stage_time: false },
+    { slug: 'em_atendimento', name: 'Em Atendimento', color: 'teal', locked: false, counts_in_stage_time: true }
   ].freeze
 
   # Mantido para compatibilidade (rake de seed/backfill legado usa DEFAULT_STAGES).
@@ -68,7 +70,9 @@ class Finture::PipelineStage < ApplicationRecord
     defaults = default_stages_for(kanban_type)
     transaction do
       locked = scope.where(locked: true).ordered.first || scope.ordered.first
-      locked.update!(name: defaults.first[:name]) if locked.name != defaults.first[:name]
+      # A 1ª etapa acompanha o tipo: rótulo e participação no tempo médio por
+      # etapa (no operacional ela é espera do cliente; no comercial, conta).
+      sync_locked_stage!(locked, defaults.first)
 
       others = scope.ordered.to_a - [locked]
       missing = defaults.reject { |attrs| attrs[:locked] || scope.exists?(slug: attrs[:slug]) }
@@ -81,4 +85,14 @@ class Finture::PipelineStage < ApplicationRecord
       end
     end
   end
+
+  # Alinha a etapa travada ao padrão do tipo sem tocar no slug (cards intactos).
+  def self.sync_locked_stage!(stage, defaults)
+    counts = defaults.fetch(:counts_in_stage_time, true)
+    changes = {}
+    changes[:name] = defaults[:name] if stage.name != defaults[:name]
+    changes[:counts_in_stage_time] = counts if stage.counts_in_stage_time != counts
+    stage.update!(changes) if changes.any?
+  end
+  private_class_method :sync_locked_stage!
 end

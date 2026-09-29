@@ -29,7 +29,7 @@ class Api::V1::Accounts::FinturePipelineStagesController < Api::V1::Accounts::Ba
   end
 
   def update
-    @stage.update!(name: stage_params[:name].presence || @stage.name, color: color_param)
+    @stage.update!(stage_update_attrs)
     render json: { stage: serialize(@stage) }
   end
 
@@ -69,7 +69,17 @@ class Api::V1::Accounts::FinturePipelineStagesController < Api::V1::Accounts::Ba
   end
 
   def stage_params
-    params.permit(:name, :color)
+    params.permit(:name, :color, :counts_in_stage_time)
+  end
+
+  # Nome/cor sempre; a participação no "Tempo médio na etapa" só quando o
+  # cliente manda a chave (PATCH parcial não pode zerar o que não foi enviado).
+  def stage_update_attrs
+    attrs = { name: stage_params[:name].presence || @stage.name, color: color_param }
+    unless stage_params[:counts_in_stage_time].nil?
+      attrs[:counts_in_stage_time] = ActiveModel::Type::Boolean.new.cast(stage_params[:counts_in_stage_time])
+    end
+    attrs
   end
 
   def color_param
@@ -106,7 +116,8 @@ class Api::V1::Accounts::FinturePipelineStagesController < Api::V1::Accounts::Ba
       slug: stage.slug,
       position: stage.position,
       color: stage.color,
-      locked: stage.locked
+      locked: stage.locked,
+      counts_in_stage_time: stage.counts_in_stage_time
     }
   end
 
