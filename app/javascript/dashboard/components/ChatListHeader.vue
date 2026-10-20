@@ -5,9 +5,9 @@ import { formatNumber } from '@chatwoot/utils';
 import wootConstants from 'dashboard/constants/globals';
 
 import ConversationBasicFilter from './widgets/conversation/ConversationBasicFilter.vue';
-import ConversationChannelFilter from './widgets/conversation/ConversationChannelFilter.vue';
 import SwitchLayout from 'dashboard/routes/dashboard/conversation/search/SwitchLayout.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import Icon from 'dashboard/components-next/icon/Icon.vue';
 
 const props = defineProps({
   pageTitle: { type: String, required: true },
@@ -17,8 +17,8 @@ const props = defineProps({
   isOnExpandedLayout: { type: Boolean, required: true },
   conversationStats: { type: Object, required: true },
   isListLoading: { type: Boolean, required: true },
-  showChannelFilter: { type: Boolean, default: false },
-  channelFilter: { type: String, default: null },
+  quickFiltersOpen: { type: Boolean, default: false },
+  quickFiltersCount: { type: Number, default: 0 },
 });
 
 const emit = defineEmits([
@@ -26,18 +26,14 @@ const emit = defineEmits([
   'deleteFolders',
   'resetFilters',
   'basicFilterChange',
-  'channelFilterChange',
   'filtersModal',
+  'toggleQuickFilters',
 ]);
 
 const { uiSettings, updateUISettings } = useUISettings();
 
 const onBasicFilterChange = (value, type) => {
   emit('basicFilterChange', value, type);
-};
-
-const onChannelFilterChange = value => {
-  emit('channelFilterChange', value);
 };
 
 const hasAppliedFiltersOrActiveFolders = computed(() => {
@@ -146,27 +142,33 @@ const toggleConversationLayout = () => {
           @click="emit('deleteFolders')"
         />
       </template>
-      <div v-else class="relative">
-        <NextButton
-          id="toggleConversationFilterButton"
-          v-tooltip.right="$t('FILTER.TOOLTIP_LABEL')"
-          icon="i-lucide-list-filter"
-          slate
-          xs
-          faded
-          @click="emit('filtersModal')"
+      <button
+        v-else
+        id="toggleConversationFilterButton"
+        type="button"
+        class="flex items-center gap-1 px-2 h-6 text-xs border rounded-lg transition-colors shrink-0"
+        :class="
+          quickFiltersOpen || quickFiltersCount
+            ? 'border-n-brand text-n-slate-12 bg-n-alpha-1'
+            : 'border-n-strong text-n-slate-11 hover:bg-n-alpha-2'
+        "
+        :aria-expanded="quickFiltersOpen"
+        @click="emit('toggleQuickFilters')"
+      >
+        <Icon icon="i-lucide-sliders-horizontal" class="size-3.5" />
+        {{ $t('CHAT_LIST.QUICK_FILTERS.BUTTON') }}
+        <span
+          v-if="quickFiltersCount"
+          class="px-1 rounded bg-n-brand text-white text-xxs leading-4"
+        >
+          {{ quickFiltersCount }}
+        </span>
+        <Icon
+          icon="i-lucide-chevron-down"
+          class="size-3 transition-transform"
+          :class="{ 'rotate-180': quickFiltersOpen }"
         />
-        <div
-          id="conversationFilterTeleportTarget"
-          class="absolute z-50 mt-2"
-          :class="{ 'ltr:right-0 rtl:left-0': isOnExpandedLayout }"
-        />
-      </div>
-      <ConversationChannelFilter
-        v-if="showChannelFilter && !hasAppliedFiltersOrActiveFolders"
-        :model-value="channelFilter"
-        @update:model-value="onChannelFilterChange"
-      />
+      </button>
       <ConversationBasicFilter
         v-if="!hasAppliedFiltersOrActiveFolders"
         :is-on-expanded-layout="isOnExpandedLayout"

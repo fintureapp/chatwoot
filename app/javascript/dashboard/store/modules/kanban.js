@@ -8,6 +8,11 @@ import {
 
 const nowInSeconds = () => Math.round(Date.now() / 1000);
 
+// Busca/filtro ativos do Histórico por caixa e contador anti-resposta-velha
+// (ver fetchHistory).
+const lastHistoryFilters = {};
+let historyRequestSeq = 0;
+
 export const state = {
   records: [],
   selectedInboxIds: [],
@@ -235,17 +240,30 @@ export const actions = {
     commit('REMOVE_RECORD', conversationId);
   },
 
-  async fetchHistory({ commit }, { inboxId }) {
+  // `filters` ({ query, outcome }) ficam lembrados por caixa, para que o reabrir
+  // recarregue o Histórico com a mesma busca. Só a resposta da última chamada
+  // é aplicada (digitação rápida dispara buscas fora de ordem).
+  async fetchHistory({ commit }, { inboxId, filters }) {
     if (!inboxId) return;
+    if (filters) lastHistoryFilters[inboxId] = filters;
+    historyRequestSeq += 1;
+    const seq = historyRequestSeq;
     commit('SET_HISTORY_UI_FLAG', { isFetching: true, hasError: false });
     try {
-      const response = await FintureCrmApi.getHistory(inboxId);
+      const response = await FintureCrmApi.getHistory(
+        inboxId,
+        lastHistoryFilters[inboxId]
+      );
+      if (seq !== historyRequestSeq) return;
       commit('SET_HISTORY', { inboxId, history: response.data?.payload ?? [] });
     } catch (error) {
+      if (seq !== historyRequestSeq) return;
       commit('SET_HISTORY_UI_FLAG', { hasError: true });
       throw error;
     } finally {
-      commit('SET_HISTORY_UI_FLAG', { isFetching: false });
+      if (seq === historyRequestSeq) {
+        commit('SET_HISTORY_UI_FLAG', { isFetching: false });
+      }
     }
   },
 

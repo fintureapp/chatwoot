@@ -150,6 +150,24 @@
     "SHOW_QUOTED_TEXT": "Show Quoted Text",
     "MESSAGE_READ": "Read",
     "SENDING": "Sending",
-    "UNREAD_COUNT_OVERFLOW": "9+"
+    "UNREAD_COUNT_OVERFLOW": "9+",
+    "QUICK_FILTERS": {
+      "BUTTON": "Filters",
+      "TYPE": "Type",
+      "TYPE_WHATSAPP": "WhatsApp",
+      "TYPE_EMAIL": "Email",
+      "TYPE_OTHER": "Other channels",
+      "INBOX": "Inbox",
+      "STAGE": "Kanban column",
+      "STATUS": "Status",
+      "PRIORITY": "Priority",
+      "LABEL": "Label",
+      "TEAM": "Team",
+      "AGENT": "Agent",
+      "STAGE_NEEDS_INBOX": "Choose an inbox first",
+      "NO_OPTIONS": "No options",
+      "SEARCH": "Search...",
+      "CLEAR": "Clear"
+    }
   }
 }

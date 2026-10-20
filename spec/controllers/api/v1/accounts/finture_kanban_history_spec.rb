@@ -23,6 +23,31 @@ RSpec.describe 'Kanban SDR history API', type: :request do
       ids = response.parsed_body['payload'].map { |c| c['id'] }
       expect(ids).to eq([won.display_id])
     end
+
+    it 'filters by outcome' do
+      create(:conversation, account: account, inbox: inbox,
+                            custom_attributes: { 'sdr_outcome' => 'won', 'sdr_outcome_at' => Time.now.to_i })
+      lost = create(:conversation, account: account, inbox: inbox,
+                                   custom_attributes: { 'sdr_outcome' => 'lost', 'sdr_outcome_at' => Time.now.to_i })
+
+      get url, params: { inbox_id: inbox.id, outcome: 'lost' }, headers: agent.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['payload'].map { |c| c['id'] }).to eq([lost.display_id])
+    end
+
+    it 'searches by contact name or phone digits' do
+      ravero = create(:contact, account: account, name: 'Ravero Consultoria Empresarial', phone_number: '+5511913307958')
+      other = create(:contact, account: account, name: 'Outro Cliente', phone_number: '+5521900000000')
+      closed = { 'sdr_outcome' => 'won', 'sdr_outcome_at' => Time.now.to_i }
+      match = create(:conversation, account: account, inbox: inbox, contact: ravero, custom_attributes: closed)
+      create(:conversation, account: account, inbox: inbox, contact: other, custom_attributes: closed)
+
+      ['ravero consult', '(11) 91330'].each do |query|
+        get url, params: { inbox_id: inbox.id, q: query }, headers: agent.create_new_auth_token, as: :json
+
+        expect(response.parsed_body['payload'].map { |c| c['id'] }).to eq([match.display_id])
+      end
+    end
   end
 
   context 'when the inbox is operational' do

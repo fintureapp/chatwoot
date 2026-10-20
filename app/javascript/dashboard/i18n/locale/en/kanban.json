@@ -1,6 +1,6 @@
 {
   "KANBAN": {
-    "HEADER_TITLE": "Kanban SDR AI",
+    "HEADER_TITLE": "Acompanhamento",
     "TABS": {
       "BOARD": "Board",
       "DASHBOARD": "Dashboard SDR",
@@ -41,19 +41,35 @@
       "REOPEN": "Reabrir"
     },
     "HISTORY": {
-      "COUNT": "{count} lead(s) fechado(s)",
-      "COUNT_OP": "{count} demanda(s) resolvida(s)",
+      "COUNT_GROUPED": "{contacts} cliente(s) · {count} lead(s) fechado(s)",
+      "COUNT_GROUPED_OP": "{contacts} cliente(s) · {count} demanda(s) resolvida(s)",
       "REFRESH": "Atualizar",
+      "SEARCH_PLACEHOLDER": "Buscar por nome, telefone ou e-mail",
+      "FILTER_ALL": "Todos",
+      "FILTER_WON": "Ganhos",
+      "FILTER_LOST": "Perdidos",
+      "ATTENDANCES": "{count} atendimentos",
       "EMPTY_TITLE": "Nenhum lead fechado",
       "EMPTY_SUBTITLE": "Leads marcados como ganho ou perdido aparecem aqui — com valor, motivo e data.",
       "EMPTY_TITLE_OP": "Nenhuma demanda resolvida",
       "EMPTY_SUBTITLE_OP": "Demandas resolvidas aparecem aqui, com o resumo do atendimento gerado automaticamente.",
-      "COL_LEAD": "Lead",
-      "COL_OUTCOME": "Desfecho",
-      "COL_VALUE": "Valor",
-      "COL_REASON": "Motivo",
-      "COL_DATE": "Fechado em",
-      "SUMMARY_PENDING": "Resumo em processamento…"
+      "EMPTY_SEARCH_TITLE": "Nada encontrado",
+      "EMPTY_SEARCH_SUBTITLE": "Nenhum cliente corresponde à busca ou ao filtro. Ajuste ou limpe a busca.",
+      "SUMMARY_PENDING": "Resumo em processamento…",
+      "SUMMARY_MISSING": "Sem resumo para este atendimento",
+      "SUMMARY_OPEN": "Atendimento em andamento",
+      "TIMELINE": {
+        "CLIENT_SUMMARY": "Resumo geral do cliente",
+        "COUNT": "{count} conversa(s) · {closed} fechada(s)",
+        "OPENED_AT": "Aberta em {date}",
+        "CLOSED_AT": "fechada em {date}",
+        "LOST_REASON": "Motivo: {reason}",
+        "RESOLVED": "Resolvida",
+        "OPEN": "Em aberto",
+        "OPEN_CONVERSATION": "Abrir conversa",
+        "CLOSE": "Fechar",
+        "ERROR": "Não foi possível carregar o histórico deste cliente."
+      }
     },
     "DASHBOARD": {
       "ALL_INBOXES": "Visão geral (todas as caixas)",

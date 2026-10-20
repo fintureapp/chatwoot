@@ -83,6 +83,9 @@ const getValueFromConversation = (conversation, attributeKey) => {
       return conversation.inbox_id;
     case 'team_id':
       return conversation.meta?.team?.id;
+    case 'sdr_stage':
+      // Coluna do Kanban: sem etapa = '' (mesma regra do back).
+      return conversation.custom_attributes?.sdr_stage || '';
     case 'browser_language':
     case 'referer':
       return conversation.additional_attributes?.[attributeKey];

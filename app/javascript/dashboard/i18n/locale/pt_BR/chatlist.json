@@ -147,6 +147,24 @@
     "SHOW_QUOTED_TEXT": "Mostrar Texto Citado",
     "MESSAGE_READ": "Lida",
     "SENDING": "Enviando",
-    "UNREAD_COUNT_OVERFLOW": "9+"
+    "UNREAD_COUNT_OVERFLOW": "9+",
+    "QUICK_FILTERS": {
+      "BUTTON": "Filtros",
+      "TYPE": "Tipo",
+      "TYPE_WHATSAPP": "WhatsApp",
+      "TYPE_EMAIL": "E-mail",
+      "TYPE_OTHER": "Outros canais",
+      "INBOX": "Caixa",
+      "STAGE": "Coluna do Kanban",
+      "STATUS": "Status",
+      "PRIORITY": "Prioridade",
+      "LABEL": "Etiqueta",
+      "TEAM": "Time",
+      "AGENT": "Agente",
+      "STAGE_NEEDS_INBOX": "Escolha uma caixa antes",
+      "NO_OPTIONS": "Nenhuma opção",
+      "SEARCH": "Buscar...",
+      "CLEAR": "Limpar"
+    }
   }
 }
