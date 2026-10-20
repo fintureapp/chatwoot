@@ -155,6 +155,19 @@ const isActive = computed(() => {
 // nested correctly, so we need to check the active state ourselves
 // TODO: Audit the routes and fix the nesting and remove this
 const activeChild = computed(() => {
+  // Itens com o mesmo caminho que diferem só pela query (ex.: Conversas
+  // ?tipo=whatsapp) ganham do item sem query.
+  const queryMatch = navigableChildren.value.find(child => {
+    const query = child.to?.query || {};
+    const keys = Object.keys(query);
+    return (
+      keys.length > 0 &&
+      route.path === resolvePath(child.to) &&
+      keys.every(key => String(route.query[key]) === String(query[key]))
+    );
+  });
+  if (queryMatch) return queryMatch;
+
   const pathSame = navigableChildren.value.find(
     child => child.to && route.path === resolvePath(child.to)
   );

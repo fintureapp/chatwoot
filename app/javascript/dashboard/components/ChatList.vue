@@ -17,6 +17,7 @@ import DeleteCustomViews from 'dashboard/routes/dashboard/customviews/DeleteCust
 import ConversationBulkActions from './widgets/conversation/conversationBulkActions/Index.vue';
 import TeleportWithDirection from 'dashboard/components-next/TeleportWithDirection.vue';
 import ConversationResolveAttributesModal from 'dashboard/components-next/ConversationWorkflow/ConversationResolveAttributesModal.vue';
+import ConversationQuickFilters from './widgets/conversation/ConversationQuickFilters.vue';
 
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useAccount } from 'dashboard/composables/useAccount';
@@ -53,7 +54,12 @@ import {
 import { matchesFilters } from '../store/modules/conversations/helpers/filterHelpers';
 import { CONVERSATION_EVENTS } from '../helper/AnalyticsHelper/events';
 import { ASSIGNEE_TYPE_TAB_PERMISSIONS } from 'dashboard/constants/permissions.js';
-import { getInboxIdsForChannelGroup } from 'dashboard/helper/channelGroupHelper';
+import {
+  buildQuickFilterConditions,
+  countQuickFilters,
+  emptyQuickFilters,
+  inboxesForTipos,
+} from 'dashboard/helper/quickFilterHelper';
 
 const props = defineProps({
   conversationInbox: { type: [String, Number], default: 0 },
@@ -78,10 +84,11 @@ const resolveAttributesModalRef = ref(null);
 const activeAssigneeTab = ref(wootConstants.ASSIGNEE_TYPE.ME);
 const activeStatus = ref(wootConstants.STATUS_TYPE.OPEN);
 const activeSortBy = ref(wootConstants.SORT_BY_TYPE.LAST_ACTIVITY_AT_DESC);
-// null = "All". Otherwise a value from CHANNEL_GROUPS (whatsapp/email).
-// Intentionally not persisted: the toggle always starts on "All".
-const activeChannelType = ref(null);
 const showAdvancedFilters = ref(false);
+// Barra "Filtros" (Tipo, Caixa, Coluna do Kanban, Status, Prioridade,
+// Etiqueta, Time, Agente). O tipo pode vir da sidebar via ?tipo=whatsapp|email|other.
+const showQuickFilters = ref(false);
+const quickFilters = ref(emptyQuickFilters());
 // chatsOnView is to store the chats that are currently visible on the screen,
 // which mirrors the conversationList.
 const chatsOnView = ref([]);
@@ -253,33 +260,14 @@ const conversationListPagination = computed(() => {
 });
 
 // Map of inbox_id -> channel group, manually classified by an admin and stored
-// on the account. Drives the WhatsApp/Email/All toggle grouping.
+// on the account. Drives the "Tipo" filter (WhatsApp / E-mail / Outros).
 const channelGroupsMap = computed(
   () => currentAccount.value?.custom_attributes?.channel_groups || {}
 );
 
-// The toggle only makes sense on the general conversation views. Inside a
-// specific inbox the channel is already fixed, so we hide it.
-const showChannelFilter = computed(() => !props.conversationInbox);
-
-// Inbox ids belonging to the selected channel group. `undefined` means "All"
-// (no channel filtering). An empty group falls back to a sentinel id so the
-// list correctly shows nothing instead of everything.
-const channelInboxIds = computed(() => {
-  if (!activeChannelType.value || props.conversationInbox) return undefined;
-  const ids =
-    getInboxIdsForChannelGroup(
-      inboxesList.value,
-      channelGroupsMap.value,
-      activeChannelType.value
-    ) || [];
-  return ids.length ? ids : [0];
-});
-
 const conversationFilters = computed(() => {
   return {
     inboxId: props.conversationInbox ? props.conversationInbox : undefined,
-    channelInboxIds: channelInboxIds.value,
     assigneeType: activeAssigneeTab.value,
     status: activeStatus.value,
     sortBy: activeSortBy.value,
@@ -605,6 +593,7 @@ function fetchConversations() {
 
 function resetAndFetchData() {
   appliedFilter.value = [];
+  quickFilters.value = emptyQuickFilters();
   resetBulkActions();
   store.dispatch('conversationPage/reset');
   store.dispatch('emptyAllConversations');
@@ -654,15 +643,75 @@ function onBasicFilterChange(value, type) {
   resetAndFetchData();
 }
 
-function onChannelFilterChange(value) {
-  if (activeChannelType.value === value) return;
-  resetBulkActions();
-  emitter.emit('clearSearchInput');
-  activeChannelType.value = value;
-  resetAndFetchData();
-  // Refresh the assignee tab counts (Mine / Unassigned / All) for the channel.
-  store.dispatch('conversationStats/get', conversationFilters.value);
+const quickFiltersCount = computed(() => countQuickFilters(quickFilters.value));
+
+function onToggleQuickFilters() {
+  if (!showQuickFilters.value && !countQuickFilters(quickFilters.value)) {
+    // Abre já refletindo a visão atual (status da lista e caixa/etiqueta/time da rota).
+    quickFilters.value = {
+      ...emptyQuickFilters(),
+      status:
+        activeStatus.value === wootConstants.STATUS_TYPE.ALL
+          ? []
+          : [activeStatus.value],
+      inbox: props.conversationInbox ? [Number(props.conversationInbox)] : [],
+      label: props.label ? [props.label] : [],
+      team: props.teamId ? [Number(props.teamId)] : [],
+    };
+  }
+  showQuickFilters.value = !showQuickFilters.value;
 }
+
+function onQuickFiltersChange(filters) {
+  // Tipo diferente do atalho da sidebar: tira o ?tipo da URL (e o destaque).
+  const routeTipo = route.query.tipo;
+  if (
+    routeTipo &&
+    (filters.tipo.length !== 1 || filters.tipo[0] !== routeTipo)
+  ) {
+    router.replace({ query: { ...route.query, tipo: undefined } });
+  }
+  const conditions = buildQuickFilterConditions(filters, {
+    stagesByInbox: store.state.kanban?.stagesByInbox || {},
+    tipoInboxIds: inboxesForTipos(
+      filters.tipo,
+      inboxesList.value,
+      channelGroupsMap.value
+    ).map(item => item.id),
+  });
+  if (!conditions.length) {
+    resetAndFetchData();
+    return;
+  }
+  store.dispatch(
+    'setConversationFilters',
+    JSON.parse(JSON.stringify(conditions))
+  );
+  onApplyFilter(conditions);
+}
+
+// Atalho da sidebar (WhatsApp / E-mail / Outros): abre a barra já com o Tipo.
+function applyTipoFromRoute() {
+  const tipo = route.query.tipo;
+  if (!tipo || props.foldersId) return;
+  quickFilters.value = {
+    ...emptyQuickFilters(),
+    tipo: [tipo],
+    status:
+      activeStatus.value === wootConstants.STATUS_TYPE.ALL
+        ? []
+        : [activeStatus.value],
+  };
+  showQuickFilters.value = true;
+  onQuickFiltersChange(quickFilters.value);
+}
+
+watch(
+  () => route.query.tipo,
+  tipo => {
+    if (tipo) applyTipoFromRoute();
+  }
+);
 
 function openLastSavedItemInFolder() {
   const lastItemOfFolder = folders.value[folders.value.length - 1];
@@ -852,6 +901,7 @@ onMounted(() => {
   store.dispatch('setChatStatusFilter', activeStatus.value);
   store.dispatch('setChatSortFilter', activeSortBy.value);
   resetAndFetchData();
+  applyTipoFromRoute();
   if (hasActiveFolders.value) {
     store.dispatch('campaigns/get');
   }
@@ -940,14 +990,22 @@ watch(conversationFilters, (newVal, oldVal) => {
       :is-on-expanded-layout="isOnExpandedLayout"
       :conversation-stats="conversationStats"
       :is-list-loading="chatListLoading && !conversationList.length"
-      :show-channel-filter="showChannelFilter"
-      :channel-filter="activeChannelType"
+      :quick-filters-open="showQuickFilters"
+      :quick-filters-count="quickFiltersCount"
       @add-folders="onClickOpenAddFoldersModal"
       @delete-folders="onClickOpenDeleteFoldersModal"
       @filters-modal="onToggleAdvanceFiltersModal"
       @reset-filters="resetAndFetchData"
       @basic-filter-change="onBasicFilterChange"
-      @channel-filter-change="onChannelFilterChange"
+      @toggle-quick-filters="onToggleQuickFilters"
+    />
+
+    <ConversationQuickFilters
+      v-if="showQuickFilters && !hasActiveFolders"
+      v-model="quickFilters"
+      :inboxes="inboxesList"
+      :channel-groups-map="channelGroupsMap"
+      @change="onQuickFiltersChange"
     />
 
     <TeleportWithDirection

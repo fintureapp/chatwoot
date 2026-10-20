@@ -277,17 +277,35 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
     # Histórico: leads fechados, do mais recente ao mais antigo. Comercial fecha
     # por desfecho (sdr_outcome); operacional fecha ao resolver (status resolved),
     # com o resumo da demanda em custom_attributes.sdr_resumo (gerado pelo n8n).
+    # Filtros opcionais: `q` (nome, e-mail ou telefone do contato) e, só no
+    # comercial, `outcome` (won/lost).
+    scope = kanban_history_search(kanban_scope)
     if kanban_operational?
-      return kanban_scope
+      return scope
              .where(status: :resolved)
              .order(last_activity_at: :desc)
              .limit(KANBAN_RESULTS_CAP)
     end
 
-    kanban_scope
+    outcome = params[:outcome].presence_in(%w[won lost])
+    scope = scope.where("conversations.custom_attributes ->> 'sdr_outcome' = ?", outcome) if outcome
+    scope
       .where("conversations.custom_attributes ->> 'sdr_outcome' IS NOT NULL")
       .order(Arel.sql("(conversations.custom_attributes ->> 'sdr_outcome_at')::bigint DESC NULLS LAST"))
       .limit(KANBAN_RESULTS_CAP)
+  end
+
+  # Busca do Histórico por contato. Telefone casa pelos dígitos digitados, então
+  # "(11) 91330" acha "+5511913307958".
+  def kanban_history_search(scope)
+    query = params[:q].to_s.strip
+    return scope if query.blank?
+
+    term = "%#{ActiveRecord::Base.sanitize_sql_like(query)}%"
+    digits = query.gsub(/\D/, '')
+    conditions = ['contacts.name ILIKE :term', 'contacts.email ILIKE :term']
+    conditions << 'contacts.phone_number LIKE :digits' if digits.length >= 3
+    scope.joins(:contact).where(conditions.join(' OR '), term: term, digits: "%#{digits}%")
   end
 
   # Board/histórico operam sobre UMA caixa; considera operacional quando toda

@@ -1,5 +1,9 @@
 class Conversations::FilterService < FilterService
   ATTRIBUTE_MODEL = 'conversation_attribute'.freeze
+  # Coluna do Kanban SDR (custom_attributes.sdr_stage). Não é um custom attribute
+  # definido na conta, então é tratada aqui. Conversa sem etapa = '' (o front
+  # inclui '' ao filtrar pela 1ª coluna da caixa, onde esses cards aparecem).
+  KANBAN_STAGE_KEY = 'sdr_stage'.freeze
 
   def initialize(params, user, account)
     @account = account
@@ -33,6 +37,14 @@ class Conversations::FilterService < FilterService
       @user,
       @account
     ).perform
+  end
+
+  def build_condition_query_string(current_filter, query_hash, current_index)
+    return super unless query_hash['attribute_key'] == KANBAN_STAGE_KEY
+
+    filter_operator_value = filter_operation(query_hash, current_index)
+    "COALESCE(conversations.custom_attributes ->> '#{KANBAN_STAGE_KEY}', '') " \
+      "#{filter_operator_value} #{query_hash[:query_operator]}"
   end
 
   def current_page

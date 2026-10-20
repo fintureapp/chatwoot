@@ -105,10 +105,23 @@ class FintureCrmApi extends ApiClient {
   }
 
   // ---- Histórico (leads fechados) de uma caixa ------------------------------
-  getHistory(inboxId) {
+  // `query` busca por nome/e-mail/telefone do contato; `outcome` (won/lost) só
+  // vale no comercial.
+  getHistory(inboxId, { query = '', outcome = '' } = {}) {
     return axios.get(`${this.url}/kanban_history`, {
-      params: { inbox_id: inboxId },
+      params: {
+        inbox_id: inboxId,
+        q: query || undefined,
+        outcome: outcome || undefined,
+      },
     });
+  }
+
+  // ---- Linha do tempo de um contato (todas as conversas + resumos) ----------
+  getContactTimeline(contactId) {
+    return axios.get(
+      `${this.baseUrl()}/contacts/${contactId}/finture_timeline`
+    );
   }
 
   // ---- Dashboard SDR (métricas do funil por caixa ou geral) -----------------

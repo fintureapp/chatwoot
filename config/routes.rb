@@ -221,6 +221,7 @@ Rails.application.routes.draw do
               resources :labels, only: [:create, :index]
               resources :notes
               get :attachments, to: 'attachments#index'
+              get :finture_timeline, to: 'finture_timelines#show'
               post :call, on: :member, to: 'calls#create' if ChatwootApp.enterprise?
             end
           end
