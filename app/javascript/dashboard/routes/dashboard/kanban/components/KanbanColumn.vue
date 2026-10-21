@@ -25,6 +25,10 @@ const props = defineProps({
     type: String,
     default: 'comercial',
   },
+  highlightedId: {
+    type: [Number, String],
+    default: null,
+  },
 });
 
 const emit = defineEmits([
@@ -86,6 +90,7 @@ const inboxNameFor = card => props.inboxNames[card.inbox_id] || '';
             :conversation="element"
             :inbox-name="inboxNameFor(element)"
             :kanban-type="kanbanType"
+            :is-highlighted="element.id === highlightedId"
             @open="emit('open', $event)"
             @won="emit('won', $event)"
             @lost="emit('lost', $event)"

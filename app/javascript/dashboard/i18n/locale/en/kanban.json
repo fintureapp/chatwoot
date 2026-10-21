@@ -198,10 +198,12 @@
         "VOLUME_DESC": "Maior volume"
       }
     },
-    "CSV": {
-      "EXPORT": "Exportar CSV",
-      "EXPORT_FILTERED": "Exportar filtradas",
-      "EXPORT_ALL": "Exportar todas"
+    "EXPORT": {
+      "BUTTON": "Exportar Excel",
+      "SCOPE_ALL": "Exporta tudo o que esta caixa mostra nesta aba, uma linha por contato (todas as páginas, não só as carregadas).",
+      "SCOPE_FILTERED": "Exporta só o que passa pela busca e filtros atuais, uma linha por contato (todas as páginas, não só as carregadas).",
+      "DONE": "Planilha gerada. Uma linha por contato; demandas extras do mesmo contato ficam em \"Qtd. de demandas\".",
+      "ERROR": "Não foi possível exportar. Tente novamente."
     },
     "DRAWER": {
       "CLOSE": "Fechar",

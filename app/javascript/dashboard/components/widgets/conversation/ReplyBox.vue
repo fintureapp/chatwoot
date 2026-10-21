@@ -28,6 +28,7 @@ import {
   getUndefinedVariablesInMessage,
 } from '@chatwoot/utils';
 import WhatsappTemplates from './WhatsappTemplates/Modal.vue';
+import ScheduleMessageDialog from './ScheduleMessageDialog.vue';
 import ContentTemplates from './ContentTemplates/ContentTemplatesModal.vue';
 import { MESSAGE_MAX_LENGTH } from 'shared/helpers/MessageTypeHelper';
 import inboxMixin, { INBOX_FEATURES } from 'shared/mixins/inboxMixin';
@@ -70,6 +71,7 @@ export default {
     EmojiIconPicker,
     MessageSignatureMissingAlert,
     ReplyBottomPanel,
+    ScheduleMessageDialog,
     ReplyEmailHead,
     ReplyToMessage,
     ReplyTopPanel,
@@ -945,6 +947,16 @@ export default {
     executeCopilotAction(action, data) {
       this.copilot.execute(action, data);
     },
+    // Finture: agendar o texto atual do editor (sem anexos) para envio futuro.
+    openScheduleDialog() {
+      if (this.isReplyButtonDisabled || this.isPrivate) return;
+      const { message } = this.getMessagePayload(this.message);
+      this.$refs.scheduleDialog?.open({ message });
+    },
+    onMessageScheduled() {
+      this.clearMessage();
+      this.removeFromDraft();
+    },
     clearMessage() {
       this.message = '';
       this.clearCopilotAcceptedMessage();
@@ -1418,6 +1430,7 @@ export default {
         :recording-audio-duration-text="recordingAudioDurationText"
         :recording-audio-state="recordingAudioState"
         :send-button-text="replyButtonLabel"
+        :show-schedule="!isPrivate && !isEditorDisabled"
         :show-audio-recorder="showAudioRecorder"
         :show-emoji-picker="showEmojiPicker"
         :show-file-upload="showFileUpload"
@@ -1433,8 +1446,16 @@ export default {
         @select-content-template="openContentTemplateModal"
         @toggle-insert-article="toggleInsertArticle"
         @toggle-quoted-reply="toggleQuotedReply"
+        @schedule="openScheduleDialog"
       />
     </Transition>
+
+    <ScheduleMessageDialog
+      v-if="currentChat.id"
+      ref="scheduleDialog"
+      :conversation-id="currentChat.id"
+      @scheduled="onMessageScheduled"
+    />
 
     <WhatsappTemplates
       :inbox-id="inbox.id"

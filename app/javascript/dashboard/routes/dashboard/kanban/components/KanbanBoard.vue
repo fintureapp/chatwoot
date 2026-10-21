@@ -1,9 +1,10 @@
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, inject, nextTick, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import { resolveStage } from 'dashboard/routes/dashboard/kanban/config/stages';
+import { KANBAN_VIEW_STATE_KEY } from 'dashboard/routes/dashboard/kanban/composables/useKanbanViewState';
 
 import KanbanColumn from './KanbanColumn.vue';
 import KanbanCardDrawer from './KanbanCardDrawer.vue';
@@ -73,6 +74,47 @@ const columnsSignature = computed(
 );
 watch(columnsSignature, rebuildColumns, { immediate: true });
 
+// ---- Posição de rolagem / card âncora -------------------------------------
+// A página persiste o estado de trabalho (por conta + usuário). Aqui salvamos a
+// rolagem horizontal do board e, ao montar com cards, restauramos a posição e
+// levamos a tela até o card clicado antes de abrir a conversa (destacado por
+// alguns segundos). Card que sumiu (resolvido, movido, sem permissão) só
+// mantém a rolagem salva — sem erro nem salto arbitrário.
+const viewState = inject(KANBAN_VIEW_STATE_KEY, null);
+const scrollerRef = ref(null);
+const highlightedId = ref(null);
+let highlightTimer = null;
+let restored = false;
+
+const onScroll = () => {
+  if (!viewState || !scrollerRef.value) return;
+  viewState.state.scroll.boardLeft = scrollerRef.value.scrollLeft;
+};
+
+const restorePosition = async () => {
+  if (restored || !viewState || !props.records.length) return;
+  restored = true;
+  await nextTick();
+  const scroller = scrollerRef.value;
+  if (scroller) scroller.scrollLeft = viewState.state.scroll.boardLeft || 0;
+
+  const anchorId = viewState.consumeAnchor('card');
+  if (!anchorId) return;
+  const element = scroller?.querySelector(`[data-kanban-card="${anchorId}"]`);
+  if (!element) return;
+  element.scrollIntoView({ block: 'center', inline: 'nearest' });
+  highlightedId.value = anchorId;
+  highlightTimer = setTimeout(() => {
+    highlightedId.value = null;
+  }, 2500);
+};
+
+watch(() => props.records.length, restorePosition, { immediate: true });
+
+onBeforeUnmount(() => {
+  if (highlightTimer) clearTimeout(highlightTimer);
+});
+
 const persistStage = async (conversation, stage) => {
   try {
     await store.dispatch('kanban/changeStage', {
@@ -131,7 +173,11 @@ const openDrawer = ({ conversation, intent }) => {
 
 <template>
   <div class="flex flex-col min-h-0">
-    <div class="flex flex-1 gap-3 px-3 py-3 overflow-x-auto min-h-0">
+    <div
+      ref="scrollerRef"
+      class="flex flex-1 gap-3 px-3 py-3 overflow-x-auto min-h-0"
+      @scroll.passive="onScroll"
+    >
       <KanbanColumn
         v-for="column in localColumns"
         :key="column.stage.value"
@@ -140,6 +186,7 @@ const openDrawer = ({ conversation, intent }) => {
         :inbox-names="inboxNames"
         :kanban-type="kanbanType"
         :is-dragging="isDragging"
+        :highlighted-id="highlightedId"
         @change="handleChange(column.stage.value, $event)"
         @drag-start="isDragging = true"
         @drag-end="isDragging = false"

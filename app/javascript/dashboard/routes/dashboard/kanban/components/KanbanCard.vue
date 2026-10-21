@@ -1,9 +1,10 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, inject } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useToggle } from '@vueuse/core';
 import { useRoute, useRouter } from 'vue-router';
 import { frontendURL, conversationUrl } from 'dashboard/helper/URLHelper';
+import { KANBAN_VIEW_STATE_KEY } from 'dashboard/routes/dashboard/kanban/composables/useKanbanViewState';
 import {
   visibleCardFields,
   resolveFieldValue,
@@ -35,6 +36,11 @@ const props = defineProps({
     type: String,
     default: 'comercial',
   },
+  // Card ancora ao voltar de uma conversa: destaque temporario.
+  isHighlighted: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(['open', 'won', 'lost']);
@@ -42,6 +48,9 @@ const emit = defineEmits(['open', 'won', 'lost']);
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
+// Estado de trabalho do Kanban (pagina): guarda este card como ancora antes
+// de navegar para a conversa, para o board voltar nele.
+const viewState = inject(KANBAN_VIEW_STATE_KEY, null);
 
 const fields = visibleCardFields();
 
@@ -94,6 +103,7 @@ const open = (intent = 'detail') =>
   emit('open', { conversation: props.conversation, intent });
 
 const goToConversation = () => {
+  viewState?.rememberAnchor('card', props.conversation.id);
   const path = frontendURL(
     conversationUrl({
       accountId: route.params.accountId,
@@ -137,7 +147,13 @@ const onMenuAction = ({ action }) => {
 
 <template>
   <div
-    class="relative flex flex-col gap-2 p-3 mb-2 transition-shadow bg-n-solid-2 rounded-xl outline outline-1 -outline-offset-1 outline-n-container cursor-grab hover:shadow-md"
+    :data-kanban-card="conversation.id"
+    class="relative flex flex-col gap-2 p-3 mb-2 transition-shadow bg-n-solid-2 rounded-xl outline outline-1 -outline-offset-1 cursor-grab hover:shadow-md"
+    :class="
+      isHighlighted
+        ? 'outline-n-brand ring-2 ring-n-brand/40 shadow-md'
+        : 'outline-n-container'
+    "
     role="button"
     tabindex="0"
     @click="open('detail')"

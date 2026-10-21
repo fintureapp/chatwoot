@@ -34,6 +34,40 @@ Campos de negócio já usados no card: `valor_potencial` (volume), `produto_inte
   (substitui o hash inteiro — o store faz merge).
 - **Notas:** mensagens privadas (`POST conversations/:id/messages` com `private: true`).
 
+## Estado de trabalho preservado (voltar da conversa)
+
+`composables/useKanbanViewState.js` guarda em `localStorage`, por **conta + usuário**
+(`finture:kanban-view:<accountId>:<userId>`): caixa, aba, busca, filtros, ordenação,
+busca/desfecho do histórico, rolagem horizontal do board, rolagem do histórico e o
+registro **âncora** (card ou contato clicado antes de abrir a conversa).
+
+- A página instancia a composable e a oferece via `provide(KANBAN_VIEW_STATE_KEY)`;
+  card, drawer, histórico e `ContactProfileDialog` só chamam `rememberAnchor`.
+- Ao voltar (botão do navegador ou menu), board/histórico restauram a rolagem e levam a
+  tela até a âncora, destacando-a por ~2,5 s. Âncora que sumiu (resolvida, movida, sem
+  permissão) só mantém a rolagem — sem erro nem salto.
+- Troca de caixa zera rolagem e âncora. "Limpar filtros" zera filtros, ordenação e busca
+  do histórico (mantém caixa e aba). Chave por usuário impede reaproveitar estado de outra
+  conta/sessão.
+
+## Exportação Excel (servidor)
+
+`GET conversations/kanban_export` (`Finture::KanbanExportService` + `KanbanExportStyles`,
+gem `caxlsx`) gera um .xlsx no padrão visual dos relatórios de Saúde: aba **Principal**
+(logo, título com filete laranja e blocos label/valor com faixa preta: resumo do recorte,
+filtros aplicados, como ler) e aba **Contatos** (cabeçalho preto, zebra bege, desfecho
+colorido, filtro automático, cabeçalho congelado, datas e moeda nativas) sobre o conjunto
+filtrado **completo** (sem o cap de 1000), com o mesmo escopo/permissão do board. Cuidado:
+o caxlsx não escapa aspas em `format_code` — usar só códigos sem aspas (ex.: `[$R$-416]`),
+senão o Excel abre com "reparo". Parâmetros:
+`inbox_id`, `scope` (board|history) e os filtros ativos (`q`, `product`, `stage`,
+`assignee_id`, `created_from`, `created_to`, `outcome`). Botão `KanbanExportMenu` no board e
+no histórico.
+
+- **Uma linha por contato**, deduplicado por id do contato → telefone (dígitos) → e-mail.
+  Contexto da demanda mais recente + "Qtd. de demandas" e "IDs das demandas".
+- Logo: `public/brand-assets/logo.png` (PNG extraído do `logo.svg` oficial).
+
 ## Backend (fork — aditivo, sem migração)
 
 - Rota: `get :kanban` (collection) em `config/routes.rb`.
@@ -52,7 +86,8 @@ Rollback do endpoint = apagar rota+ação+view (nenhum schema tocado).
   Mudanças de status/assignee/label existem apenas como texto nas activity messages.
 - **Permissões:** herdadas de `ConversationPolicy#show?`. No community **não há** permissão
   separada de "editar atributos": quem enxerga a conversa pode mover/editar/notar.
-- **Board cap:** 1000 cards por carga; acima disso é preciso paginação/virtualização.
+- **Board cap:** 1000 cards por carga; acima disso é preciso paginação/virtualização
+  (a exportação não tem esse limite).
 
 ## Passo de dados recomendado (opcional)
 

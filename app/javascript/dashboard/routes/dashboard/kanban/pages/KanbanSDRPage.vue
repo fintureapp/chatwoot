@@ -1,15 +1,20 @@
 <script setup>
-import { computed, reactive, ref, onMounted } from 'vue';
+import { computed, ref, onMounted, provide } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { resolveStage } from 'dashboard/routes/dashboard/kanban/config/stages';
 import { groupRecordsByContact } from 'dashboard/routes/dashboard/kanban/helper/grouping';
-import { downloadKanbanCsv } from 'dashboard/routes/dashboard/kanban/helper/csv';
+import {
+  useKanbanViewState,
+  KANBAN_VIEW_STATE_KEY,
+} from 'dashboard/routes/dashboard/kanban/composables/useKanbanViewState';
+import { useKanbanExport } from 'dashboard/routes/dashboard/kanban/composables/useKanbanExport';
 
 import KanbanInboxFilter from '../components/KanbanInboxFilter.vue';
 import KanbanToolbar from '../components/KanbanToolbar.vue';
 import KanbanBoard from '../components/KanbanBoard.vue';
+import KanbanExportMenu from '../components/KanbanExportMenu.vue';
 import StageManagerDialog from '../components/StageManagerDialog.vue';
 import KanbanHistoryView from '../components/KanbanHistoryView.vue';
 import SdrDashboard from '../components/SdrDashboard.vue';
@@ -26,9 +31,21 @@ const selectedInboxIds = useMapGetter('kanban/getSelectedInboxIds');
 const uiFlags = useMapGetter('kanban/getUIFlags');
 const records = useMapGetter('kanban/getRecords');
 const currentRole = useMapGetter('getCurrentRole');
+const currentUserId = useMapGetter('getCurrentUserID');
 
 const isAdmin = computed(() => currentRole.value === 'administrator');
 const hasSelection = computed(() => selectedInboxIds.value.length > 0);
+
+// ---- Estado de trabalho persistido (por conta + usuário) -------------------
+// Caixa, aba, filtros, ordenação, busca do histórico, rolagem e card âncora
+// sobrevivem a abrir uma conversa e voltar (navegador ou menu). Os componentes
+// filhos (board, card, histórico) recebem a API via provide/inject.
+const viewState = useKanbanViewState({
+  accountId: route.params.accountId,
+  userId: currentUserId.value,
+});
+provide(KANBAN_VIEW_STATE_KEY, viewState);
+const { state: view } = viewState;
 
 // Board opera sobre UMA caixa (o funil é por caixa).
 const activeInboxId = computed(() => selectedInboxIds.value[0] ?? null);
@@ -52,9 +69,12 @@ const inboxNames = computed(() => {
 });
 
 // ---- Abas (Board / Dashboard SDR / Histórico) -----------------------------
-// Dashboard (Fase D) e Histórico (Fase C) entram nas próximas fases; por ora
-// exibem um estado "Em breve" para sinalizar o roadmap.
-const activeTab = ref('board');
+const activeTab = computed({
+  get: () => view.activeTab,
+  set: value => {
+    view.activeTab = value;
+  },
+});
 const tabs = computed(() => [
   { key: 'board', label: t('KANBAN.TABS.BOARD') },
   { key: 'dashboard', label: t('KANBAN.TABS.DASHBOARD') },
@@ -65,20 +85,12 @@ const tabs = computed(() => [
 const stageManagerRef = ref(null);
 const openStageManager = () => stageManagerRef.value?.open();
 
-// ---- Filtros / ordenação (client-side) ------------------------------------
-const defaultFilters = () => ({
-  query: '',
-  product: '',
-  stage: '',
-  assigneeId: '',
-  createdFrom: '',
-  createdTo: '',
-});
-const filters = reactive(defaultFilters());
-const sortBy = ref('last_activity_desc');
+// ---- Filtros / ordenação (client-side, persistidos) -----------------------
+const filters = computed(() => view.filters);
+const sortBy = computed(() => view.sortBy);
 
 const hasActiveFilters = computed(() =>
-  Object.values(filters).some(value => value !== '')
+  Object.values(view.filters).some(value => value !== '')
 );
 
 const products = computed(() =>
@@ -109,8 +121,8 @@ const toSeconds = (dateStr, endOfDay = false) => {
 };
 
 const matchesQuery = record => {
-  if (!filters.query) return true;
-  const needle = filters.query.toLowerCase();
+  if (!view.filters.query) return true;
+  const needle = view.filters.query.toLowerCase();
   const sender = record.meta?.sender || {};
   const haystack = [
     sender.name,
@@ -138,37 +150,26 @@ const sorters = {
 // Filtros por conversa que NÃO dependem de etapa (aplicados antes de agrupar,
 // para que o histórico do card não seja recortado pelo filtro de etapa).
 const passesBaseFilters = record => {
+  const current = view.filters;
   if (!matchesQuery(record)) return false;
   if (
-    filters.product &&
-    record.custom_attributes?.produto_interesse !== filters.product
+    current.product &&
+    record.custom_attributes?.produto_interesse !== current.product
   ) {
     return false;
   }
   if (
-    filters.assigneeId &&
-    String(record.meta?.assignee?.id) !== filters.assigneeId
+    current.assigneeId &&
+    String(record.meta?.assignee?.id) !== current.assigneeId
   ) {
     return false;
   }
-  const createdFrom = toSeconds(filters.createdFrom);
-  const createdTo = toSeconds(filters.createdTo, true);
+  const createdFrom = toSeconds(current.createdFrom);
+  const createdTo = toSeconds(current.createdTo, true);
   if (createdFrom && (record.created_at || 0) < createdFrom) return false;
   if (createdTo && (record.created_at || 0) > createdTo) return false;
   return true;
 };
-
-// Lista "crua" (1 linha por conversa) — usada só na exportação CSV, onde cada
-// atendimento deve virar uma linha. Aplica todos os filtros, inclusive etapa.
-const filteredRecords = computed(() => {
-  const slugs = stageSlugs.value;
-  return records.value
-    .filter(passesBaseFilters)
-    .filter(
-      record => !filters.stage || resolveStage(record, slugs) === filters.stage
-    )
-    .sort(sorters[sortBy.value] || sorters.last_activity_desc);
-});
 
 // Nome da etapa por slug (para rotular o histórico do card).
 const stageNameBySlug = computed(() => {
@@ -184,7 +185,7 @@ const historyDateFmt = new Intl.DateTimeFormat('pt-BR', {
   month: '2-digit',
 });
 
-// Rótulo de cada atendimento anterior: "18/08 · Ganho" / "18/08 · Reunião Marcada".
+// Rótulo de cada atendimento anterior: "18/08 - Ganho" / "18/08 - Reunião".
 const historyEntryLabel = entry => {
   const datePart = entry.at
     ? historyDateFmt.format(new Date(entry.at * 1000))
@@ -222,20 +223,18 @@ const boardRecords = computed(() => {
   ).map(decorateGroup);
   return grouped
     .filter(
-      record => !filters.stage || resolveStage(record, slugs) === filters.stage
+      record =>
+        !view.filters.stage ||
+        resolveStage(record, slugs) === view.filters.stage
     )
-    .sort(sorters[sortBy.value] || sorters.last_activity_desc);
+    .sort(sorters[view.sortBy] || sorters.last_activity_desc);
 });
 
-const clearFilters = () => {
-  Object.assign(filters, defaultFilters());
-};
+const clearFilters = () => viewState.resetFilters();
 
-// v-model manual: `filters` é reactive (não ref), então mesclamos o objeto emitido
-// em vez de reatribuir. `sortBy` é ref e pode ser atribuído direto.
-const onFiltersUpdate = value => Object.assign(filters, value);
+const onFiltersUpdate = value => Object.assign(view.filters, value);
 const onSortUpdate = value => {
-  sortBy.value = value;
+  view.sortBy = value;
 };
 
 // ---- Seleção de inbox / carregamento --------------------------------------
@@ -251,6 +250,12 @@ const parseInboxIds = raw => {
 const applySelection = (ids, { updateQuery = true } = {}) => {
   // Board por caixa: mantém no máximo uma caixa selecionada.
   const single = ids.slice(0, 1);
+  if (single[0] !== view.inboxId) {
+    // Troca de caixa = outro contexto: rolagem e âncora antigas não valem.
+    view.scroll = { boardLeft: 0, historyTop: 0 };
+    view.anchor = { kind: '', id: null, at: 0 };
+  }
+  view.inboxId = single[0] ?? null;
   store.dispatch('kanban/setSelectedInboxIds', single);
   if (updateQuery) {
     router.replace({
@@ -267,11 +272,21 @@ const applySelection = (ids, { updateQuery = true } = {}) => {
 const onSelectionUpdate = ids => applySelection(ids);
 const retry = () => store.dispatch('kanban/fetchBoard');
 
-// ---- CSV ------------------------------------------------------------------
-const exportCsv = scope => {
-  const data = scope === 'all' ? records.value : filteredRecords.value;
-  downloadKanbanCsv(data);
-};
+// ---- Exportação Excel (servidor) --------------------------------------------
+const { isExporting, exportCsv } = useKanbanExport();
+const exportBoard = () =>
+  exportCsv({
+    inboxId: activeInboxId.value,
+    scope: 'board',
+    filters: {
+      q: view.filters.query,
+      product: view.filters.product,
+      stage: view.filters.stage,
+      assignee_id: view.filters.assigneeId,
+      created_from: view.filters.createdFrom,
+      created_to: view.filters.createdTo,
+    },
+  });
 
 const skeletonColumns = 5;
 const skeletonCards = [1, 2, 3];
@@ -280,12 +295,13 @@ onMounted(async () => {
   if (!inboxes.value.length) {
     await store.dispatch('inboxes/get');
   }
-  // Board por caixa: cai na 1ª caixa quando não há uma na URL.
+  // Prioridade: caixa da URL → última caixa usada (estado salvo) → 1ª caixa.
   let ids = parseInboxIds(route.query.inbox_ids);
+  if (!ids.length && view.inboxId) ids = parseInboxIds(view.inboxId);
   if (!ids.length && inboxes.value.length) {
     ids = [inboxes.value[0].id];
   }
-  applySelection(ids, { updateQuery: false });
+  applySelection(ids, { updateQuery: !route.query.inbox_ids });
 });
 </script>
 
@@ -307,31 +323,11 @@ onMounted(async () => {
           :label="t('KANBAN.STAGE_MANAGER.MANAGE')"
           @click="openStageManager"
         />
-        <Button
+        <KanbanExportMenu
           v-if="activeTab === 'board' && hasSelection && records.length"
-          color="slate"
-          variant="outline"
-          size="sm"
-          icon="i-lucide-download"
-          :label="
-            hasActiveFilters
-              ? t('KANBAN.CSV.EXPORT_FILTERED')
-              : t('KANBAN.CSV.EXPORT')
-          "
-          @click="exportCsv('filtered')"
-        />
-        <Button
-          v-if="
-            activeTab === 'board' &&
-            hasSelection &&
-            records.length &&
-            hasActiveFilters
-          "
-          color="slate"
-          variant="ghost"
-          size="sm"
-          :label="t('KANBAN.CSV.EXPORT_ALL')"
-          @click="exportCsv('all')"
+          :has-active-filters="hasActiveFilters"
+          :is-exporting="isExporting"
+          @export="exportBoard"
         />
         <KanbanInboxFilter
           :inboxes="inboxes"
@@ -358,12 +354,6 @@ onMounted(async () => {
         @click="activeTab = tab.key"
       >
         {{ tab.label }}
-        <span
-          v-if="tab.soon"
-          class="px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-n-alpha-2 text-n-slate-10"
-        >
-          {{ t('KANBAN.TABS.SOON') }}
-        </span>
       </button>
     </nav>
 

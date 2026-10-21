@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_09_29_130000) do
+ActiveRecord::Schema[7.1].define(version: 2026_10_21_120000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -900,6 +900,26 @@ ActiveRecord::Schema[7.1].define(version: 2026_09_29_130000) do
     t.index ["conversation_id"], name: "index_finture_quotes_on_conversation_id", unique: true
   end
 
+  create_table "finture_scheduled_messages", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "inbox_id", null: false
+    t.bigint "user_id"
+    t.text "content", null: false
+    t.datetime "scheduled_at", null: false
+    t.string "status", default: "pending", null: false
+    t.boolean "cancel_on_reply", default: true, null: false
+    t.datetime "processing_at"
+    t.datetime "sent_at"
+    t.bigint "message_id"
+    t.string "cancel_reason"
+    t.text "error_message"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["conversation_id", "scheduled_at"], name: "index_finture_scheduled_messages_on_conv_scheduled"
+    t.index ["status", "scheduled_at"], name: "index_finture_scheduled_messages_on_status_scheduled"
+  end
+
   create_table "finture_stage_transitions", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "conversation_id", null: false
@@ -1428,6 +1448,11 @@ ActiveRecord::Schema[7.1].define(version: 2026_09_29_130000) do
   add_foreign_key "finture_pipeline_stages", "inboxes", on_delete: :cascade
   add_foreign_key "finture_quotes", "accounts", on_delete: :cascade
   add_foreign_key "finture_quotes", "conversations", on_delete: :cascade
+  add_foreign_key "finture_scheduled_messages", "accounts", on_delete: :cascade
+  add_foreign_key "finture_scheduled_messages", "conversations", on_delete: :cascade
+  add_foreign_key "finture_scheduled_messages", "inboxes", on_delete: :cascade
+  add_foreign_key "finture_scheduled_messages", "messages", on_delete: :nullify
+  add_foreign_key "finture_scheduled_messages", "users", on_delete: :nullify
   add_foreign_key "finture_stage_transitions", "accounts", on_delete: :cascade
   add_foreign_key "finture_stage_transitions", "conversations", on_delete: :cascade
   add_foreign_key "finture_stage_transitions", "inboxes", on_delete: :nullify

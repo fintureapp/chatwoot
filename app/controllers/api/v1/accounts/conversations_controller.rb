@@ -3,7 +3,7 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   include DateRangeHelper
   include HmacConcern
 
-  before_action :conversation, except: [:index, :meta, :search, :create, :filter, :kanban, :kanban_history]
+  before_action :conversation, except: [:index, :meta, :search, :create, :filter, :kanban, :kanban_history, :kanban_export]
   before_action :inbox, :contact, :contact_inbox, only: [:create]
 
   ATTACHMENT_RESULTS_PER_PAGE = 100
@@ -39,6 +39,21 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
 
   def kanban_history
     @conversations = kanban_history_conversations
+  end
+
+  # Exporta o conjunto filtrado COMPLETO (board ou histórico) em Excel (.xlsx) — ver
+  # Finture::KanbanExportService. Mesmo escopo/permissão do board, sem o cap.
+  def kanban_export
+    inbox = current_user.assigned_inboxes.find_by(id: params[:inbox_id])
+    return render_not_found_error('Inbox not found') if inbox.blank?
+
+    base = params[:scope] == 'history' ? kanban_history_filter(kanban_base_scope) : kanban_board_filter(kanban_base_scope)
+    service = Finture::KanbanExportService.new(
+      scope: base, params: params, inbox: inbox,
+      kanban_type: kanban_operational? ? 'operacional' : 'comercial'
+    )
+    send_data service.perform, filename: service.filename, disposition: 'attachment',
+                               type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   end
 
   def attachments
@@ -263,36 +278,38 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   end
 
   def kanban_conversations
-    # Board ativo: exclui os leads já fechados (sdr_outcome presente) — eles
-    # passam a viver no Histórico (endpoint kanban_history). Em caixas
-    # OPERACIONAIS não há ganho/perdido: a demanda sai do board ao ser resolvida
-    # (status resolved), então também excluímos as resolvidas.
-    scope = kanban_scope
-            .where("conversations.custom_attributes ->> 'sdr_outcome' IS NULL")
+    kanban_board_filter(kanban_scope).order(last_activity_at: :desc).limit(KANBAN_RESULTS_CAP)
+  end
+
+  # Board ativo: exclui os leads já fechados (sdr_outcome presente) — eles
+  # passam a viver no Histórico (endpoint kanban_history). Em caixas
+  # OPERACIONAIS não há ganho/perdido: a demanda sai do board ao ser resolvida
+  # (status resolved), então também excluímos as resolvidas.
+  def kanban_board_filter(scope)
+    scope = scope.where("conversations.custom_attributes ->> 'sdr_outcome' IS NULL")
     scope = scope.where.not(status: :resolved) if kanban_operational?
-    scope.order(last_activity_at: :desc).limit(KANBAN_RESULTS_CAP)
+    scope
   end
 
   def kanban_history_conversations
-    # Histórico: leads fechados, do mais recente ao mais antigo. Comercial fecha
-    # por desfecho (sdr_outcome); operacional fecha ao resolver (status resolved),
-    # com o resumo da demanda em custom_attributes.sdr_resumo (gerado pelo n8n).
-    # Filtros opcionais: `q` (nome, e-mail ou telefone do contato) e, só no
-    # comercial, `outcome` (won/lost).
-    scope = kanban_history_search(kanban_scope)
-    if kanban_operational?
-      return scope
-             .where(status: :resolved)
-             .order(last_activity_at: :desc)
-             .limit(KANBAN_RESULTS_CAP)
-    end
+    scope = kanban_history_search(kanban_history_filter(kanban_scope))
+    return scope.order(last_activity_at: :desc).limit(KANBAN_RESULTS_CAP) if kanban_operational?
+
+    scope
+      .order(Arel.sql("(conversations.custom_attributes ->> 'sdr_outcome_at')::bigint DESC NULLS LAST"))
+      .limit(KANBAN_RESULTS_CAP)
+  end
+
+  # Histórico: leads fechados. Comercial fecha por desfecho (sdr_outcome);
+  # operacional fecha ao resolver (status resolved), com o resumo da demanda em
+  # custom_attributes.sdr_resumo (gerado pelo n8n). Filtro opcional, só no
+  # comercial: `outcome` (won/lost).
+  def kanban_history_filter(scope)
+    return scope.where(status: :resolved) if kanban_operational?
 
     outcome = params[:outcome].presence_in(%w[won lost])
     scope = scope.where("conversations.custom_attributes ->> 'sdr_outcome' = ?", outcome) if outcome
-    scope
-      .where("conversations.custom_attributes ->> 'sdr_outcome' IS NOT NULL")
-      .order(Arel.sql("(conversations.custom_attributes ->> 'sdr_outcome_at')::bigint DESC NULLS LAST"))
-      .limit(KANBAN_RESULTS_CAP)
+    scope.where("conversations.custom_attributes ->> 'sdr_outcome' IS NOT NULL")
   end
 
   # Busca do Histórico por contato. Telefone casa pelos dígitos digitados, então
@@ -322,16 +339,20 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   # admin vs agente; where(id:) aceita único ou array) + permission scoping
   # (respeita custom roles enterprise via prepend) + includes do payload enxuto.
   def kanban_scope
-    inbox_ids = current_user.assigned_inboxes.where(id: params[:inbox_id]).pluck(:id)
-    return Conversation.none if inbox_ids.blank?
-
-    scope = Current.account.conversations.where(inbox_id: inbox_ids)
-    scope = Conversations::PermissionFilterService.new(scope, current_user, current_account).perform
-    scope.includes(
+    kanban_base_scope.includes(
       :taggings,
       { contact: { avatar_attachment: :blob } },
       { assignee: { avatar_attachment: :blob } }
     )
+  end
+
+  # Sem includes: usado pela exportação, que carrega só o que o CSV precisa.
+  def kanban_base_scope
+    inbox_ids = current_user.assigned_inboxes.where(id: params[:inbox_id]).pluck(:id)
+    return Conversation.none if inbox_ids.blank?
+
+    scope = Current.account.conversations.where(inbox_id: inbox_ids)
+    Conversations::PermissionFilterService.new(scope, current_user, current_account).perform
   end
 
   def assignee?

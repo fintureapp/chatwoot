@@ -1,9 +1,10 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, inject } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useStore } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
+import { KANBAN_VIEW_STATE_KEY } from 'dashboard/routes/dashboard/kanban/composables/useKanbanViewState';
 import { frontendURL, conversationUrl } from 'dashboard/helper/URLHelper';
 import { copyTextToClipboard } from 'shared/helpers/clipboard';
 import FintureCrmApi from 'dashboard/api/fintureCrm';
@@ -43,6 +44,9 @@ const { t } = useI18n();
 const store = useStore();
 const route = useRoute();
 const router = useRouter();
+// Presente so quando o modal e aberto de dentro do Kanban (historico): guarda
+// o contato como ancora para a lista voltar nele ao retornar da conversa.
+const kanbanViewState = inject(KANBAN_VIEW_STATE_KEY, null);
 
 const dialogRef = ref(null);
 const contact = ref({});
@@ -293,6 +297,7 @@ const summaryState = entry =>
   });
 
 const openConversation = entry => {
+  kanbanViewState?.rememberAnchor('history', contact.value?.id);
   const path = frontendURL(
     conversationUrl({ accountId: accountId.value, id: entry.id })
   );

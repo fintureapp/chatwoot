@@ -549,3 +549,21 @@ pt_BR:
       no_subscriptions_to_test: 'Selecione pelo menos uma assinatura para teste.'
       no_subscriptions_to_delete: 'Selecione pelo menos uma assinatura para excluir.'
       subscriptions_deleted: "Excluída(s) %{count} inscrição(ões). O(s) dispositivo(s) do usuário será(ão) registrado(s) novamente na próxima inicialização do aplicativo."
+
+  finture:
+    scheduled_messages:
+      unknown_author: "um agente"
+      activity:
+        scheduled: "%{user_name} agendou uma mensagem para %{time}"
+        updated: "%{user_name} alterou uma mensagem agendada (agora para %{time})"
+        cancelled: "%{user_name} cancelou a mensagem agendada para %{time}"
+        auto_cancelled: "Mensagem agendada para %{time} foi cancelada automaticamente porque o cliente respondeu antes"
+        sent: "Mensagem agendada por %{user_name} para %{time} foi enviada"
+        failed: "Mensagem agendada para %{time} NÃO foi enviada: %{reason}"
+      notes:
+        auto_cancelled: "sua mensagem agendada para %{time} foi cancelada porque o cliente respondeu antes. Revise e reagende se fizer sentido. Prévia: \"%{preview}\""
+        failed: "sua mensagem agendada para %{time} NÃO foi enviada (%{reason}). Prévia: \"%{preview}\""
+      errors:
+        not_pending: "Só é possível alterar ou cancelar agendamentos pendentes."
+        window_closed: "a janela de resposta do canal está fechada (ex.: 24h do WhatsApp) e o cliente não respondeu"
+        interrupted: "o processamento foi interrompido antes do envio"

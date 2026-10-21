@@ -1,7 +1,8 @@
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue';
+import { ref, computed, watch, nextTick, inject } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
+import { KANBAN_VIEW_STATE_KEY } from 'dashboard/routes/dashboard/kanban/composables/useKanbanViewState';
 import { onKeyStroke } from '@vueuse/core';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
@@ -58,6 +59,7 @@ const store = useStore();
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
+const viewState = inject(KANBAN_VIEW_STATE_KEY, null);
 
 const getRecordById = useMapGetter('kanban/getRecordById');
 const getNotes = useMapGetter('kanban/getNotes');
@@ -215,6 +217,8 @@ const close = () => emit('update:open', false);
 // Abre um atendimento anterior (conversa antiga do mesmo número).
 const openPrevious = entry => {
   if (!entry?.id) return;
+  // O card ancora e o primario (a conversa antiga nao e card do board).
+  viewState?.rememberAnchor('card', props.conversationId);
   const path = frontendURL(
     conversationUrl({ accountId: route.params.accountId, id: entry.id })
   );

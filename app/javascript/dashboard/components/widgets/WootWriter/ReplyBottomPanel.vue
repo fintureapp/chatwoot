@@ -125,9 +125,15 @@ export default {
       type: Boolean,
       default: false,
     },
+    // Finture: botao "Agendar envio" ao lado do Enviar (so em resposta publica).
+    showSchedule: {
+      type: Boolean,
+      default: false,
+    },
   },
   emits: [
     'toggleInsertArticle',
+    'schedule',
     'selectWhatsappTemplate',
     'selectContentTemplate',
     'toggleQuotedReply',
@@ -397,6 +403,17 @@ export default {
       />
     </div>
     <div class="right-wrap">
+      <NextButton
+        v-if="showSchedule"
+        v-tooltip.top-end="$t('CONVERSATION.SCHEDULE.BUTTON')"
+        icon="i-lucide-clock"
+        slate
+        faded
+        sm
+        :disabled="isSendDisabled"
+        class="flex-shrink-0"
+        @click="$emit('schedule')"
+      />
       <NextButton
         :label="sendButtonText"
         type="submit"

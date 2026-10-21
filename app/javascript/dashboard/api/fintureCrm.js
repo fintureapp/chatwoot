@@ -117,6 +117,43 @@ class FintureCrmApi extends ApiClient {
     });
   }
 
+  // ---- Exportação CSV (servidor, conjunto filtrado completo) ------------------
+  // `mode`: contacts (1 linha por contato) | conversations (1 por demanda);
+  // `scope`: board | history. Demais chaves são os filtros ativos.
+  exportKanban(params) {
+    return axios.get(`${this.url}/kanban_export`, {
+      params,
+      responseType: 'blob',
+    });
+  }
+
+  // ---- Mensagens agendadas da conversa --------------------------------------
+  getScheduledMessages(conversationId) {
+    return axios.get(
+      `${this.url}/${conversationId}/finture_scheduled_messages`
+    );
+  }
+
+  createScheduledMessage(conversationId, payload) {
+    return axios.post(
+      `${this.url}/${conversationId}/finture_scheduled_messages`,
+      payload
+    );
+  }
+
+  updateScheduledMessage(conversationId, id, payload) {
+    return axios.patch(
+      `${this.url}/${conversationId}/finture_scheduled_messages/${id}`,
+      payload
+    );
+  }
+
+  cancelScheduledMessage(conversationId, id) {
+    return axios.delete(
+      `${this.url}/${conversationId}/finture_scheduled_messages/${id}`
+    );
+  }
+
   // ---- Linha do tempo de um contato (todas as conversas + resumos) ----------
   getContactTimeline(contactId) {
     return axios.get(
