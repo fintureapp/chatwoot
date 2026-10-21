@@ -1,0 +1,12 @@
+From: Contato Simulado <{{FROM}}>
+To: {{TO}}
+Subject: {{SUBJECT}}
+Message-ID: <{{MESSAGE_ID}}>
+Date: {{DATE}}
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+{{BODY}}
+
+--
+Mensagem fictícia gerada pelo simulador do ambiente local Finture.

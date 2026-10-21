@@ -64,3 +64,6 @@ docker:
 	docker build -t $(APP_NAME) -f ./docker/Dockerfile .
 
 .PHONY: setup db_create db_migrate db_seed db_reset db console server burn docker run force_run force_run_tunnel debug debug_worker
+
+# Finture: ambiente local Docker (make dev, make stop, make db-reset...). Ver docs/LOCAL_DEVELOPMENT.md
+include docker/local/local.mk

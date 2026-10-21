@@ -230,6 +230,10 @@ AllCops:
     - 'tmp/**/*'
     - 'storage/**/*'
     - 'db/migrate/20230426130150_init_schema.rb'
+    # Finture: scripts de terminal e seeds do ambiente local Docker (só development).
+    # Imprimem relatório (puts/exit) e são roteiros longos por natureza, como bin/**.
+    - 'docker/local/**/*'
+    - 'db/seeds/finture_local.rb'
 
 FactoryBot/SyntaxMethods:
   Enabled: false

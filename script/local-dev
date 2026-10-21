@@ -1,0 +1,420 @@
+#!/usr/bin/env bash
+# Finture — CLI do ambiente local Docker. Uso: script/local-dev <comando> [args]
+# Funciona em Git Bash (Windows), WSL, Linux e macOS. Os alvos do Makefile
+# (make dev, make stop...) apenas chamam este script.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+COMPOSE_FILE="docker-compose.local.yaml"
+SYNC_FILE="docker-compose.local.sync.yaml"
+ENV_FILE=".env.local"
+PROJECT="chatwoot-finture-local"
+WATCH_PID="tmp/finture-local-watch.pid"
+WATCH_LOG="tmp/finture-local-watch.log"
+# Git Bash converte caminhos como /app em C:/...; os comandos daqui são todos Linux.
+export MSYS_NO_PATHCONV=1
+
+# Modo do código no container:
+#   sync — código no volume app_src + `docker compose watch` (padrão no Windows:
+#          bind mount de pasta Windows/OneDrive é lento e não gera eventos)
+#   bind — bind mount do repositório (padrão em WSL/Linux/macOS)
+code_mode() {
+  local mode=""
+  [ -f "$ENV_FILE" ] && mode="$(grep -E '^LOCAL_CODE_MODE=' "$ENV_FILE" | tail -1 | cut -d= -f2- | tr -d '\r ')"
+  case "$mode" in
+    sync|bind) echo "$mode" ;;
+    *) if [ "${OS:-}" = "Windows_NT" ] || [ -n "${MSYSTEM:-}" ]; then echo sync; else echo bind; fi ;;
+  esac
+}
+
+compose_args() {
+  COMPOSE_ARGS=(-f "$COMPOSE_FILE")
+  [ "$(code_mode)" = "sync" ] && COMPOSE_ARGS+=(-f "$SYNC_FILE")
+  COMPOSE_ARGS+=(--env-file "$ENV_FILE")
+}
+compose() { compose_args; docker compose "${COMPOSE_ARGS[@]}" "$@"; }
+
+info() { printf '\033[1;34m[finture-local]\033[0m %s\n' "$*"; }
+warn() { printf '\033[1;33m[finture-local]\033[0m %s\n' "$*" >&2; }
+die() { printf '\033[1;31m[finture-local]\033[0m %s\n' "$*" >&2; exit 1; }
+
+# Git Bash (mintty) precisa de winpty para sessões interativas.
+interactive_prefix() {
+  if [ -n "${MSYSTEM:-}" ] && command -v winpty >/dev/null 2>&1; then echo "winpty"; fi
+}
+
+random_hex() {
+  local bytes="$1"
+  if command -v openssl >/dev/null 2>&1; then
+    openssl rand -hex "$bytes"
+  else
+    head -c "$bytes" /dev/urandom | od -An -tx1 | tr -d ' \n'
+  fi
+}
+
+confirm() {
+  local expected="$1" prompt="$2" answer
+  if [ "${ASSUME_YES:-false}" = "true" ]; then return 0; fi
+  printf '%s\nDigite "%s" para confirmar: ' "$prompt" "$expected"
+  read -r answer
+  [ "$answer" = "$expected" ]
+}
+
+require_docker() {
+  command -v docker >/dev/null 2>&1 || die "Docker não encontrado. Instale o Docker Desktop (docs/LOCAL_DEVELOPMENT.md)."
+  docker info >/dev/null 2>&1 || die "O Docker não está rodando. Abra o Docker Desktop e aguarde o motor iniciar."
+  docker compose version >/dev/null 2>&1 || die "Docker Compose v2 não encontrado (docker compose)."
+}
+
+cmd_setup() {
+  if [ -f "$ENV_FILE" ]; then
+    info "$ENV_FILE já existe; mantendo (segredos locais preservados)."
+  else
+    info "Gerando $ENV_FILE com segredos LOCAIS aleatórios..."
+    sed \
+      -e "s/^SECRET_KEY_BASE=.*/SECRET_KEY_BASE=$(random_hex 64)/" \
+      -e "s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=$(random_hex 24)/" \
+      -e "s/^REDIS_PASSWORD=.*/REDIS_PASSWORD=$(random_hex 24)/" \
+      .env.local.example > "$ENV_FILE"
+  fi
+  git check-ignore -q "$ENV_FILE" || die "$ENV_FILE não está no .gitignore — abortando por segurança."
+}
+
+cmd_build() {
+  require_docker
+  [ -f "$ENV_FILE" ] || cmd_setup
+  info "Construindo a imagem de desenvolvimento (gems de dev/test)..."
+  compose build "$@"
+}
+
+cmd_deps() {
+  require_docker
+  [ -f "$ENV_FILE" ] || cmd_setup
+  compose run --rm "$@" deps
+}
+
+wait_healthy() {
+  local service="$1" timeout="${2:-600}" elapsed=0 cid status
+  cid="$(compose ps -q "$service")"
+  [ -n "$cid" ] || die "Serviço $service não está rodando."
+  while true; do
+    status="$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$cid")"
+    case "$status" in
+      healthy|running) [ "$status" = "healthy" ] && return 0 ;;
+      unhealthy|exited|dead) die "Serviço $service ficou $status. Veja: make logs-web" ;;
+    esac
+    [ "$elapsed" -ge "$timeout" ] && die "Timeout aguardando $service ficar healthy."
+    sleep 5; elapsed=$((elapsed + 5))
+  done
+}
+
+# Copia o repositório para o volume app_src (modo sync). Lê do Windows com tar
+# nativo (rápido) e extrai no Linux. Nunca copia .git, .env*, dumps nem node_modules.
+seed_source() {
+  local volume="${PROJECT}_app_src"
+  docker volume create --label com.docker.compose.project="$PROJECT" --label com.docker.compose.volume=app_src "$volume" >/dev/null
+  if [ "${1:-}" != "--force" ] && docker run --rm -v "$volume:/app" finture-chatwoot-dev:local test -f /app/docker/local/.seeded 2>/dev/null; then
+    return 0
+  fi
+  info "Copiando o código para o volume Linux ($volume)..."
+  tar -cf - \
+    --exclude=./.git --exclude=./node_modules --exclude=./tmp --exclude=./log --exclude=./storage \
+    --exclude=./.playwright-mcp --exclude=./public/vite-dev --exclude=./coverage \
+    --exclude='./.env' --exclude='./.env.*' --exclude='*.rdb' --exclude='*.dump' --exclude='*.pgdump' . \
+    | docker run --rm -i -v "$volume:/app" finture-chatwoot-dev:local sh -c "tar -xf - -C /app && touch /app/docker/local/.seeded"
+}
+
+# Confere que o PID salvo ainda é o `docker compose watch` (e não outro processo
+# que reaproveitou o número depois de um reboot).
+watch_running() {
+  [ -f "$WATCH_PID" ] || return 1
+  local pid; pid="$(cat "$WATCH_PID")"
+  kill -0 "$pid" 2>/dev/null || return 1
+  ps -ef 2>/dev/null | awk -v pid="$pid" '$2 == pid' | grep -q "watch"
+}
+
+start_watch() {
+  [ "$(code_mode)" = "sync" ] || return 0
+  if watch_running; then info "Sincronização já ativa (PID $(cat "$WATCH_PID"))."; return 0; fi
+  mkdir -p tmp
+  compose_args
+  nohup docker compose "${COMPOSE_ARGS[@]}" watch --no-up rails > "$WATCH_LOG" 2>&1 &
+  echo $! > "$WATCH_PID"
+  disown 2>/dev/null || true
+  info "Sincronização Windows -> container ativa (PID $(cat "$WATCH_PID"), log em $WATCH_LOG)."
+}
+
+stop_watch() {
+  if watch_running; then kill "$(cat "$WATCH_PID")" 2>/dev/null || true; info "Sincronização encerrada."; fi
+  rm -f "$WATCH_PID"
+}
+
+cmd_dev() {
+  require_docker
+  [ -f "$ENV_FILE" ] || cmd_setup
+  if ! docker image inspect finture-chatwoot-dev:local >/dev/null 2>&1; then cmd_build; fi
+  info "Modo do código: $(code_mode)"
+  [ "$(code_mode)" = "sync" ] && seed_source
+  info "Subindo serviços (deps -> db-prepare -> rails/sidekiq/vite -> edge)..."
+  compose up -d --remove-orphans
+  start_watch
+  info "Aguardando Rails ficar saudável (primeira vez pode levar alguns minutos)..."
+  wait_healthy rails 900
+  cat <<'TXT'
+
+  Chatwoot Finture (local) ........ http://localhost:3000
+     login: admin@finture.example  | senha: LOCAL_SEED_PASSWORD do .env.local
+  Mailpit (e-mails capturados) .... http://localhost:8025
+  Webhook sink (saídas simuladas) . http://localhost:8099/_requests
+  Sidekiq Web ..................... http://localhost:3000/monitoring/sidekiq (entre antes em /super_admin)
+  PostgreSQL ...................... 127.0.0.1:5432  db chatwoot_local_dev  user chatwoot_local
+  Redis ........................... 127.0.0.1:6379
+
+  Logs: make logs-web | make logs-worker   Parar: make stop
+TXT
+}
+
+cmd_stop() { require_docker; [ $# -eq 0 ] && stop_watch; compose stop "$@"; }
+cmd_down() { require_docker; stop_watch; compose down --remove-orphans; }
+cmd_restart() { require_docker; compose restart "$@"; }
+cmd_status() {
+  require_docker
+  compose ps
+  if [ "$(code_mode)" = "sync" ]; then
+    if watch_running; then info "Modo sync: sincronização ativa (PID $(cat "$WATCH_PID"))."
+    else warn "Modo sync: sincronização PARADA — edições no Windows não chegam ao container. Rode: script/local-dev sync"; fi
+  else
+    info "Modo bind: o container lê o repositório diretamente."
+  fi
+}
+
+# Religa a sincronização (ex.: depois de fechar o terminal).
+cmd_sync() { require_docker; [ "$(code_mode)" = "sync" ] || die "Modo bind: não há sincronização."; start_watch; }
+
+# Traz para o repositório arquivos gerados dentro do container (modo sync).
+cmd_pull() {
+  require_docker
+  [ $# -gt 0 ] || die "Uso: script/local-dev pull <caminho> [...] (ex.: db/schema.rb db/migrate)"
+  [ "$(code_mode)" = "sync" ] || { info "Modo bind: os arquivos já estão no repositório."; return 0; }
+  local path
+  for path in "$@"; do
+    path="${path#./}"
+    case "$path" in /*|*..*) die "Caminho inválido: $path" ;; esac
+    if [ -d "$path" ] || compose exec -T rails test -d "/app/$path"; then
+      mkdir -p "$path"
+      compose cp "rails:/app/$path/." "$path/"
+    else
+      mkdir -p "$(dirname "$path")"
+      compose cp "rails:/app/$path" "$path"
+    fi
+    info "Trazido do container: $path"
+  done
+}
+cmd_logs() { require_docker; compose logs -f --tail=200 "$@"; }
+
+exec_or_run() {
+  # Usa o container rails em execução; se não houver, sobe um one-shot.
+  if [ -n "$(compose ps -q --status running rails 2>/dev/null)" ]; then
+    compose exec -T rails "$@"
+  else
+    compose run --rm --no-deps rails "$@"
+  fi
+}
+
+cmd_db_migrate() {
+  require_docker
+  exec_or_run ruby bin/rails db:migrate
+  # Modo sync: o schema atualizado nasce no container; traz de volta ao repositório.
+  if [ "$(code_mode)" = "sync" ] && [ -n "$(compose ps -q --status running rails 2>/dev/null)" ]; then cmd_pull db/schema.rb; fi
+}
+cmd_db_seed() { require_docker; exec_or_run ruby bin/rails finture:local:seed; }
+
+cmd_db_reset() {
+  require_docker
+  [ -f "$ENV_FILE" ] || die "$ENV_FILE não existe. Rode make dev primeiro."
+  grep -q 'POSTGRES_HOST: postgres' "$COMPOSE_FILE" || die "Compose não aponta para o postgres local. Abortando."
+  cat <<'TXT'
+Isto vai APAGAR e recriar SOMENTE o banco local chatwoot_local_dev (volume Docker
+postgres_data deste projeto) e limpar o Redis local. Anexos (volume storage) e
+e-mails do Mailpit são preservados. Nenhum banco remoto é tocado: o reset aborta
+se o destino não for o PostgreSQL do compose.
+TXT
+  confirm "reset" "Confirmar reset do banco local?" || die "Cancelado."
+
+  compose up -d postgres redis webhook-sink mailpit
+  compose stop rails sidekiq >/dev/null 2>&1 || true
+  info "Validando destino e recriando o banco..."
+  compose run --rm --no-deps rails bash -c '
+    set -e
+    ruby bin/rails finture:local:assert_safe_db
+    ruby bin/rails db:drop db:create
+    ruby bin/rails db:chatwoot_prepare
+    ruby bin/rails finture:local:seed
+  '
+  info "Limpando Redis local (filas e cache)..."
+  compose exec -T redis sh -c 'redis-cli -a "$REDIS_PASSWORD" --no-auth-warning FLUSHALL'
+  compose up -d rails sidekiq edge
+  wait_healthy rails 600
+  info "Banco local recriado."
+}
+
+cmd_db_console() {
+  require_docker
+  compose_args; $(interactive_prefix) docker compose "${COMPOSE_ARGS[@]}" exec postgres psql -U chatwoot_local -d chatwoot_local_dev
+}
+
+cmd_console() { require_docker; compose_args; $(interactive_prefix) docker compose "${COMPOSE_ARGS[@]}" exec rails ruby bin/rails console; }
+cmd_shell() { require_docker; compose_args; $(interactive_prefix) docker compose "${COMPOSE_ARGS[@]}" exec rails bash; }
+cmd_attach() { require_docker; docker attach "$(compose ps -q "${1:-rails}")"; }
+
+cmd_test() {
+  require_docker
+  local args=("$@")
+  [ ${#args[@]} -eq 0 ] && args=(spec)
+  compose up -d postgres redis
+  info "Preparando banco de teste chatwoot_local_test..."
+  compose run --rm --no-deps \
+    -e RAILS_ENV=test -e POSTGRES_DATABASE=chatwoot_local_test -e REDIS_URL=redis://redis:6379/1 \
+    rails bash -c 'ruby bin/rails db:create db:schema:load >/dev/null && bundle exec rspec "$@"' rspec "${args[@]}"
+}
+
+cmd_test_js() {
+  require_docker
+  compose run --rm --no-deps vite pnpm test "$@"
+}
+
+cmd_check() { require_docker; exec_or_run ruby bin/rails finture:local:check; }
+cmd_simulate() {
+  require_docker
+  [ -n "$(compose ps -q --status running rails 2>/dev/null)" ] || die "Suba o ambiente antes (make dev)."
+  compose exec -T rails ruby bin/rails finture:local:simulate
+}
+
+cmd_clean() {
+  require_docker
+  local volumes=false image=false
+  for arg in "$@"; do
+    case "$arg" in
+      --volumes) volumes=true ;;
+      --image) image=true ;;
+      --all) volumes=true; image=true ;;
+      *) die "Opção desconhecida: $arg (use --volumes, --image ou --all)" ;;
+    esac
+  done
+  echo "Escopo da limpeza:"
+  echo "  - containers e redes do projeto chatwoot-finture-local: SIM"
+  echo "  - volumes (banco, Redis, anexos, e-mails, node_modules): $([ "$volumes" = true ] && echo 'SIM — dados locais serão perdidos' || echo 'não')"
+  echo "  - imagem finture-chatwoot-dev:local: $([ "$image" = true ] && echo 'SIM' || echo 'não')"
+  echo "  - .env.local e arquivos do repositório: nunca"
+  local word="limpar"
+  [ "$volumes" = true ] && word="apagar-dados"
+  confirm "$word" "Confirmar limpeza?" || die "Cancelado."
+  if [ "$volumes" = true ]; then compose down --remove-orphans --volumes; else compose down --remove-orphans; fi
+  if [ "$image" = true ]; then docker image rm finture-chatwoot-dev:local || true; fi
+  info "Limpeza concluída."
+}
+
+# Compara valores do .env.prod com arquivos versionados e com o histórico do fork
+# SEM imprimir valores: só os nomes das chaves encontradas.
+cmd_scan_secrets() {
+  local source_file="${1:-.env.prod}" upstream_base="${UPSTREAM_BASE:-64b0ebd8d}" found=0
+  [ -f "$source_file" ] || die "$source_file não encontrado."
+  git check-ignore -q "$source_file" || warn "$source_file NÃO está ignorado pelo Git!"
+  local seen=" "
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line%$'\r'}"; line="${line#$'\xEF\xBB\xBF'}"
+    case "$line" in ''|\#*) continue ;; esac
+    local key="${line%%=*}" value="${line#*=}"
+    case "$seen" in *" $key "*) continue ;; esac
+    seen="$seen$key "
+    value="${value%\"}"; value="${value#\"}"; value="${value%\'}"; value="${value#\'}"
+    [ ${#value} -lt 8 ] && continue
+    # Palavras simples em chaves que não são credenciais (ex.: nome de container) geram
+    # falso positivo com o código upstream; credenciais são sempre verificadas.
+    if [[ ! "$key" =~ (PASSWORD|SECRET|KEY|TOKEN|URL) ]] && [[ "$value" =~ ^[A-Za-z_-]{1,16}$ ]]; then continue; fi
+    if git grep -q -F -e "$value" -- . 2>/dev/null; then
+      warn "  $key: valor aparece em arquivo VERSIONADO"; found=1
+    fi
+    if [ -n "$(git log --all --not "$upstream_base" -S"$value" --format=%h 2>/dev/null | head -1)" ]; then
+      warn "  $key: valor aparece no HISTÓRICO do Git (commits do fork)"; found=1
+    fi
+  done < "$source_file"
+  if [ "$found" -eq 0 ]; then info "Nenhum valor de $source_file encontrado em arquivos versionados ou no histórico do fork."; fi
+  if git log --all --format=%h -- "$source_file" .env | head -1 | grep -q .; then
+    warn "  Arquivo $source_file ou .env já foi commitado em algum momento."
+  else
+    info "Nem $source_file nem .env aparecem no histórico do Git."
+  fi
+}
+
+usage() {
+  cat <<'TXT'
+Uso: script/local-dev <comando> [args]
+
+  setup          gera .env.local com segredos locais aleatórios
+  build          constrói a imagem de desenvolvimento
+  deps           instala node_modules no volume (FORCE_DEPS=true para forçar)
+  dev            sobe tudo (deps, banco, migrations, seeds, rails, sidekiq, vite)
+  stop [svc]     para os containers (dados preservados)
+  down           remove containers e redes (volumes preservados)
+  restart [svc]  reinicia serviços
+  status         lista serviços, saúde e a sincronização (modo sync)
+  sync           religa a sincronização Windows -> container (modo sync)
+  pull <caminho> traz arquivos gerados no container para o repositório (modo sync)
+  reseed-source  recopia todo o código para o volume (modo sync)
+  logs [svc]     segue logs (todos ou de um serviço)
+  logs-web       logs do Rails/Puma e do proxy
+  logs-worker    logs do Sidekiq
+  db-migrate     roda migrations pendentes
+  db-seed        reaplica seeds sintéticas Finture (idempotente)
+  db-reset       APAGA e recria só o banco local (pede confirmação)
+  db-console     psql no banco local
+  console        rails console
+  shell          bash no container rails
+  attach [svc]   anexa ao processo (byebug/debug); sair: Ctrl-P Ctrl-Q
+  test [args]    rspec no banco chatwoot_local_test (padrão: spec inteira)
+  test-js [args] vitest
+  check          prova o isolamento (boot, egress, rede)
+  simulate       simula WhatsApp/API/e-mail ponta a ponta
+  clean [--volumes|--image|--all]  limpeza com confirmação do escopo
+  scan-secrets [arquivo]  procura valores do .env.prod no Git (só imprime nomes)
+
+ASSUME_YES=true pula confirmações (ex.: automação).
+TXT
+}
+
+command="${1:-help}"
+shift || true
+case "$command" in
+  setup) cmd_setup ;;
+  build) cmd_build "$@" ;;
+  deps) cmd_deps "$@" ;;
+  dev|up) cmd_dev ;;
+  stop) cmd_stop "$@" ;;
+  down) cmd_down ;;
+  restart) cmd_restart "$@" ;;
+  status|ps) cmd_status ;;
+  logs) cmd_logs "$@" ;;
+  sync) cmd_sync ;;
+  pull) cmd_pull "$@" ;;
+  reseed-source) require_docker; seed_source --force ;;
+  logs-web) cmd_logs rails edge ;;
+  logs-worker) cmd_logs sidekiq ;;
+  db-migrate) cmd_db_migrate ;;
+  db-seed) cmd_db_seed ;;
+  db-reset) cmd_db_reset ;;
+  db-console) cmd_db_console ;;
+  console) cmd_console ;;
+  shell) cmd_shell ;;
+  attach) cmd_attach "$@" ;;
+  test) cmd_test "$@" ;;
+  test-js) cmd_test_js "$@" ;;
+  check) cmd_check ;;
+  simulate) cmd_simulate ;;
+  clean) cmd_clean "$@" ;;
+  scan-secrets) cmd_scan_secrets "$@" ;;
+  help|-h|--help) usage ;;
+  *) usage; exit 1 ;;
+esac

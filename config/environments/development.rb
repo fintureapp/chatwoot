@@ -58,11 +58,21 @@ Rails.application.configure do
 
   # Use an evented file watcher to asynchronously detect changes in source code,
   # routes, locales, etc. This feature depends on the listen gem.
-  config.file_watcher = ActiveSupport::EventedFileUpdateChecker
+  # Finture local Docker: bind mounts do Windows não propagam eventos inotify,
+  # então o watcher evented nunca dispara. RAILS_FILE_WATCHER_POLLING=true troca
+  # pelo checker por mtime (docs/LOCAL_DEVELOPMENT.md).
+  config.file_watcher = if ActiveModel::Type::Boolean.new.cast(ENV.fetch('RAILS_FILE_WATCHER_POLLING', false))
+                          ActiveSupport::FileUpdateChecker
+                        else
+                          ActiveSupport::EventedFileUpdateChecker
+                        end
 
   # Disable host check during development
   config.hosts = nil
-  
+
+  # Finture local Docker: as requisições chegam pelo proxy "edge" (rede privada do compose).
+  config.web_console.allowed_ips = %w[127.0.0.1 ::1 172.16.0.0/12 192.168.0.0/16 10.0.0.0/8] if ENV['FINTURE_LOCAL_DOCKER'].present?
+
   # GitHub Codespaces configuration
   if ENV['CODESPACES']
     # Allow web console access from any IP
@@ -77,7 +87,12 @@ Rails.application.configure do
 
   # Use a different logger for distributed setups.
   # require 'syslog/logger'
-  config.logger = ActiveSupport::Logger.new(Rails.root.join('log', "#{Rails.env}.log"), 1, ENV.fetch('LOG_SIZE', '1024').to_i.megabytes)
+  config.logger = if ActiveModel::Type::Boolean.new.cast(ENV.fetch('RAILS_LOG_TO_STDOUT', false))
+                    # Finture local Docker: logs no stdout para `make logs-web`/`make logs-worker`.
+                    ActiveSupport::TaggedLogging.new(ActiveSupport::Logger.new($stdout))
+                  else
+                    ActiveSupport::Logger.new(Rails.root.join('log', "#{Rails.env}.log"), 1, ENV.fetch('LOG_SIZE', '1024').to_i.megabytes)
+                  end
 
   # Bullet configuration to fix the N+1 queries
   config.after_initialize do
