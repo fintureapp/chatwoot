@@ -12,6 +12,7 @@ import { isValidSlug } from 'shared/helpers/Validators';
 
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
+import { FINTURE_COLORS } from 'dashboard/constants/brand';
 
 const emit = defineEmits(['create']);
 
@@ -109,7 +110,7 @@ const handleDialogConfirm = async () => {
     slug: state.slug,
     custom_domain: state.domain,
     blob_id: state.avatarBlobId || null,
-    color: '#2781F6', // The default color is set to Chatwoot brand color
+    color: FINTURE_COLORS.orange, // Cor padrão do portal: Laranja Finture
   };
   await createPortal(portal);
 };

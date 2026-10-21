@@ -451,7 +451,7 @@ const views = computed(() => [
           class="px-3 py-1 text-[13px] font-medium rounded-md transition-colors"
           :class="
             period === opt.value
-              ? 'bg-n-brand text-white shadow-sm'
+              ? 'bg-n-brand text-n-brand-contrast shadow-sm'
               : 'text-n-slate-11 hover:text-n-slate-12 hover:bg-n-alpha-1'
           "
           @click="period = opt.value"

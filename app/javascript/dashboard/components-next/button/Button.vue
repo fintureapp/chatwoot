@@ -101,7 +101,7 @@ const STYLE_CONFIG = {
   colors: {
     blue: {
       solid:
-        'bg-n-brand text-white hover:enabled:brightness-110 focus-visible:brightness-110 outline-transparent',
+        'bg-n-brand text-n-brand-contrast hover:enabled:brightness-110 focus-visible:brightness-110 outline-transparent',
       faded:
         'bg-n-brand/10 text-n-blue-11 hover:enabled:bg-n-brand/20 focus-visible:bg-n-brand/20 outline-transparent',
       outline: 'text-n-blue-11 outline-n-brand',
@@ -191,7 +191,8 @@ const STYLE_CONFIG = {
     center: 'justify-center',
     end: 'justify-end',
   },
-  base: 'inline-flex items-center min-w-0 gap-2 transition-all duration-100 ease-out border-0 rounded-lg outline-1 outline disabled:opacity-50',
+  // Anel de foco visível para navegação por teclado em todas as variantes
+  base: 'inline-flex items-center min-w-0 gap-2 transition-all duration-100 ease-out border-0 rounded-lg outline-1 outline disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-n-blue-11',
 };
 
 const variantClasses = computed(() => {

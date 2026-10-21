@@ -159,7 +159,7 @@ const toggleConversationLayout = () => {
         {{ $t('CHAT_LIST.QUICK_FILTERS.BUTTON') }}
         <span
           v-if="quickFiltersCount"
-          class="px-1 rounded bg-n-brand text-white text-xxs leading-4"
+          class="px-1 rounded bg-n-brand text-n-brand-contrast text-xxs leading-4"
         >
           {{ quickFiltersCount }}
         </span>

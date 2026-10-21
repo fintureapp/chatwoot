@@ -38,10 +38,23 @@ const tailwindConfig = {
   ],
   theme: {
     extend: {
+      // Tipografia Finture: Space Grotesk no corpo e IBM Plex Sans nos títulos.
+      // `inter` e `interDisplay` continuam existindo porque os componentes do
+      // Chatwoot usam essas classes; elas apontam para as fontes da marca.
       fontFamily: {
-        sans: defaultSansFonts,
-        inter: ['Inter', ...defaultSansFonts],
-        interDisplay: ['InterDisplay', ...defaultSansFonts],
+        sans: ['"Space Grotesk"', ...defaultSansFonts],
+        body: ['"Space Grotesk"', ...defaultSansFonts],
+        heading: ['"IBM Plex Sans"', ...defaultSansFonts],
+        inter: ['"Space Grotesk"', ...defaultSansFonts],
+        interDisplay: ['"IBM Plex Sans"', ...defaultSansFonts],
+      },
+      // Texto em `n-brand` usa um tom mais escuro do laranja (--brand-text),
+      // porque o laranja oficial tem só 3.3:1 sobre branco. Fundos e bordas
+      // continuam com o laranja oficial.
+      textColor: {
+        n: {
+          brand: 'rgb(var(--brand-text) / <alpha-value>)',
+        },
       },
       fontWeight: {
         420: '420',

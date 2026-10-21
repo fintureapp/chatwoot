@@ -2,19 +2,32 @@
 @layer base {
   // NEXT COLORS START
   :root {
-    // slate
-    --slate-1: 252 252 253;
-    --slate-2: 249 249 251;
-    --slate-3: 240 240 243;
-    --slate-4: 232 232 236;
-    --slate-5: 224 225 230;
-    --slate-6: 217 217 224;
-    --slate-7: 205 206 214;
-    --slate-8: 185 187 198;
-    --slate-9: 139 141 152;
-    --slate-10: 128 131 141;
-    --slate-11: 96 100 108;
-    --slate-12: 28 32 36;
+    // Paleta oficial Finture (manual de marca, Drive 01_FINTURE/03_PALETA_DE_CORES).
+    // Fonte única das três cores de marca; as escalas abaixo derivam delas.
+    --finture-orange: 234 98 45; // #EA622D Laranja Finture: destaques e ações
+    --finture-ink: 27 26 26; // #1B1A1A Preto Finture: texto e fundos escuros
+    --finture-offwhite: 248 241 231; // #F8F1E7 Off-white Finture: base clara
+
+    // Cor de destaque da interface. Texto sobre ela usa --brand-contrast
+    // (preto Finture, 5.2:1), porque branco sobre o laranja fica em 3.3:1.
+    --brand: var(--finture-orange);
+    --brand-contrast: var(--finture-ink);
+    // Laranja escurecido para texto (5.2:1 no branco, 4.6:1 no off-white)
+    --brand-text: var(--blue-11);
+
+    // slate: neutros quentes ancorados no Preto Finture
+    --slate-1: 253 253 252;
+    --slate-2: 250 249 247;
+    --slate-3: 243 241 238;
+    --slate-4: 236 233 229;
+    --slate-5: 228 225 220;
+    --slate-6: 220 216 211;
+    --slate-7: 208 204 198;
+    --slate-8: 189 184 177;
+    --slate-9: 143 139 133;
+    --slate-10: 131 127 121;
+    --slate-11: 98 94 89;
+    --slate-12: var(--finture-ink);
 
     --iris-1: 253 253 255;
     --iris-2: 248 248 255;
@@ -29,18 +42,20 @@
     --iris-11: 87 83 198;
     --iris-12: 39 41 98;
 
-    --blue-1: 251 253 255;
-    --blue-2: 245 249 255;
-    --blue-3: 233 243 255;
-    --blue-4: 218 236 255;
-    --blue-5: 201 226 255;
-    --blue-6: 181 213 255;
-    --blue-7: 155 195 252;
-    --blue-8: 117 171 247;
-    --blue-9: 39 129 246;
-    --blue-10: 16 115 233;
-    --blue-11: 8 109 224;
-    --blue-12: 11 50 101;
+    // blue: escala de destaque do Chatwoot, convertida para o Laranja Finture.
+    // O nome foi mantido para não tocar nos ~2.700 usos de n-blue-* nos componentes.
+    --blue-1: 255 252 250;
+    --blue-2: 255 247 242;
+    --blue-3: 254 236 226;
+    --blue-4: 255 223 207;
+    --blue-5: 255 209 188;
+    --blue-6: 251 192 166;
+    --blue-7: 243 169 138;
+    --blue-8: 236 141 103;
+    --blue-9: var(--finture-orange);
+    --blue-10: 221 86 33;
+    --blue-11: 191 67 18;
+    --blue-12: 89 36 16;
 
     --ruby-1: 255 252 253;
     --ruby-2: 255 247 248;
@@ -65,7 +80,7 @@
     --amber-8: 226 163 54;
     --amber-9: 255 197 61;
     --amber-10: 255 186 24;
-    --amber-11: 171 100 0;
+    --amber-11: 150 105 0;
     --amber-12: 79 52 34;
 
     --teal-1: 250 254 253;
@@ -107,25 +122,25 @@
     --violet-11: 101 85 183;
     --violet-12: 47 38 95;
 
-    --background-color: 247 247 247;
-    --surface-1: 254 254 254;
+    --background-color: var(--finture-offwhite);
+    --surface-1: 254 254 253;
     --surface-2: 255 255 255;
     --surface-active: 255 255 255;
     --background-input-box: 0, 0, 0, 0.03;
-    --text-blue: 1 22 44;
+    --text-blue: 66 26 10;
     --text-purple: 2 4 49;
     --text-amber: 37 24 1;
-    --border-container: 236 236 236;
-    --border-strong: 226 227 231;
-    --border-weak: 234 234 234;
-    --border-blue-strong: 18 61 117;
+    --border-container: 234 228 219;
+    --border-strong: 224 218 209;
+    --border-weak: 233 227 218;
+    --border-blue-strong: 107 45 20;
     --solid-1: 255 255 255;
     --solid-2: 255 255 255;
     --solid-3: 255 255 255;
     --solid-active: 255 255 255;
-    --solid-amber: 255 228 181;
-    --solid-blue: 218 236 255;
-    --solid-blue-2: 251 253 255;
+    --solid-amber: 255 238 179;
+    --solid-blue: 254 236 226;
+    --solid-blue-2: 255 250 246;
     --solid-iris: 230 231 255;
     --solid-purple: 230 231 255;
     --solid-red: 254 200 201;
@@ -135,38 +150,41 @@
     --overlay-avatar: 255, 255, 255, 0.67;
     --button-color: 255 255 255;
     --button-hover-color: 255, 255, 255, 0.2;
-    --label-background: 247 247 247;
+    --label-background: 245 241 235;
     --label-border: 0, 0, 0, 0.04;
 
-    --alpha-1: 215, 215, 215, 0.22;
-    --alpha-2: 196, 197, 198, 0.22;
+    --alpha-1: 205, 195, 180, 0.22;
+    --alpha-2: 190, 180, 166, 0.22;
     --alpha-3: 255, 255, 255, 0.96;
     --black-alpha-1: 0, 0, 0, 0.12;
     --black-alpha-2: 0, 0, 0, 0.04;
-    --border-blue: 39, 129, 246, 0.5;
+    --border-blue: 234, 98, 45, 0.5;
     --white-alpha: 255, 255, 255, 0.8;
 
     // Voice call widget - light mode
-    --call-widget: 33, 34, 38, 0.95;
+    --call-widget: 27, 26, 26, 0.95;
     --call-widget-border: 255, 255, 255, 0.1;
     --call-widget-text: 237, 238, 240, 1;
     --call-widget-sub-text: 173, 177, 184, 1;
   }
 
   .dark {
-    // slate
-    --slate-1: 17 17 19;
-    --slate-2: 24 25 27;
-    --slate-3: 33 34 37;
-    --slate-4: 39 42 45;
-    --slate-5: 46 49 53;
-    --slate-6: 54 58 63;
-    --slate-7: 67 72 78;
-    --slate-8: 90 97 105;
-    --slate-9: 105 110 119;
-    --slate-10: 119 123 132;
-    --slate-11: 176 180 186;
-    --slate-12: 237 238 240;
+    // Repetido aqui porque o .dark fica no <body> e o var() resolve onde é declarado
+    --brand-text: var(--blue-11);
+
+    // slate: neutros quentes ancorados no Preto Finture
+    --slate-1: 18 17 17;
+    --slate-2: 25 24 23;
+    --slate-3: 34 33 32;
+    --slate-4: 41 40 38;
+    --slate-5: 48 46 44;
+    --slate-6: 58 56 53;
+    --slate-7: 72 69 66;
+    --slate-8: 96 92 88;
+    --slate-9: 110 106 101;
+    --slate-10: 124 120 114;
+    --slate-11: 182 177 170;
+    --slate-12: var(--finture-offwhite);
 
     --iris-1: 19 19 30;
     --iris-2: 23 22 37;
@@ -181,18 +199,19 @@
     --iris-11: 158 177 255;
     --iris-12: 224 223 254;
 
-    --blue-1: 10 17 28;
-    --blue-2: 15 24 38;
-    --blue-3: 15 39 72;
-    --blue-4: 10 49 99;
-    --blue-5: 18 61 117;
-    --blue-6: 29 84 134;
-    --blue-7: 40 89 156;
-    --blue-8: 48 106 186;
-    --blue-9: 39 129 246;
-    --blue-10: 21 116 231;
-    --blue-11: 126 182 255;
-    --blue-12: 205 227 255;
+    // blue: escala de destaque, convertida para o Laranja Finture
+    --blue-1: 22 15 12;
+    --blue-2: 30 20 16;
+    --blue-3: 52 28 18;
+    --blue-4: 70 33 17;
+    --blue-5: 85 41 22;
+    --blue-6: 102 52 31;
+    --blue-7: 128 66 40;
+    --blue-8: 168 83 50;
+    --blue-9: var(--finture-orange);
+    --blue-10: 242 116 66;
+    --blue-11: 255 156 118;
+    --blue-12: 255 218 202;
 
     --ruby-1: 25 17 19;
     --ruby-2: 30 21 23;
@@ -259,42 +278,42 @@
     --violet-11: 169 153 236;
     --violet-12: 226 221 254;
 
-    --background-color: 28 29 32;
-    --surface-1: 20 21 23;
-    --surface-2: 22 23 26;
-    --surface-active: 53 57 66;
+    --background-color: var(--finture-ink);
+    --surface-1: 21 20 20;
+    --surface-2: 24 23 22;
+    --surface-active: 54 51 48;
     --background-input-box: 255, 255, 255, 0.02;
-    --text-blue: 213 234 255;
+    --text-blue: 255 228 214;
     --text-purple: 232 233 254;
     --text-amber: 255 247 234;
-    --border-strong: 46 45 50;
-    --border-weak: 31 31 37;
-    --border-blue-strong: 201 226 255;
-    --solid-1: 23 23 26;
-    --solid-2: 29 30 36;
-    --solid-3: 44 45 54;
-    --solid-active: 53 57 66;
+    --border-strong: 48 46 43;
+    --border-weak: 36 34 32;
+    --border-blue-strong: 255 209 188;
+    --solid-1: 25 24 23;
+    --solid-2: 32 30 29;
+    --solid-3: 46 43 41;
+    --solid-active: 54 51 48;
     --solid-amber: 56 50 41;
-    --solid-blue: 15 57 102;
-    --solid-blue-2: 26 29 35;
+    --solid-blue: 74 36 20;
+    --solid-blue-2: 34 28 25;
     --solid-iris: 38 42 101;
     --solid-purple: 51 51 107;
     --solid-red: 90 33 34;
     --solid-amber-button: 255 221 141;
-    --card-color: 28 30 34;
+    --card-color: 31 29 28;
     --overlay: 0, 0, 0, 0.4;
     --overlay-avatar: 0, 0, 0, 0.05;
-    --button-color: 42 43 51;
+    --button-color: 43 41 39;
     --button-hover-color: 0, 0, 0, 0.15;
-    --label-background: 36 38 45;
+    --label-background: 38 36 34;
     --label-border: 255, 255, 255, 0.03;
 
-    --alpha-1: 35, 36, 42, 0.8;
-    --alpha-2: 147, 153, 176, 0.12;
-    --alpha-3: 33, 34, 38, 0.95;
+    --alpha-1: 37, 35, 33, 0.8;
+    --alpha-2: 168, 160, 148, 0.12;
+    --alpha-3: 34, 32, 31, 0.95;
     --black-alpha-1: 0, 0, 0, 0.3;
     --black-alpha-2: 0, 0, 0, 0.2;
-    --border-blue: 39, 129, 246, 0.5;
+    --border-blue: 234, 98, 45, 0.5;
     --border-container: 255, 255, 255, 0;
     --white-alpha: 255, 255, 255, 0.1;
 

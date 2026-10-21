@@ -258,7 +258,7 @@ watch(
 
       <div class="flex items-center gap-2">
         <button
-          class="px-3 h-8 text-sm rounded-lg bg-n-brand text-white disabled:opacity-50"
+          class="px-3 h-8 text-sm rounded-lg bg-n-brand text-n-brand-contrast disabled:opacity-50"
           :disabled="uiFlags.isSaving"
           @click="save"
         >

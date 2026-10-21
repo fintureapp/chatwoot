@@ -130,7 +130,7 @@ const clear = () => {
               class="flex items-center justify-center border rounded size-4 shrink-0"
               :class="
                 isSelected(option)
-                  ? 'bg-n-brand border-n-brand text-white'
+                  ? 'bg-n-brand border-n-brand text-n-brand-contrast'
                   : 'border-n-strong'
               "
             >

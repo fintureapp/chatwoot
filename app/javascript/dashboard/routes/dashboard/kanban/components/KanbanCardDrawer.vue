@@ -421,7 +421,7 @@ watch(
               />
               <div class="flex items-center gap-2">
                 <button
-                  class="px-3 h-8 text-sm rounded-lg bg-n-brand text-white disabled:opacity-50"
+                  class="px-3 h-8 text-sm rounded-lg bg-n-brand text-n-brand-contrast disabled:opacity-50"
                   :disabled="isSavingNextAction"
                   @click="saveNextAction"
                 >
@@ -461,7 +461,7 @@ watch(
                 class="w-full px-3 py-2 text-sm border rounded-lg resize-none bg-n-background border-n-weak text-n-slate-12 focus:border-n-brand"
               />
               <button
-                class="self-start px-3 h-8 text-sm rounded-lg bg-n-brand text-white disabled:opacity-50"
+                class="self-start px-3 h-8 text-sm rounded-lg bg-n-brand text-n-brand-contrast disabled:opacity-50"
                 :disabled="!noteDraft.trim() || notesUiFlags.isCreating"
                 @click="submitNote"
               >

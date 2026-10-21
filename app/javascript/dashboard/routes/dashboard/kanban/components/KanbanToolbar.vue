@@ -73,7 +73,7 @@ const fieldClass = `w-full ${inputClass}`;
         type="search"
         :placeholder="t('KANBAN.TOOLBAR.SEARCH_PLACEHOLDER')"
         :class="inputClass"
-        class="w-64 ltr:pl-8 rtl:pr-8"
+        class="w-64 ltr:!pl-8 rtl:!pr-8"
         @input="setFilter('query', $event.target.value)"
       />
     </div>
@@ -90,7 +90,7 @@ const fieldClass = `w-full ${inputClass}`;
       />
       <span
         v-if="activeCount"
-        class="absolute flex items-center justify-center h-4 px-1 text-[10px] font-medium text-white rounded-full -top-1 min-w-4 ltr:-right-1 rtl:-left-1 bg-n-brand"
+        class="absolute flex items-center justify-center h-4 px-1 text-[10px] font-medium text-n-brand-contrast rounded-full -top-1 min-w-4 ltr:-right-1 rtl:-left-1 bg-n-brand"
       >
         {{ activeCount }}
       </span>
