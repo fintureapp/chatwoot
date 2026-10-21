@@ -12,10 +12,11 @@
 # - gargalo      → finture_stage_transitions (+ tempo na etapa atual, sem viés)
 #
 # O que é snapshot e o que é do período:
-# - snapshot (estado AGORA do board): carga do funil e tempo médio por etapa;
-# - do período: follow-ups concluídos, SLA, leads sem responsável e parados.
-#   Estes três últimos olham só conversas criadas em [since, until_at] — antes
-#   varriam a caixa inteira e não batiam com o filtro exibido na tela.
+# - snapshot (estado AGORA do board): carga do funil, tempo médio por etapa,
+#   leads sem responsável e leads parados. Os dois últimos são backlog — o lead
+#   criado antes do período e ainda aberto é justamente o que mais precisa de
+#   ação; recortar pela data de criação o escondia da tela.
+# - do período: follow-ups concluídos e SLA.
 class Finture::SdrOperationalReportService
   include Finture::SdrShared
 
@@ -51,10 +52,8 @@ class Finture::SdrOperationalReportService
   end
 
   # ---- Scopes ---------------------------------------------------------------
-  def conversations_scope
-    scope = account.conversations
-    inbox_id.present? ? scope.where(inbox_id: inbox_id) : scope
-  end
+  # conversations_scope / transitions_scope: escopo de visibilidade do usuário,
+  # em Finture::SdrShared.
 
   # Caixas classificadas como operacionais dentro do escopo consultado. Nelas a
   # demanda sai do board ao ser RESOLVIDA (não há ganho/perdido) — ver
@@ -81,19 +80,8 @@ class Finture::SdrOperationalReportService
                 operational_inbox_ids, Conversation.statuses[:resolved])
   end
 
-  # Leads em aberto criados dentro do período selecionado na tela.
-  def period_leads_scope
-    open_leads_scope.where(created_at: range)
-  end
-
-  def transitions_scope
-    scope = Finture::StageTransition.where(account_id: account.id)
-    inbox_id.present? ? scope.where(inbox_id: inbox_id) : scope
-  end
-
   def follow_ups_scope
-    scope = Finture::FollowUp.where(account_id: account.id)
-    inbox_id.present? ? scope.joins(:conversation).where(conversations: { inbox_id: inbox_id }) : scope
+    Finture::FollowUp.where(account_id: account.id, conversation_id: conversations_scope.select(:id))
   end
 
   # ---- KPIs de topo ---------------------------------------------------------
@@ -102,7 +90,7 @@ class Finture::SdrOperationalReportService
     {
       overdue_followups: fu[:overdue],
       followups_today: fu[:today],
-      unassigned: period_leads_scope.where(assignee_id: nil).count,
+      unassigned: open_leads_scope.where(assignee_id: nil).count,
       stalled: stalled_scope.count,
       sla_minutes: sla[:avg_minutes]
     }
@@ -203,10 +191,11 @@ class Finture::SdrOperationalReportService
   end
 
   # ---- Leads parados --------------------------------------------------------
-  # Só o que ainda está no board (não resolvido, sem desfecho) e foi criado no
-  # período — conversa resolvida meses atrás não é "lead parado", é histórico.
+  # Tudo que ainda está no board (sem desfecho; na operacional, não resolvido),
+  # qualquer que seja a data de criação — conversa fechada meses atrás não é
+  # "lead parado", é histórico; lead antigo ainda aberto é backlog e aparece.
   def stalled_scope
-    period_leads_scope.where('last_activity_at < ?', now - STALLED_AFTER)
+    open_leads_scope.where('last_activity_at < ?', now - STALLED_AFTER)
   end
 
   def stalled

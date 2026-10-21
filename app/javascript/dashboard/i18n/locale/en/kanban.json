@@ -164,7 +164,7 @@
       "MY_FOLLOWUPS_EYEBROW": "Agenda",
       "MY_FOLLOWUPS_TITLE": "Meus follow-ups",
       "MY_FOLLOWUPS_EMPTY": "Você não tem follow-ups em aberto.",
-      "OP_IN_PERIOD": "no período",
+      "OP_OPEN_NOW": "em aberto agora",
       "GARGALO_EXCLUDED": "Fora da conta: {stages}. O tempo nessas etapas depende do cliente responder, não do atendimento — ajuste em Gerenciar etapas.",
       "SLA_SAMPLE": "{measured}/{total}",
       "SLA_COVERAGE": "{measured} de {total} conversas do período têm 1º contato mensurável (precisam da label atendimento_humano antes da 1ª resposta)."
