@@ -13,7 +13,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import EmptyStateLayout from 'dashboard/components-next/EmptyStateLayout.vue';
-import ContactHistoryDialog from './ContactHistoryDialog.vue';
+import ContactProfileDialog from 'dashboard/components-next/Contacts/ContactProfileDialog.vue';
 
 // Histórico da caixa ativa, agrupado por CONTATO (uma linha por número). No
 // COMERCIAL, leads fechados por desfecho (ganho/perdido), filtráveis; no
@@ -307,6 +307,6 @@ const openContact = group => {
       </li>
     </ul>
 
-    <ContactHistoryDialog ref="dialogRef" :inbox-id="inboxId" />
+    <ContactProfileDialog ref="dialogRef" :inbox-id="inboxId" />
   </div>
 </template>

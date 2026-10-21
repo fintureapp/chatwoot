@@ -30,6 +30,9 @@
       "MARK_WON": "Marcar como ganho",
       "MARK_LOST": "Marcar como perdido",
       "MORE_ACTIONS": "Mais ações",
+      "ASSIGNEE": "Responsável",
+      "UNASSIGNED": "Sem responsável",
+      "NEXT_ACTION": "Plano de ação",
       "HISTORY_TITLE": "Atendimentos anteriores ({count})",
       "HISTORY_MORE": "+{count} anteriores",
       "HISTORY_OPEN": "Em aberto",
@@ -346,5 +349,45 @@
       "DELETE": "Excluir",
       "SAVE_ERROR": "Não foi possível salvar o follow-up. Tente novamente."
     }
+  },
+  "CONTACT_PROFILE": {
+    "VIEW_PROFILE": "Ver perfil completo",
+    "OPEN_CONTACT": "Abrir cadastro",
+    "COPY": "Copiar",
+    "COPIED": "Copiado!",
+    "AGENTS": "Agentes que já atenderam",
+    "AGENT_LAST": "Último atendimento em {date}",
+    "NO_CONVERSATIONS": "Este cliente ainda não tem conversas visíveis para você.",
+    "FIELDS": {
+      "PHONE": "Telefone",
+      "EMAIL": "E-mail",
+      "COMPANY": "Empresa",
+      "LOCATION": "Localização",
+      "IDENTIFIER": "Identificador",
+      "SINCE": "Cliente desde",
+      "LAST_ACTIVITY": "Última atividade",
+      "EMPTY": "Não informado"
+    },
+    "STATS": {
+      "CONVERSATIONS": "{count} conversa(s)",
+      "OPEN": "{count} em aberto",
+      "CLOSED": "{count} fechada(s)"
+    },
+    "TABS": {
+      "CONVERSATIONS": "Conversas ({count})",
+      "ATTACHMENTS": "Anexos ({count})"
+    }
+  },
+  "CUSTOMERS": {
+    "HEADER_TITLE": "Gestão dos Clientes",
+    "SEARCH_PLACEHOLDER": "Buscar cliente por nome, telefone ou e-mail",
+    "SEARCH_HINT": "Digite pelo menos 2 caracteres. A busca é automática.",
+    "CLEAR": "Limpar busca",
+    "IDLE_TITLE": "Encontre um cliente",
+    "IDLE_SUBTITLE": "Pesquise por nome, telefone ou e-mail para ver o perfil completo: dados de contato, resumo geral, agentes que atenderam, todas as conversas e anexos.",
+    "EMPTY_TITLE": "Nenhum cliente encontrado",
+    "EMPTY_SUBTITLE": "Nenhum contato corresponde à busca. Confira a grafia ou tente outro dado.",
+    "ERROR": "Não foi possível buscar os clientes. Tente novamente.",
+    "RESULTS_COUNT": "{count} cliente(s) encontrado(s)"
   }
 }

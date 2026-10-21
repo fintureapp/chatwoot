@@ -61,6 +61,10 @@ const nextAction = computed(
   () => props.conversation?.custom_attributes?.[NEXT_ACTION_ATTRIBUTE_KEY]
 );
 
+// Responsável em destaque (decisão de 20/10/2026): sai da lista genérica de
+// campos e vira um chip próprio com avatar. Sem responsável, o chip avisa.
+const assignee = computed(() => props.conversation?.meta?.assignee || null);
+
 // Espelhos do CRM Fase 1 (gravados pelo backend em custom_attributes).
 const quoteSummary = computed(
   () => props.conversation?.custom_attributes?.[QUOTE_ATTRIBUTE_KEY]
@@ -180,6 +184,29 @@ const onMenuAction = ({ action }) => {
         />
       </div>
     </div>
+    <!-- Responsável em destaque: chip com avatar do agente. -->
+    <div class="flex items-center min-w-0">
+      <span
+        v-if="assignee"
+        class="inline-flex items-center gap-1.5 max-w-full px-2 py-1 text-xs font-semibold rounded-full bg-n-blue-3 text-n-blue-11 outline outline-1 -outline-offset-1 outline-n-blue-6"
+        :title="$t('KANBAN.CARD.ASSIGNEE')"
+      >
+        <Avatar
+          :name="assignee.name"
+          :src="assignee.thumbnail"
+          :size="16"
+          rounded-full
+        />
+        <span class="truncate">{{ assignee.name }}</span>
+      </span>
+      <span
+        v-else
+        class="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium border border-dashed rounded-full text-n-slate-10 border-n-slate-7"
+      >
+        <Icon icon="i-lucide-user-round" class="size-3.5 shrink-0" />
+        {{ $t('KANBAN.CARD.UNASSIGNED') }}
+      </span>
+    </div>
     <!-- Badges do CRM: resumo da cotação e follow-up (vencido em destaque). -->
     <div
       v-if="quoteSummary || followUpDueAt"
@@ -210,13 +237,27 @@ const onMenuAction = ({ action }) => {
         {{ followUpLabel }}
       </span>
     </div>
-    <!-- Dica de próxima ação, quando existir (discreta, no rodapé do card). -->
+    <!-- Plano de ação em destaque: bloco âmbar com rótulo, para o SDR bater o
+         olho e saber o próximo passo sem abrir o card. -->
     <div
       v-if="nextAction"
-      class="flex items-center gap-1 pt-1 mt-1 text-n-slate-11"
+      class="flex items-start gap-2 px-2.5 py-2 rounded-lg bg-n-amber-3 text-n-amber-12 ltr:border-l-[3px] rtl:border-r-[3px] border-n-amber-9"
+      :title="nextAction"
     >
-      <Icon icon="i-lucide-arrow-right-circle" class="size-3 shrink-0" />
-      <span class="text-xs truncate">{{ nextAction }}</span>
+      <Icon
+        icon="i-lucide-list-checks"
+        class="size-3.5 mt-0.5 shrink-0 text-n-amber-11"
+      />
+      <div class="flex flex-col min-w-0 gap-0.5">
+        <span
+          class="text-[10px] font-semibold tracking-wide uppercase text-n-amber-11"
+        >
+          {{ $t('KANBAN.CARD.NEXT_ACTION') }}
+        </span>
+        <span class="text-xs font-medium leading-snug line-clamp-2">
+          {{ nextAction }}
+        </span>
+      </div>
     </div>
     <!-- Barra de desfecho: Ganho/Perdido com rótulo (decisão do SDR). As ações
          utilitárias foram para o menu "⋯" no topo. stop em click E pointerdown

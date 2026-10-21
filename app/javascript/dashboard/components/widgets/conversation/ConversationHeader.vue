@@ -9,11 +9,15 @@ import MoreActions from './MoreActions.vue';
 import Avatar from 'next/avatar/Avatar.vue';
 import SLACardLabel from './components/SLACardLabel.vue';
 import ConversationCallButton from './ConversationCallButton.vue';
+import ContactProfileDialog from 'dashboard/components-next/Contacts/ContactProfileDialog.vue';
 import wootConstants from 'dashboard/constants/globals';
 import { conversationListPageURL } from 'dashboard/helper/URLHelper';
 import { snoozedReopenTime } from 'dashboard/helper/snoozeHelpers';
 import { useInbox } from 'dashboard/composables/useInbox';
 import { useAlert } from 'dashboard/composables';
+import { useUISettings } from 'dashboard/composables/useUISettings';
+import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
+import ButtonV4 from 'dashboard/components-next/button/Button.vue';
 import { useI18n } from 'vue-i18n';
 import { copyTextToClipboard } from 'shared/helpers/clipboard';
 
@@ -95,6 +99,27 @@ const hasMultipleInboxes = computed(
 
 const hasSlaPolicyId = computed(() => props.chat?.sla_policy_id);
 
+// Painel lateral (ações da conversa, atributos, notas…). O botão flutuante
+// que ficava sobre as mensagens foi removido a pedido; o acesso agora é por
+// este botão no cabeçalho ou pelo atalho Alt+O.
+const { uiSettings, updateUISettings } = useUISettings();
+const isContactSidebarOpen = computed(
+  () => uiSettings.value.is_contact_sidebar_open
+);
+const toggleContactSidebar = () => {
+  updateUISettings({
+    is_contact_sidebar_open: !isContactSidebarOpen.value,
+    is_copilot_panel_open: false,
+  });
+};
+useKeyboardEvents({ 'Alt+KeyO': { action: toggleContactSidebar } });
+
+// Perfil completo do cliente (modal centralizado) ao clicar no avatar/nome.
+const profileDialogRef = ref(null);
+const openContactProfile = () => {
+  profileDialogRef.value?.open({ ...currentContact.value });
+};
+
 const copyConversationId = async () => {
   try {
     await copyTextToClipboard(String(props.chat.id));
@@ -118,22 +143,32 @@ const copyConversationId = async () => {
         :back-url="backButtonUrl"
         class="ltr:mr-2 rtl:ml-2"
       />
-      <Avatar
-        :name="currentContact.name"
-        :src="currentContact.thumbnail"
-        :size="32"
-        :status="currentContact.availability_status"
-        hide-offline-status
-      />
+      <button
+        type="button"
+        class="flex items-center justify-center rounded-full shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+        :title="$t('CONTACT_PROFILE.VIEW_PROFILE')"
+        @click="openContactProfile"
+      >
+        <Avatar
+          :name="currentContact.name"
+          :src="currentContact.thumbnail"
+          :size="32"
+          :status="currentContact.availability_status"
+          hide-offline-status
+        />
+      </button>
       <div
         class="flex flex-col items-start min-w-0 ml-2 overflow-hidden rtl:ml-0 rtl:mr-2"
       >
         <div class="flex flex-row items-center max-w-full gap-1 p-0 m-0">
-          <span
-            class="text-sm font-medium truncate leading-tight text-n-slate-12"
+          <button
+            type="button"
+            class="max-w-full min-w-0 text-sm font-medium truncate leading-tight text-n-slate-12 hover:underline underline-offset-2 !p-0"
+            :title="$t('CONTACT_PROFILE.VIEW_PROFILE')"
+            @click="openContactProfile"
           >
             {{ currentContact.name }}
-          </span>
+          </button>
           <fluent-icon
             v-if="!isHMACVerified"
             v-tooltip="$t('CONVERSATION.UNVERIFIED_SESSION')"
@@ -173,7 +208,18 @@ const copyConversationId = async () => {
         class="hidden md:flex"
       />
       <ConversationCallButton :inbox="inbox" :chat="currentChat" />
+      <ButtonV4
+        v-tooltip="$t('CONVERSATION.HEADER.TOGGLE_SIDEBAR')"
+        size="sm"
+        variant="ghost"
+        color="slate"
+        icon="i-lucide-panel-right"
+        class="rounded-md"
+        :class="{ 'bg-n-alpha-2': isContactSidebarOpen }"
+        @click="toggleContactSidebar"
+      />
       <MoreActions :conversation-id="currentChat.id" />
     </div>
+    <ContactProfileDialog ref="profileDialogRef" />
   </div>
 </template>

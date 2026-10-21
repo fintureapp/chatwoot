@@ -35,6 +35,25 @@ RSpec.describe 'Contact Finture timeline API', type: :request do
     expect(entries[open.display_id]['closed_at']).to be_nil
   end
 
+  it 'returns the contact card fields and the agents who handled the contact' do
+    contact.update!(additional_attributes: { 'company_name' => 'Embracon', 'city' => 'Nova Iguaçu', 'country' => 'Brasil' })
+    create(:conversation, account: account, inbox: inbox, contact: contact, assignee: agent, created_at: 3.days.ago)
+    create(:conversation, account: account, inbox: inbox, contact: contact, assignee: agent, created_at: 2.days.ago)
+    create(:conversation, account: account, inbox: inbox, contact: contact, assignee: admin, created_at: 1.day.ago)
+    create(:conversation, account: account, inbox: inbox, contact: contact)
+
+    get url, headers: admin.create_new_auth_token, as: :json
+
+    body = response.parsed_body
+    expect(body['contact']).to include('company_name' => 'Embracon', 'city' => 'Nova Iguaçu', 'country' => 'Brasil')
+    expect(body['contact']['created_at']).to eq(contact.created_at.to_i)
+    agents = body['agents'].index_by { |entry| entry['id'] }
+    expect(agents.keys).to contain_exactly(agent.id, admin.id)
+    expect(agents[agent.id]).to include('name' => agent.name, 'count' => 2)
+    expect(agents[admin.id]).to include('count' => 1)
+    expect(body['payload'].pluck('assignee_id')).to eq([nil, admin.id, agent.id, agent.id])
+  end
+
   it 'hides conversations from inboxes the agent cannot access' do
     visible = create(:conversation, account: account, inbox: inbox, contact: contact)
     create(:conversation, account: account, inbox: other_inbox, contact: contact)

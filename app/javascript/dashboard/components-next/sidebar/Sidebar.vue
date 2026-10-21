@@ -353,6 +353,13 @@ const menuItems = computed(() => {
       activeOn: ['kanban_sdr_index'],
     },
     {
+      name: 'Customers',
+      label: t('SIDEBAR.CUSTOMERS'),
+      icon: 'i-lucide-user-round-search',
+      to: accountScopedRoute('customers_index'),
+      activeOn: ['customers_index'],
+    },
+    {
       name: 'Conversation',
       label: t('SIDEBAR.CONVERSATIONS'),
       icon: 'i-lucide-message-circle',
