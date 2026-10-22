@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_10_22_120100) do
+ActiveRecord::Schema[7.1].define(version: 2026_10_22_130000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -904,6 +904,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_22_120100) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "ai_enabled", default: false, null: false
+    t.boolean "audio_transcription_enabled", default: false, null: false
     t.index ["account_id"], name: "index_finture_inbox_configs_on_account_id"
     t.index ["inbox_id"], name: "index_finture_inbox_configs_on_inbox_id", unique: true
   end

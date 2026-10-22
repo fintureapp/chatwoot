@@ -99,6 +99,14 @@ class FintureCrmApi extends ApiClient {
     });
   }
 
+  // Liga/desliga a transcrição automática dos áudios recebidos na caixa.
+  updateInboxAudioTranscription(inboxId, enabled) {
+    return axios.put(`${this.baseUrl()}/finture_inbox_config`, {
+      inbox_id: inboxId,
+      audio_transcription_enabled: enabled,
+    });
+  }
+
   // ---- Modo de atendimento: IA x humano --------------------------------------
   // `expected_revision` é a revisão que a tela mostrava: se outra pessoa agiu
   // antes, o servidor responde 409 com o estado atual.

@@ -42,6 +42,7 @@ class Attachment < ApplicationRecord
   belongs_to :message
   has_one_attached :file
   before_save :set_extension
+  after_create_commit :enqueue_finture_audio_transcription
   validate :acceptable_file
   validates :external_url, length: { maximum: Limits::URL_LENGTH_LIMIT }
   enum file_type: { :image => 0, :audio => 1, :video => 2, :file => 3, :location => 4, :fallback => 5, :share => 6, :story_mention => 7,
@@ -110,7 +111,10 @@ class Attachment < ApplicationRecord
       {
         # Keep audio playback inline while avoiding the ActiveStorage proxy path.
         data_url: inline_audio_url,
-        transcribed_text: meta&.[]('transcribed_text') || ''
+        transcribed_text: meta&.[]('transcribed_text') || '',
+        # Situação da transcrição automática (Finture::AudioTranscriptionService):
+        # o n8n usa para seguir a triagem ou pedir que o cliente repita.
+        transcription_status: meta&.dig('finture_transcription', 'status')
       }
     )
   end
@@ -166,6 +170,13 @@ class Attachment < ApplicationRecord
       fallback_title: fallback_title,
       meta: meta || {}
     }
+  end
+
+  # Áudio recebido do cliente: o job confere a caixa e transcreve (Finture).
+  def enqueue_finture_audio_transcription
+    return unless audio? && message&.incoming?
+
+    Finture::AudioTranscriptionJob.perform_later(id)
   end
 
   def instagram_incoming_message?

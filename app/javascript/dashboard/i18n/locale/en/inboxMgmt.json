@@ -845,6 +845,10 @@
       "REMOVE": "Remove Help Center",
       "SUB_TEXT": "Attach a Help Center with the inbox"
     },
+    "AUDIO_TRANSCRIPTION": {
+      "LABEL": "Transcrição de áudio",
+      "HELP_TEXT": "Transcreve os áudios que o cliente manda e mostra o texto embaixo do áudio. Caixas com Atendimento com IA já transcrevem, porque a triagem só entende texto. Ligue aqui para transcrever também em caixas sem IA."
+    },
     "AI_ATTENDANCE": {
       "LABEL": "Atendimento com IA",
       "HELP_TEXT": "Ligue nas caixas atendidas pela triagem com IA. Mostra os botões Assumir conversa / Devolver à IA e, quando o cliente reabre uma conversa resolvida, a IA volta a atender."

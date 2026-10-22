@@ -75,6 +75,12 @@
       "HIDE_LABELS": "Hide labels",
       "LABELS_COUNT": "{count} labels"
     },
+    "AUDIO_TRANSCRIPTION": {
+      "AUTO_LABEL": "Transcrição automática",
+      "UNINTELLIGIBLE": "Não deu para entender este áudio para transcrever.",
+      "TOO_LONG": "Áudio longo demais para transcrever.",
+      "FAILED": "Não foi possível transcrever este áudio."
+    },
     "VOICE_CALL": {
       "INCOMING_CALL": "Incoming call",
       "OUTGOING_CALL": "Outgoing call",

@@ -7,6 +7,10 @@
 #
 # `ai_enabled`: caixa atendida por IA (triagem do n8n). Liga os controles
 # Assumir/Devolver e a volta para a IA quando o cliente reabre a conversa.
+#
+# `audio_transcription_enabled`: transcreve os áudios recebidos mesmo sem IA
+# (o atendente lê o texto embaixo do áudio). Caixa com IA sempre transcreve,
+# porque a triagem do n8n só entende texto.
 class Finture::InboxConfig < ApplicationRecord
   self.table_name = 'finture_inbox_configs'
 
@@ -30,6 +34,11 @@ class Finture::InboxConfig < ApplicationRecord
 
   def self.ai_enabled?(inbox_id)
     exists?(inbox_id: inbox_id, ai_enabled: true)
+  end
+
+  # Áudios recebidos nesta caixa devem ser transcritos (Finture::AudioTranscriptionJob)?
+  def self.audio_transcription?(inbox_id)
+    where(inbox_id: inbox_id).where('ai_enabled = TRUE OR audio_transcription_enabled = TRUE').exists?
   end
 
   # {inbox_id => true} das caixas com IA, para payloads em lote (kanban).

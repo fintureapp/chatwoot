@@ -9,10 +9,11 @@ class Api::V1::Accounts::FintureInboxConfigsController < Api::V1::Accounts::Base
   before_action :set_inbox
 
   def show
-    render json: { kanban_type: Finture::InboxConfig.type_for(@inbox), ai_enabled: Finture::InboxConfig.ai_enabled?(@inbox.id) }
+    render json: payload(Finture::InboxConfig.find_by(inbox_id: @inbox.id))
   end
 
-  # Aceita `kanban_type` e/ou `ai_enabled` (o que não vier fica como está).
+  # Aceita `kanban_type`, `ai_enabled` e/ou `audio_transcription_enabled` (o que
+  # não vier fica como está).
   def update
     kanban_type = params[:kanban_type].presence&.to_s
     return render_error('Tipo inválido.') if kanban_type && Finture::InboxConfig::KANBAN_TYPES.exclude?(kanban_type)
@@ -23,10 +24,18 @@ class Api::V1::Accounts::FintureInboxConfigsController < Api::V1::Accounts::Base
     config.save!
 
     ensure_stages_for_type(config.kanban_type) if type_changed || (kanban_type && stages_missing?)
-    render json: { kanban_type: config.kanban_type, ai_enabled: config.ai_enabled }
+    render json: payload(config)
   end
 
   private
+
+  def payload(config)
+    {
+      kanban_type: config&.kanban_type || Finture::InboxConfig::DEFAULT_TYPE,
+      ai_enabled: config&.ai_enabled || false,
+      audio_transcription_enabled: config&.audio_transcription_enabled || false
+    }
+  end
 
   def type_changing?(config, kanban_type)
     return false if kanban_type.blank?
@@ -37,7 +46,12 @@ class Api::V1::Accounts::FintureInboxConfigsController < Api::V1::Accounts::Base
   def assign_config(config, kanban_type)
     config.account_id = Current.account.id
     config.kanban_type = kanban_type if kanban_type
-    config.ai_enabled = ActiveModel::Type::Boolean.new.cast(params[:ai_enabled]) if params.key?(:ai_enabled)
+    config.ai_enabled = cast_bool(:ai_enabled) if params.key?(:ai_enabled)
+    config.audio_transcription_enabled = cast_bool(:audio_transcription_enabled) if params.key?(:audio_transcription_enabled)
+  end
+
+  def cast_bool(key)
+    ActiveModel::Type::Boolean.new.cast(params[key])
   end
 
   def set_inbox
