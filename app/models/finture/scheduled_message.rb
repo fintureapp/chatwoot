@@ -5,7 +5,9 @@
 #   - transferência de responsável, resolução da conversa ou troca IA/humano
 #     NÃO cancelam: a mensagem sai no horário, assinada pelo autor original;
 #   - regras do canal são checadas no envio (janela do WhatsApp etc.): fora da
-#     janela a mensagem NÃO é enviada e vira `failed`, com aviso ao autor.
+#     janela a mensagem NÃO é enviada e vira `failed`, com aviso ao autor;
+#   - agendamento de TEMPLATE (template_params preenchido) não depende da
+#     janela: template aprovado pode ser enviado com a janela de 24h fechada.
 class Finture::ScheduledMessage < ApplicationRecord
   self.table_name = 'finture_scheduled_messages'
 
@@ -23,6 +25,7 @@ class Finture::ScheduledMessage < ApplicationRecord
   validates :scheduled_at, presence: true
   validates :status, inclusion: { in: STATUSES }
   validate :scheduled_in_future, on: :create
+  validate :template_params_shape
 
   scope :pending, -> { where(status: 'pending') }
   scope :due, -> { pending.where(scheduled_at: ..Time.current) }
@@ -30,6 +33,10 @@ class Finture::ScheduledMessage < ApplicationRecord
 
   def pending?
     status == 'pending'
+  end
+
+  def template?
+    template_params.present?
   end
 
   # Reivindica o registro para envio. Só um worker vence (UPDATE condicional).
@@ -54,5 +61,14 @@ class Finture::ScheduledMessage < ApplicationRecord
     return if scheduled_at.blank?
 
     errors.add(:scheduled_at, 'deve ser no futuro') if scheduled_at <= Time.current
+  end
+
+  def template_params_shape
+    return if template_params.nil?
+
+    return errors.add(:template_params, 'precisa do nome do template') if !template_params.is_a?(Hash) || template_params['name'].blank?
+
+    body = template_params.dig('processed_params', 'body')
+    errors.add(:template_params, 'tem variáveis sem preencher') if body.is_a?(Hash) && body.values.any?(&:blank?)
   end
 end

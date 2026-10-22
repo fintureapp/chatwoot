@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_10_21_120000) do
+ActiveRecord::Schema[7.1].define(version: 2026_10_21_190000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -916,6 +916,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_21_120000) do
     t.text "error_message"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "template_params"
     t.index ["conversation_id", "scheduled_at"], name: "index_finture_scheduled_messages_on_conv_scheduled"
     t.index ["status", "scheduled_at"], name: "index_finture_scheduled_messages_on_status_scheduled"
   end

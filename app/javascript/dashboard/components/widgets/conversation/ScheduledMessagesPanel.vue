@@ -21,6 +21,8 @@ const props = defineProps({
 const store = useStore();
 const { t } = useI18n();
 
+const inboxId = computed(() => store.getters.getSelectedChat?.inbox_id);
+
 const showHistory = ref(false);
 const confirmingId = ref(null);
 const dialogRef = ref(null);
@@ -141,6 +143,16 @@ const cancel = async item => {
               >
                 {{ t(`CONVERSATION.SCHEDULE.STATUS.${item.status}`) }}
               </span>
+              <span
+                v-if="item.kind === 'template'"
+                class="px-1.5 py-0.5 rounded-md bg-n-teal-3 text-n-teal-11"
+              >
+                {{
+                  t('CONVERSATION.SCHEDULE.TEMPLATE_BADGE', {
+                    name: item.template_params?.name || '',
+                  })
+                }}
+              </span>
               <span v-if="item.user" class="text-n-slate-10">
                 {{ t('CONVERSATION.SCHEDULE.BY', { name: item.user.name }) }}
               </span>
@@ -182,6 +194,10 @@ const cancel = async item => {
         </li>
       </ul>
     </div>
-    <ScheduleMessageDialog ref="dialogRef" :conversation-id="conversationId" />
+    <ScheduleMessageDialog
+      ref="dialogRef"
+      :conversation-id="conversationId"
+      :inbox-id="inboxId"
+    />
   </div>
 </template>

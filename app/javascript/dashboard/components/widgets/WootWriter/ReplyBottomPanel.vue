@@ -410,7 +410,6 @@ export default {
         slate
         faded
         sm
-        :disabled="isSendDisabled"
         class="flex-shrink-0"
         @click="$emit('schedule')"
       />

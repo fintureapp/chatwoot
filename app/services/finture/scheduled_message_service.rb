@@ -35,7 +35,7 @@ class Finture::ScheduledMessageService
 
     scheduled_message.reload
     return auto_cancel! if should_auto_cancel?
-    return fail!(I18n.t('finture.scheduled_messages.errors.window_closed')) unless conversation.can_reply?
+    return fail!(I18n.t('finture.scheduled_messages.errors.window_closed')) unless scheduled_message.template? || conversation.can_reply?
 
     send_message!
   rescue StandardError => e
@@ -65,15 +65,20 @@ class Finture::ScheduledMessageService
   def send_message!
     message = nil
     ActiveRecord::Base.transaction do
-      message = Messages::MessageBuilder.new(
-        user, conversation,
-        { content: scheduled_message.content, private: false,
-          content_attributes: { finture_scheduled_message_id: scheduled_message.id } }
-      ).perform
+      message = Messages::MessageBuilder.new(user, conversation, message_params).perform
       scheduled_message.update!(status: 'sent', sent_at: Time.current, message: message)
     end
     activity(:sent, user_name: author_name, time: formatted_time)
     message
+  end
+
+  # Template vai em `template_params`, como na caixa de resposta: o canal
+  # (Whatsapp::SendOnWhatsappService) envia como template, fora da janela inclusive.
+  def message_params
+    params = { content: scheduled_message.content, private: false,
+               content_attributes: { finture_scheduled_message_id: scheduled_message.id } }
+    params[:template_params] = scheduled_message.template_params if scheduled_message.template?
+    params
   end
 
   def fail!(reason)

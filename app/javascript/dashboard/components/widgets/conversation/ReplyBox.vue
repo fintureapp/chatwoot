@@ -440,6 +440,11 @@ export default {
     isDefaultEditorMode() {
       return !this.showAudioRecorderEditor && !this.copilot.isActive.value;
     },
+    // Finture: com a janela fechada só dá para agendar template.
+    showScheduleButton() {
+      if (this.isPrivate) return false;
+      return !this.isEditorDisabled || this.showWhatsappTemplates;
+    },
     isEditorDisabled() {
       return (
         (this.isAWhatsAppChannel || this.isAPIInbox) &&
@@ -947,13 +952,20 @@ export default {
     executeCopilotAction(action, data) {
       this.copilot.execute(action, data);
     },
-    // Finture: agendar o texto atual do editor (sem anexos) para envio futuro.
+    // Finture: agendar envio futuro — o texto atual do editor (sem anexos) ou
+    // um template do WhatsApp (único jeito de enviar com a janela de 24h fechada).
     openScheduleDialog() {
-      if (this.isReplyButtonDisabled || this.isPrivate) return;
-      const { message } = this.getMessagePayload(this.message);
-      this.$refs.scheduleDialog?.open({ message });
+      if (this.isPrivate) return;
+      const message = this.isEditorDisabled
+        ? ''
+        : this.getMessagePayload(this.message).message;
+      this.$refs.scheduleDialog?.open({
+        message,
+        preferTemplate: this.isEditorDisabled,
+      });
     },
-    onMessageScheduled() {
+    onMessageScheduled(item) {
+      if (item?.kind === 'template') return;
       this.clearMessage();
       this.removeFromDraft();
     },
@@ -1430,7 +1442,7 @@ export default {
         :recording-audio-duration-text="recordingAudioDurationText"
         :recording-audio-state="recordingAudioState"
         :send-button-text="replyButtonLabel"
-        :show-schedule="!isPrivate && !isEditorDisabled"
+        :show-schedule="showScheduleButton"
         :show-audio-recorder="showAudioRecorder"
         :show-emoji-picker="showEmojiPicker"
         :show-file-upload="showFileUpload"
@@ -1454,6 +1466,7 @@ export default {
       v-if="currentChat.id"
       ref="scheduleDialog"
       :conversation-id="currentChat.id"
+      :inbox-id="inboxId"
       @scheduled="onMessageScheduled"
     />
 
