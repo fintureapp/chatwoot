@@ -845,6 +845,10 @@
       "REMOVE": "Remove Help Center",
       "SUB_TEXT": "Attach a Help Center with the inbox"
     },
+    "AI_ATTENDANCE": {
+      "LABEL": "Atendimento com IA",
+      "HELP_TEXT": "Ligue nas caixas atendidas pela triagem com IA. Mostra os botões Assumir conversa / Devolver à IA e, quando o cliente reabre uma conversa resolvida, a IA volta a atender."
+    },
     "KANBAN_CLASSIFICATION": {
       "LABEL": "Classificação do Kanban",
       "HELP_TEXT": "Define a estrutura do Kanban e a visão padrão do Dashboard desta caixa. Comercial usa o funil de vendas (ganho/perdido); Operacional usa o funil de atendimento e a demanda sai do board ao ser resolvida.",

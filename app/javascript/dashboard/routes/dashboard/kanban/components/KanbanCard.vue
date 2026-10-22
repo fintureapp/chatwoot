@@ -63,6 +63,11 @@ const enrichedConversation = computed(() => ({
 const isOperational = computed(() => props.kanbanType === 'operacional');
 
 const contactName = computed(() => props.conversation?.meta?.sender?.name);
+// Finture: IA conduzindo (caixa com atendimento por IA) — chip no lugar de "sem responsável".
+const isAiAttending = computed(() => {
+  const attendance = props.conversation?.finture_attendance;
+  return !!attendance?.ai_enabled && attendance.mode === 'ia';
+});
 const contactThumbnail = computed(
   () => props.conversation?.meta?.sender?.thumbnail
 );
@@ -214,6 +219,13 @@ const onMenuAction = ({ action }) => {
           rounded-full
         />
         <span class="truncate">{{ assignee.name }}</span>
+      </span>
+      <span
+        v-else-if="isAiAttending"
+        class="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-semibold rounded-full bg-n-brand/10 text-n-blue-11"
+      >
+        <Icon icon="i-lucide-bot" class="size-3.5 shrink-0" />
+        {{ $t('CONVERSATION.ATTENDANCE.AI_ATTENDING') }}
       </span>
       <span
         v-else

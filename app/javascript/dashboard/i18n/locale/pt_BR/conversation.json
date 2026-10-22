@@ -14,6 +14,33 @@
     "SEARCH_MESSAGES": "Pesquisar por mensagens nas conversas",
     "VIEW_ORIGINAL": "Ver original",
     "VIEW_TRANSLATED": "Ver traduzido",
+    "ATTENDANCE": {
+      "AI_ATTENDING": "IA atendendo",
+      "HUMAN_ATTENDING": "Atendimento humano",
+      "YOU_ATTENDING": "Você está atendendo",
+      "AGENT_ATTENDING": "{name} atendendo",
+      "WAITING_AGENT": "Aguardando atendente",
+      "SINCE": "· desde {time}",
+      "CHANGED_BY": "Alterado por {name} às {time}",
+      "TAKE_OVER": "Assumir conversa",
+      "TAKING_OVER": "Assumindo...",
+      "TAKE_OVER_SUCCESS": "Você assumiu a conversa. A IA não responde mais aqui.",
+      "TAKE_OVER_AND_SEND": "Assumir e enviar",
+      "RETURN": "Devolver à IA",
+      "RETURN_TOOLTIP": "A IA volta a responder o cliente na próxima mensagem dele",
+      "RETURN_SUCCESS": "Conversa devolvida à IA.",
+      "ERROR": "Não foi possível alterar o atendimento. Tente novamente.",
+      "BANNER": "A IA está atendendo esta conversa. Assuma para responder o cliente.",
+      "RETURN_DIALOG": {
+        "TITLE": "Devolver à IA",
+        "DESCRIPTION": "A IA volta a responder o cliente a partir da próxima mensagem dele, com o contexto abaixo. Você deixa de ser o responsável; o time continua o mesmo.",
+        "CONFIRM": "Devolver à IA",
+        "REASON_LABEL": "Motivo (obrigatório)",
+        "REASON_PLACEHOLDER": "Ex.: dúvida simples, a IA consegue resolver",
+        "PENDING_LABEL": "O que ficou pendente",
+        "PENDING_PLACEHOLDER": "Ex.: cliente vai enviar o RG; confirmar a data da vistoria"
+      }
+    },
     "EMPTY_STATE": {
       "CMD_BAR": "para abrir o menu de comando",
       "KEYBOARD_SHORTCUTS": "para ver os atalhos de teclado"

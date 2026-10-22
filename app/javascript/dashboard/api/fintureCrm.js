@@ -91,6 +91,42 @@ class FintureCrmApi extends ApiClient {
     });
   }
 
+  // Liga/desliga o atendimento com IA da caixa (controles Assumir/Devolver).
+  updateInboxAiEnabled(inboxId, aiEnabled) {
+    return axios.put(`${this.baseUrl()}/finture_inbox_config`, {
+      inbox_id: inboxId,
+      ai_enabled: aiEnabled,
+    });
+  }
+
+  // ---- Modo de atendimento: IA x humano --------------------------------------
+  // `expected_revision` é a revisão que a tela mostrava: se outra pessoa agiu
+  // antes, o servidor responde 409 com o estado atual.
+  getAttendance(conversationId) {
+    return axios.get(`${this.url}/${conversationId}/finture_attendance`);
+  }
+
+  takeOverConversation(conversationId, { expectedRevision, reason } = {}) {
+    return axios.post(
+      `${this.url}/${conversationId}/finture_attendance/take_over`,
+      { expected_revision: expectedRevision, reason }
+    );
+  }
+
+  returnConversationToAi(
+    conversationId,
+    { expectedRevision, reason, pendingNotes }
+  ) {
+    return axios.post(
+      `${this.url}/${conversationId}/finture_attendance/return_to_ai`,
+      {
+        expected_revision: expectedRevision,
+        reason,
+        pending_notes: pendingNotes,
+      }
+    );
+  }
+
   // ---- Mudança de etapa do card (server-side, registra a transição) ---------
   changeStage(conversationId, payload) {
     return axios.patch(`${this.url}/${conversationId}/finture_stage`, payload);

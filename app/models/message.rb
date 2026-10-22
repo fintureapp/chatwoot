@@ -431,6 +431,9 @@ class Message < ApplicationRecord
     else
       conversation.open!
     end
+    # Finture: em caixa com IA, conversa reaberta pelo cliente volta para a triagem.
+    # Roda antes de dispatch_create_events, então o webhook do n8n já vê o modo 'ia'.
+    Finture::AttendanceModeService.new(conversation: conversation).reopen_to_ai! if reopened_by_contact?
   end
 
   def reopened_by_contact?

@@ -841,6 +841,10 @@
       "REMOVE": "Remover Centro de Ajuda",
       "SUB_TEXT": "Anexe um Centro de Ajuda com a caixa de entrada"
     },
+    "AI_ATTENDANCE": {
+      "LABEL": "Atendimento com IA",
+      "HELP_TEXT": "Ligue nas caixas atendidas pela triagem com IA. Mostra os botões Assumir conversa / Devolver à IA e, quando o cliente reabre uma conversa resolvida, a IA volta a atender."
+    },
     "AUTO_ASSIGNMENT": {
       "MAX_ASSIGNMENT_LIMIT": "Limite de atribuição automática",
       "MAX_ASSIGNMENT_LIMIT_RANGE_ERROR": "Por favor, insira um valor maior que 0",

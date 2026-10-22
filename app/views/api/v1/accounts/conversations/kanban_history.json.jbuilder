@@ -1,6 +1,7 @@
 # Histórico do Kanban SDR: leads já fechados (ganho/perdido) de uma caixa. Mesmo
 # payload enxuto do board — o card lê sdr_outcome/_at, sdr_lost_reason e
 # valor_potencial dos custom_attributes.
+ai_enabled_map = Finture::InboxConfig.ai_enabled_map(@conversations.map(&:inbox_id).uniq)
 json.payload do
   json.array! @conversations do |conversation|
     json.id conversation.display_id
@@ -9,6 +10,7 @@ json.payload do
     json.priority conversation.priority
     json.labels conversation.cached_label_list_array
     json.custom_attributes conversation.custom_attributes
+    json.finture_attendance Finture::AttendanceState.payload_for(conversation, ai_enabled: ai_enabled_map.fetch(conversation.inbox_id, false))
     json.created_at conversation.created_at.to_i
     json.last_activity_at conversation.last_activity_at.to_i
     json.timestamp conversation.last_activity_at.to_i

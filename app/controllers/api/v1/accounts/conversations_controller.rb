@@ -166,8 +166,8 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   end
 
   def custom_attributes
-    @conversation.custom_attributes = params.permit(custom_attributes: {})[:custom_attributes]
-    @conversation.save!
+    Finture::CustomAttributesWriter.new(conversation: @conversation, user: Current.user)
+                                   .assign!(params.permit(custom_attributes: {})[:custom_attributes])
   end
 
   def destroy
@@ -179,16 +179,14 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   private
 
   # Conversa aberta por um agente humano (não por bot) já nasce em atendimento humano.
-  # Gravamos os dois sinais que o bot (n8n) lê no guard "Avaliar Estado" para se calar:
-  # a label `atendimento_humano` e o custom attribute `modo_atendimento = humano`. Sem
-  # isso, o bot voltava a responder o lead assim que ele respondia à mensagem do agente.
+  # O serviço grava o modo e espelha os dois sinais que o bot (n8n) lê no guard
+  # "Avaliar Estado" para se calar: a label `atendimento_humano` e o custom attribute
+  # `modo_atendimento = humano`. Sem isso, o bot voltava a responder o lead assim que
+  # ele respondia à mensagem do agente.
   def mark_conversation_as_human_handled
     return unless Current.user.is_a?(User)
 
-    @conversation.add_labels(['atendimento_humano'])
-    @conversation.update!(
-      custom_attributes: (@conversation.custom_attributes || {}).merge('modo_atendimento' => 'humano')
-    )
+    Finture::AttendanceModeService.new(conversation: @conversation).escalate!(source: 'agent_created', user: Current.user)
   end
 
   def permitted_update_params
@@ -341,6 +339,7 @@ class Api::V1::Accounts::ConversationsController < Api::V1::Accounts::BaseContro
   def kanban_scope
     kanban_base_scope.includes(
       :taggings,
+      :finture_attendance_state,
       { contact: { avatar_attachment: :blob } },
       { assignee: { avatar_attachment: :blob } }
     )

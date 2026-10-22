@@ -5,6 +5,7 @@ import { useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import { useI18n } from 'vue-i18n';
 import wootConstants from 'dashboard/constants/globals';
+import { useFintureAttendance } from 'dashboard/composables/useFintureAttendance';
 
 import Banner from 'dashboard/components/ui/Banner.vue';
 
@@ -24,6 +25,17 @@ const { t } = useI18n();
 
 const currentChat = useMapGetter('getSelectedChat');
 const currentUser = useMapGetter('getCurrentUser');
+
+// Finture: IA conduzindo a conversa — avisa e oferece assumir (tem prioridade
+// sobre os avisos de atribuição, que não fazem sentido enquanto a IA atende).
+const {
+  isAi: isAiAttending,
+  isBusy: isTakingOver,
+  takeOver,
+} = useFintureAttendance(currentChat);
+const showAiAttendingBanner = computed(
+  () => isAiAttending.value && !props.isOnPrivateNote
+);
 
 const assignedAgent = computed({
   get() {
@@ -110,7 +122,21 @@ const onClickBotHandoff = async () => {
 
 <template>
   <Banner
-    v-if="showSelfAssignBanner && !showBotHandoffBanner"
+    v-if="showAiAttendingBanner"
+    action-button-variant="ghost"
+    color-scheme="secondary"
+    class="mx-2 mb-2 rounded-lg !py-2"
+    :banner-message="$t('CONVERSATION.ATTENDANCE.BANNER')"
+    has-action-button
+    :action-button-label="
+      isTakingOver
+        ? $t('CONVERSATION.ATTENDANCE.TAKING_OVER')
+        : $t('CONVERSATION.ATTENDANCE.TAKE_OVER')
+    "
+    @primary-action="takeOver()"
+  />
+  <Banner
+    v-else-if="showSelfAssignBanner && !showBotHandoffBanner"
     action-button-variant="ghost"
     color-scheme="secondary"
     class="mx-2 mb-2 rounded-lg !py-2"
@@ -120,7 +146,7 @@ const onClickBotHandoff = async () => {
     @primary-action="onClickSelfAssign"
   />
   <Banner
-    v-if="showBotHandoffBanner"
+    v-else-if="showBotHandoffBanner"
     action-button-variant="ghost"
     color-scheme="secondary"
     class="mx-2 mb-2 rounded-lg !py-2"

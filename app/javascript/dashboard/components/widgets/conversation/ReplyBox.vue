@@ -1,6 +1,7 @@
 <script>
-import { defineAsyncComponent, useTemplateRef } from 'vue';
-import { mapGetters } from 'vuex';
+import { computed, defineAsyncComponent, useTemplateRef } from 'vue';
+import { mapGetters, useStore } from 'vuex';
+import { useFintureAttendance } from 'dashboard/composables/useFintureAttendance';
 import { useAlert } from 'dashboard/composables';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useTrack } from 'dashboard/composables';
@@ -97,8 +98,15 @@ export default {
     const messageEditor = useTemplateRef('messageEditor');
     const copilot = useCopilotReply();
     const shortcutKey = useKbd(['$mod', '+', 'enter']);
+    // Finture: com a IA conduzindo, responder ao cliente exige assumir antes.
+    const store = useStore();
+    const { isAi: isAiAttending, takeOver } = useFintureAttendance(
+      computed(() => store.getters.getSelectedChat)
+    );
 
     return {
+      isAiAttending,
+      takeOver,
       uiSettings,
       isEditorHotKeyEnabled,
       fetchSignatureFlagFromUISettings,
@@ -309,6 +317,8 @@ export default {
       let sendMessageText = this.$t('CONVERSATION.REPLYBOX.SEND');
       if (this.isPrivate) {
         sendMessageText = this.$t('CONVERSATION.REPLYBOX.CREATE');
+      } else if (this.isAiAttending) {
+        sendMessageText = this.$t('CONVERSATION.ATTENDANCE.TAKE_OVER_AND_SEND');
       }
       const keyLabel = this.isEditorHotKeyEnabled('cmd_enter')
         ? `(${this.shortcutKey})`
@@ -866,7 +876,14 @@ export default {
             hasReplyTo: !!this.inReplyTo?.id,
           });
     },
+    // Resposta pública com a IA conduzindo: assume antes (Assumir e enviar). Se
+    // não der (alguém assumiu antes, erro), o texto continua na caixa.
+    async ensureHumanAttendance(isPrivate) {
+      if (isPrivate || !this.isAiAttending) return true;
+      return this.takeOver({ silent: true });
+    },
     async onSendReply() {
+      if (!(await this.ensureHumanAttendance(this.isPrivate))) return;
       const undefinedVariables = getUndefinedVariablesInMessage({
         message: this.message,
         variables: this.messageVariables,
@@ -914,6 +931,7 @@ export default {
       }
     },
     async onSendWhatsAppReply(messagePayload) {
+      if (!(await this.ensureHumanAttendance(false))) return;
       this.sendMessage({
         conversationId: this.currentChat.id,
         ...messagePayload,
@@ -921,6 +939,7 @@ export default {
       this.hideWhatsappTemplatesModal();
     },
     async onSendContentTemplateReply(messagePayload) {
+      if (!(await this.ensureHumanAttendance(false))) return;
       this.sendMessage({
         conversationId: this.currentChat.id,
         ...messagePayload,

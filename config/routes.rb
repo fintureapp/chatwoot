@@ -160,6 +160,11 @@ Rails.application.routes.draw do
               resource :finture_stage, only: [:update], controller: 'finture_stages'
               resource :finture_outcome, only: [:update], controller: 'finture_outcomes'
               resources :finture_scheduled_messages, only: [:index, :create, :update, :destroy]
+              resource :finture_attendance, only: [:show], controller: 'finture_attendances' do
+                post :take_over
+                post :return_to_ai
+                post :bot_handoff
+              end
             end
             member do
               post :mute

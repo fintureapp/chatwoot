@@ -9,6 +9,7 @@ import MoreActions from './MoreActions.vue';
 import Avatar from 'next/avatar/Avatar.vue';
 import SLACardLabel from './components/SLACardLabel.vue';
 import ConversationCallButton from './ConversationCallButton.vue';
+import AttendanceControl from './AttendanceControl.vue';
 import ContactProfileDialog from 'dashboard/components-next/Contacts/ContactProfileDialog.vue';
 import wootConstants from 'dashboard/constants/globals';
 import { conversationListPageURL } from 'dashboard/helper/URLHelper';
@@ -207,6 +208,7 @@ const copyConversationId = async () => {
         :parent-width="width"
         class="hidden md:flex"
       />
+      <AttendanceControl :conversation="currentChat" />
       <ConversationCallButton :inbox="inbox" :chat="currentChat" />
       <ButtonV4
         v-tooltip="$t('CONVERSATION.HEADER.TOGGLE_SIDEBAR')"
