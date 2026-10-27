@@ -11,6 +11,7 @@ import { timeStampAppendedURL } from 'dashboard/helper/URLHelper';
 import { downloadFile } from '@chatwoot/utils';
 import { useEmitter } from 'dashboard/composables/emitter';
 import { emitter } from 'shared/helpers/mitt';
+import { useI18n } from 'vue-i18n';
 
 const { attachment } = defineProps({
   attachment: {
@@ -40,6 +41,22 @@ const displayedTranscript = computed(() => {
   const text = attachment.transcribedText || '';
   if (!isTranscriptLong.value || isTranscriptExpanded.value) return text;
   return `${text.slice(0, TRANSCRIPT_PREVIEW_LENGTH).trimEnd()}…`;
+});
+
+// Transcrição automática (Finture::AudioTranscriptionService): o texto é derivado
+// do áudio, então leva um rótulo; quando não deu para transcrever, um aviso curto.
+const { t } = useI18n();
+const isAutoTranscript = computed(
+  () => attachment.transcriptionStatus === 'ok'
+);
+const transcriptionNotice = computed(() => {
+  if (attachment.transcribedText) return '';
+  const notices = {
+    unintelligible: t('CONVERSATION.AUDIO_TRANSCRIPTION.UNINTELLIGIBLE'),
+    too_long: t('CONVERSATION.AUDIO_TRANSCRIPTION.TOO_LONG'),
+    failed: t('CONVERSATION.AUDIO_TRANSCRIPTION.FAILED'),
+  };
+  return notices[attachment.transcriptionStatus] || '';
 });
 
 const audioPlayer = useTemplateRef('audioPlayer');
@@ -226,6 +243,13 @@ const downloadAudio = async () => {
       v-if="attachment.transcribedText && showTranscribedText"
       class="text-n-slate-12 p-3 text-sm bg-n-alpha-1 rounded-lg w-full break-words"
     >
+      <span
+        v-if="isAutoTranscript"
+        class="flex items-center gap-1 mb-1 text-xs text-n-slate-11"
+      >
+        <Icon class="size-3" icon="i-lucide-audio-lines" />
+        {{ $t('CONVERSATION.AUDIO_TRANSCRIPTION.AUTO_LABEL') }}
+      </span>
       {{ displayedTranscript }}
       <button
         v-if="isTranscriptLong"
@@ -239,5 +263,11 @@ const downloadAudio = async () => {
         }}
       </button>
     </div>
+    <p
+      v-else-if="transcriptionNotice && showTranscribedText"
+      class="mb-0 px-1 text-xs text-n-slate-11"
+    >
+      {{ transcriptionNotice }}
+    </p>
   </div>
 </template>

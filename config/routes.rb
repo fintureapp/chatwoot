@@ -139,6 +139,7 @@ Rails.application.routes.draw do
               get :search
               get :kanban
               get :kanban_history
+              get :kanban_export
               get :unread_counts, to: 'conversations/unread_counts#index'
               post :filter
             end
@@ -158,6 +159,12 @@ Rails.application.routes.draw do
               resources :finture_follow_ups, only: [:index, :create, :update, :destroy]
               resource :finture_stage, only: [:update], controller: 'finture_stages'
               resource :finture_outcome, only: [:update], controller: 'finture_outcomes'
+              resources :finture_scheduled_messages, only: [:index, :create, :update, :destroy]
+              resource :finture_attendance, only: [:show], controller: 'finture_attendances' do
+                post :take_over
+                post :return_to_ai
+                post :bot_handoff
+              end
             end
             member do
               post :mute
@@ -264,6 +271,9 @@ Rails.application.routes.draw do
             end
           end
           resource :finture_sdr_dashboard, only: [:show], controller: 'finture_sdr_dashboard'
+          resource :finture_home, only: [:show], controller: 'finture_home' do
+            get :list
+          end
           resource :finture_inbox_config, only: [:show, :update], controller: 'finture_inbox_configs'
           resources :inboxes, only: [:index, :show, :create, :update, :destroy] do
             get :assignable_agents, on: :member

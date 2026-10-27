@@ -85,6 +85,23 @@ Publish help articles, FAQs, and guides through the built-in Help Center Portal.
 - Downloadable Reports for offline analysis and reporting.
 
 
+## LOCAL DEVELOPMENT (fork Finture)
+
+Ambiente local isolado em Docker (Rails, Sidekiq, Vite, PostgreSQL + pgvector, Redis,
+Mailpit e mocks de WhatsApp/webhooks), sem nenhuma dependência de produção:
+
+No Windows, na raiz do projeto (PowerShell, cmd ou duplo clique):
+
+```powershell
+.\subir-local.cmd    # abre o Docker se preciso, sobe tudo e abre http://localhost:3000
+.\parar-local.cmd    # para tudo (dados preservados)
+```
+
+No WSL/Linux/macOS: `make dev` / `make stop` (ou `bash script/local-dev dev`).
+
+Guia completo, com arquitetura, comandos, reset, seeds, matriz de integrações,
+isolamento e testes: [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md).
+
 ## Documentation
 
 Detailed documentation is available at [chatwoot.com/help-center](https://www.chatwoot.com/help-center).

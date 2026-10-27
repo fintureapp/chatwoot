@@ -5,6 +5,7 @@ import WaveSurfer from 'wavesurfer.js';
 import RecordPlugin from 'wavesurfer.js/dist/plugins/record.js';
 import { format, intervalToDuration } from 'date-fns';
 import { convertAudio } from './utils/audioConversionUtils';
+import { FINTURE_COLORS } from 'dashboard/constants/brand';
 
 const props = defineProps({
   audioRecordFormat: {
@@ -62,7 +63,7 @@ const getRecordPluginOptions = audioFormat => {
 const initWaveSurfer = () => {
   wavesurfer.value = WaveSurfer.create({
     container: waveformContainer.value,
-    waveColor: '#1F93FF',
+    waveColor: FINTURE_COLORS.orange,
     progressColor: '#6E6F73',
     height: 100,
     barWidth: 2,

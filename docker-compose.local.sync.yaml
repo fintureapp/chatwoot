@@ -1,0 +1,54 @@
+# Finture — modo "sync" do ambiente local (padrão no Windows).
+# Usado por script/local-dev junto com docker-compose.local.yaml quando
+# LOCAL_CODE_MODE=sync (ver docs/LOCAL_DEVELOPMENT.md).
+#
+# Por quê: bind mount de uma pasta do Windows (ainda mais no OneDrive) é lento
+# demais para Rails/Vite/Tailwind (minutos por compilação de CSS) e não entrega
+# eventos de arquivo. Aqui o código vive no volume "app_src" (filesystem Linux)
+# e o `docker compose watch`, rodando no Windows, copia para lá cada arquivo
+# salvo. Arquivos gerados DENTRO do container (db/schema.rb, migrations criadas
+# por generator) voltam ao repositório com `script/local-dev pull <caminho>`.
+x-src: &src
+  volumes:
+    - app_src:/app
+    - node_modules:/app/node_modules
+    - rails_tmp:/app/tmp
+    - rails_log:/app/log
+    - storage:/app/storage
+
+services:
+  deps:
+    volumes:
+      - app_src:/app
+      - node_modules:/app/node_modules
+
+  db-prepare:
+    <<: *src
+
+  sidekiq:
+    <<: *src
+
+  vite:
+    <<: *src
+
+  rails:
+    <<: *src
+    develop:
+      watch:
+        - path: .
+          target: /app
+          action: sync
+          initial_sync: true
+          ignore:
+            - .git/
+            - node_modules/
+            - tmp/
+            - log/
+            - storage/
+            - .playwright-mcp/
+            - public/vite-dev/
+            - coverage/
+            - dump.rdb
+
+volumes:
+  app_src:

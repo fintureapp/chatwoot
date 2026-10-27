@@ -571,3 +571,41 @@ en:
       no_subscriptions_to_test: 'Select at least one subscription to test.'
       no_subscriptions_to_delete: 'Select at least one subscription to delete.'
       subscriptions_deleted: "Deleted %{count} subscription(s). The user's device(s) will re-register on next app launch."
+
+  finture:
+    scheduled_messages:
+      unknown_author: "an agent"
+      activity:
+        scheduled: "%{user_name} scheduled a message for %{time}"
+        updated: "%{user_name} changed a scheduled message (now %{time})"
+        cancelled: "%{user_name} cancelled the message scheduled for %{time}"
+        auto_cancelled: "Message scheduled for %{time} was cancelled automatically because the customer replied first"
+        sent: "Message scheduled by %{user_name} for %{time} was sent"
+        failed: "Message scheduled for %{time} was NOT sent: %{reason}"
+      notes:
+        auto_cancelled: "your message scheduled for %{time} was cancelled because the customer replied first. Review and reschedule if needed. Preview: \"%{preview}\""
+        failed: "your message scheduled for %{time} was NOT sent (%{reason}). Preview: \"%{preview}\""
+      errors:
+        not_pending: "Only pending scheduled messages can be changed or cancelled."
+        window_closed: "the channel messaging window is closed (e.g. WhatsApp 24h) and the customer did not reply"
+        interrupted: "processing was interrupted before sending"
+    attendance:
+      actors:
+        bot: "AI (triage)"
+        system: "System"
+        user: "an agent"
+      activity:
+        take_over: "%{user_name} took over the conversation — AI is paused here"
+        return_to_ai: "%{user_name} handed the conversation back to the AI. Reason: %{reason}"
+        return_to_ai_with_notes: "%{user_name} handed the conversation back to the AI. Reason: %{reason}. Pending: %{notes}"
+        bot_handoff: "The AI handed the conversation over to a human (%{reason})"
+        escalated: "Conversation moved to human attendance (%{user_name}) — AI is paused"
+        reopened: "Customer reopened the conversation — the AI is attending again"
+      errors:
+        conflict_human: "%{name} already took over this conversation at %{time}."
+        conflict_ai: "The conversation went back to the AI at %{time} (%{name})."
+        reason_required: "Provide a reason to hand back to the AI."
+        ai_disabled: "This inbox does not have AI attendance enabled."
+        not_open: "Only open conversations can be handed back to the AI."
+        already_ai: "This conversation is already with the AI."
+        bot_blocked: "Bot message refused: the conversation is in human attendance or its state changed."

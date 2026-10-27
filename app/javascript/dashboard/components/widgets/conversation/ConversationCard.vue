@@ -11,6 +11,7 @@ import UnreadBadge from 'dashboard/components-next/Conversation/ConversationCard
 import SLACardLabel from './components/SLACardLabel.vue';
 import VoiceCallStatus from './VoiceCallStatus.vue';
 import Checkbox from 'dashboard/components-next/checkbox/Checkbox.vue';
+import AttendanceBadge from './AttendanceBadge.vue';
 
 const props = defineProps({
   chat: { type: Object, required: true },
@@ -172,6 +173,10 @@ watch(
         class="conversation--user text-sm my-0 mx-2 capitalize pt-0.5 text-ellipsis overflow-hidden whitespace-nowrap flex-1 min-w-0 ltr:pr-16 rtl:pl-16 text-n-slate-12"
         :class="hasUnread ? 'font-semibold' : 'font-medium'"
       >
+        <AttendanceBadge
+          :attendance="chat.finture_attendance"
+          class="ltr:mr-1 rtl:ml-1"
+        />
         {{ currentContact.name }}
       </h4>
       <VoiceCallStatus

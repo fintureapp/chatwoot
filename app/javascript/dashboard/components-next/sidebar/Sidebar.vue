@@ -336,6 +336,13 @@ const reportRoutes = computed(() => newReportRoutes());
 const menuItems = computed(() => {
   return [
     {
+      name: 'Finture Home',
+      label: t('SIDEBAR.FINTURE_HOME'),
+      icon: 'i-lucide-layout-dashboard',
+      to: accountScopedRoute('finture_home'),
+      activeOn: ['finture_home'],
+    },
+    {
       name: 'Inbox',
       label: t('SIDEBAR.NOTIFICATIONS'),
       icon: 'i-lucide-bell',
@@ -351,6 +358,13 @@ const menuItems = computed(() => {
       icon: 'i-lucide-square-kanban',
       to: accountScopedRoute('kanban_sdr_index'),
       activeOn: ['kanban_sdr_index'],
+    },
+    {
+      name: 'Customers',
+      label: t('SIDEBAR.CUSTOMERS'),
+      icon: 'i-lucide-user-round-search',
+      to: accountScopedRoute('customers_index'),
+      activeOn: ['customers_index'],
     },
     {
       name: 'Conversation',

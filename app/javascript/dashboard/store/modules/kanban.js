@@ -538,6 +538,9 @@ export const mutations = {
     if (conversation.priority !== undefined) {
       record.priority = conversation.priority;
     }
+    if (conversation.finture_attendance !== undefined) {
+      record.finture_attendance = conversation.finture_attendance;
+    }
     if (conversation.meta?.assignee !== undefined) {
       record.meta = { ...record.meta, assignee: conversation.meta.assignee };
     }

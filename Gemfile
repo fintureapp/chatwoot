@@ -39,6 +39,8 @@ gem 'json_schemer'
 gem 'json_refs'
 # Rack middleware for blocking & throttling abusive requests
 gem 'rack-attack', '>= 6.7.0'
+# Finture: exportacao do Kanban em Excel (xlsx estilizado com logo)
+gem 'caxlsx'
 # a utility tool for streaming, flexible and safe downloading of remote files
 gem 'down'
 # SSRF-safe URL fetching

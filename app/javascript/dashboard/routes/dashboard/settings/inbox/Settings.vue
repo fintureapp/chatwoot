@@ -28,6 +28,7 @@ import CollaboratorsPage from './settingsPage/CollaboratorsPage.vue';
 import BotConfiguration from './components/BotConfiguration.vue';
 import AccountHealth from './components/AccountHealth.vue';
 import KanbanClassificationSection from './components/KanbanClassificationSection.vue';
+import AiAttendanceSection from './components/AiAttendanceSection.vue';
 import { FEATURE_FLAGS } from '../../../../featureFlags';
 import SenderNameExamplePreview from './components/SenderNameExamplePreview.vue';
 import LockToSingleConversationPreview from './components/LockToSingleConversationPreview.vue';
@@ -50,6 +51,7 @@ export default {
     CollaboratorsPage,
     ConfigurationPage,
     KanbanClassificationSection,
+    AiAttendanceSection,
     VoiceConfigurationPage,
     WhatsappCallingPage,
     CustomerSatisfactionPage,
@@ -863,6 +865,8 @@ export default {
             </SettingsFieldSection>
 
             <KanbanClassificationSection :inbox="inbox" />
+
+            <AiAttendanceSection :inbox="inbox" />
 
             <SettingsFieldSection
               v-if="canLocktoSingleConversation"

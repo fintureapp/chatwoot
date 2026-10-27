@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_09_29_130000) do
+ActiveRecord::Schema[7.1].define(version: 2026_10_22_130000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -846,6 +846,42 @@ ActiveRecord::Schema[7.1].define(version: 2026_09_29_130000) do
     t.index ["name", "account_id"], name: "index_email_templates_on_name_and_account_id", unique: true
   end
 
+  create_table "finture_attendance_states", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "conversation_id", null: false
+    t.string "mode", default: "ia", null: false
+    t.integer "revision", default: 0, null: false
+    t.string "changed_by_type"
+    t.bigint "changed_by_id"
+    t.string "changed_by_name"
+    t.string "source"
+    t.datetime "changed_at"
+    t.jsonb "resume_context", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["conversation_id"], name: "index_finture_attendance_states_on_conversation_id", unique: true
+  end
+
+  create_table "finture_attendance_transitions", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "inbox_id"
+    t.bigint "user_id"
+    t.string "actor_type", null: false
+    t.string "from_mode"
+    t.string "to_mode", null: false
+    t.string "source", null: false
+    t.string "reason"
+    t.text "pending_notes"
+    t.integer "revision", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "occurred_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "occurred_at"], name: "index_finture_attendance_transitions_on_acct_occurred"
+    t.index ["conversation_id", "occurred_at"], name: "index_finture_attendance_transitions_on_conv_occurred"
+  end
+
   create_table "finture_follow_ups", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "conversation_id", null: false
@@ -867,6 +903,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_09_29_130000) do
     t.string "kanban_type", default: "comercial", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "ai_enabled", default: false, null: false
+    t.boolean "audio_transcription_enabled", default: false, null: false
     t.index ["account_id"], name: "index_finture_inbox_configs_on_account_id"
     t.index ["inbox_id"], name: "index_finture_inbox_configs_on_inbox_id", unique: true
   end
@@ -898,6 +936,27 @@ ActiveRecord::Schema[7.1].define(version: 2026_09_29_130000) do
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_finture_quotes_on_account_id"
     t.index ["conversation_id"], name: "index_finture_quotes_on_conversation_id", unique: true
+  end
+
+  create_table "finture_scheduled_messages", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "inbox_id", null: false
+    t.bigint "user_id"
+    t.text "content", null: false
+    t.datetime "scheduled_at", null: false
+    t.string "status", default: "pending", null: false
+    t.boolean "cancel_on_reply", default: true, null: false
+    t.datetime "processing_at"
+    t.datetime "sent_at"
+    t.bigint "message_id"
+    t.string "cancel_reason"
+    t.text "error_message"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.jsonb "template_params"
+    t.index ["conversation_id", "scheduled_at"], name: "index_finture_scheduled_messages_on_conv_scheduled"
+    t.index ["status", "scheduled_at"], name: "index_finture_scheduled_messages_on_status_scheduled"
   end
 
   create_table "finture_stage_transitions", force: :cascade do |t|
@@ -1419,6 +1478,12 @@ ActiveRecord::Schema[7.1].define(version: 2026_09_29_130000) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "finture_attendance_states", "accounts", on_delete: :cascade
+  add_foreign_key "finture_attendance_states", "conversations", on_delete: :cascade
+  add_foreign_key "finture_attendance_transitions", "accounts", on_delete: :cascade
+  add_foreign_key "finture_attendance_transitions", "conversations", on_delete: :cascade
+  add_foreign_key "finture_attendance_transitions", "inboxes", on_delete: :nullify
+  add_foreign_key "finture_attendance_transitions", "users", on_delete: :nullify
   add_foreign_key "finture_follow_ups", "accounts", on_delete: :cascade
   add_foreign_key "finture_follow_ups", "conversations", on_delete: :cascade
   add_foreign_key "finture_follow_ups", "users", on_delete: :nullify
@@ -1428,6 +1493,11 @@ ActiveRecord::Schema[7.1].define(version: 2026_09_29_130000) do
   add_foreign_key "finture_pipeline_stages", "inboxes", on_delete: :cascade
   add_foreign_key "finture_quotes", "accounts", on_delete: :cascade
   add_foreign_key "finture_quotes", "conversations", on_delete: :cascade
+  add_foreign_key "finture_scheduled_messages", "accounts", on_delete: :cascade
+  add_foreign_key "finture_scheduled_messages", "conversations", on_delete: :cascade
+  add_foreign_key "finture_scheduled_messages", "inboxes", on_delete: :cascade
+  add_foreign_key "finture_scheduled_messages", "messages", on_delete: :nullify
+  add_foreign_key "finture_scheduled_messages", "users", on_delete: :nullify
   add_foreign_key "finture_stage_transitions", "accounts", on_delete: :cascade
   add_foreign_key "finture_stage_transitions", "conversations", on_delete: :cascade
   add_foreign_key "finture_stage_transitions", "inboxes", on_delete: :nullify

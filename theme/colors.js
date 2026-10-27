@@ -1,6 +1,4 @@
 const {
-  blue,
-  blueDark,
   green,
   greenDark,
   yellow,
@@ -14,19 +12,20 @@ const {
 } = require('@radix-ui/colors');
 
 export const colors = {
+  // Paleta legada do Chatwoot, apontada para a escala de destaque (Laranja Finture).
   woot: {
-    25: blue.blue2,
-    50: blue.blue3,
-    75: blue.blue4,
-    100: blue.blue5,
-    200: blue.blue7,
-    300: blue.blue8,
-    400: blueDark.blue11,
-    500: blueDark.blue10,
-    600: blueDark.blue9,
-    700: blueDark.blue8,
-    800: blueDark.blue6,
-    900: blueDark.blue2,
+    25: 'rgb(var(--blue-2) / <alpha-value>)',
+    50: 'rgb(var(--blue-3) / <alpha-value>)',
+    75: 'rgb(var(--blue-4) / <alpha-value>)',
+    100: 'rgb(var(--blue-5) / <alpha-value>)',
+    200: 'rgb(var(--blue-7) / <alpha-value>)',
+    300: 'rgb(var(--blue-8) / <alpha-value>)',
+    400: 'rgb(var(--blue-11) / <alpha-value>)',
+    500: 'rgb(var(--blue-9) / <alpha-value>)',
+    600: 'rgb(var(--blue-10) / <alpha-value>)',
+    700: 'rgb(var(--blue-11) / <alpha-value>)',
+    800: 'rgb(var(--blue-12) / <alpha-value>)',
+    900: 'rgb(var(--blue-12) / <alpha-value>)',
   },
   green: {
     50: greenDark.green12,
@@ -226,7 +225,10 @@ export const colors = {
     },
 
     black: '#000000',
-    brand: '#2781F6',
+    // Cor de destaque (Laranja Finture) e a cor de texto legível sobre ela.
+    // Valores em app/javascript/dashboard/assets/scss/_next-colors.scss.
+    brand: 'rgb(var(--brand) / <alpha-value>)',
+    'brand-contrast': 'rgb(var(--brand-contrast) / <alpha-value>)',
     portal: 'var(--dynamic-portal-color)',
     'portal-soft': 'var(--dynamic-portal-color-soft)',
     'portal-faint': 'var(--dynamic-portal-color-faint)',

@@ -1,7 +1,8 @@
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue';
+import { ref, computed, watch, nextTick, inject } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
+import { KANBAN_VIEW_STATE_KEY } from 'dashboard/routes/dashboard/kanban/composables/useKanbanViewState';
 import { onKeyStroke } from '@vueuse/core';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
@@ -58,6 +59,7 @@ const store = useStore();
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
+const viewState = inject(KANBAN_VIEW_STATE_KEY, null);
 
 const getRecordById = useMapGetter('kanban/getRecordById');
 const getNotes = useMapGetter('kanban/getNotes');
@@ -215,6 +217,8 @@ const close = () => emit('update:open', false);
 // Abre um atendimento anterior (conversa antiga do mesmo número).
 const openPrevious = entry => {
   if (!entry?.id) return;
+  // O card ancora e o primario (a conversa antiga nao e card do board).
+  viewState?.rememberAnchor('card', props.conversationId);
   const path = frontendURL(
     conversationUrl({ accountId: route.params.accountId, id: entry.id })
   );
@@ -421,7 +425,7 @@ watch(
               />
               <div class="flex items-center gap-2">
                 <button
-                  class="px-3 h-8 text-sm rounded-lg bg-n-brand text-white disabled:opacity-50"
+                  class="px-3 h-8 text-sm rounded-lg bg-n-brand text-n-brand-contrast disabled:opacity-50"
                   :disabled="isSavingNextAction"
                   @click="saveNextAction"
                 >
@@ -461,7 +465,7 @@ watch(
                 class="w-full px-3 py-2 text-sm border rounded-lg resize-none bg-n-background border-n-weak text-n-slate-12 focus:border-n-brand"
               />
               <button
-                class="self-start px-3 h-8 text-sm rounded-lg bg-n-brand text-white disabled:opacity-50"
+                class="self-start px-3 h-8 text-sm rounded-lg bg-n-brand text-n-brand-contrast disabled:opacity-50"
                 :disabled="!noteDraft.trim() || notesUiFlags.isCreating"
                 @click="submitNote"
               >

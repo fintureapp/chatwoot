@@ -1,6 +1,7 @@
 <script>
-import { defineAsyncComponent, useTemplateRef } from 'vue';
-import { mapGetters } from 'vuex';
+import { computed, defineAsyncComponent, useTemplateRef } from 'vue';
+import { mapGetters, useStore } from 'vuex';
+import { useFintureAttendance } from 'dashboard/composables/useFintureAttendance';
 import { useAlert } from 'dashboard/composables';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useTrack } from 'dashboard/composables';
@@ -28,6 +29,7 @@ import {
   getUndefinedVariablesInMessage,
 } from '@chatwoot/utils';
 import WhatsappTemplates from './WhatsappTemplates/Modal.vue';
+import ScheduleMessageDialog from './ScheduleMessageDialog.vue';
 import ContentTemplates from './ContentTemplates/ContentTemplatesModal.vue';
 import { MESSAGE_MAX_LENGTH } from 'shared/helpers/MessageTypeHelper';
 import inboxMixin, { INBOX_FEATURES } from 'shared/mixins/inboxMixin';
@@ -70,6 +72,7 @@ export default {
     EmojiIconPicker,
     MessageSignatureMissingAlert,
     ReplyBottomPanel,
+    ScheduleMessageDialog,
     ReplyEmailHead,
     ReplyToMessage,
     ReplyTopPanel,
@@ -95,8 +98,15 @@ export default {
     const messageEditor = useTemplateRef('messageEditor');
     const copilot = useCopilotReply();
     const shortcutKey = useKbd(['$mod', '+', 'enter']);
+    // Finture: com a IA conduzindo, responder ao cliente exige assumir antes.
+    const store = useStore();
+    const { isAi: isAiAttending, takeOver } = useFintureAttendance(
+      computed(() => store.getters.getSelectedChat)
+    );
 
     return {
+      isAiAttending,
+      takeOver,
       uiSettings,
       isEditorHotKeyEnabled,
       fetchSignatureFlagFromUISettings,
@@ -307,6 +317,8 @@ export default {
       let sendMessageText = this.$t('CONVERSATION.REPLYBOX.SEND');
       if (this.isPrivate) {
         sendMessageText = this.$t('CONVERSATION.REPLYBOX.CREATE');
+      } else if (this.isAiAttending) {
+        sendMessageText = this.$t('CONVERSATION.ATTENDANCE.TAKE_OVER_AND_SEND');
       }
       const keyLabel = this.isEditorHotKeyEnabled('cmd_enter')
         ? `(${this.shortcutKey})`
@@ -437,6 +449,11 @@ export default {
     },
     isDefaultEditorMode() {
       return !this.showAudioRecorderEditor && !this.copilot.isActive.value;
+    },
+    // Finture: com a janela fechada só dá para agendar template.
+    showScheduleButton() {
+      if (this.isPrivate) return false;
+      return !this.isEditorDisabled || this.showWhatsappTemplates;
     },
     isEditorDisabled() {
       return (
@@ -859,7 +876,14 @@ export default {
             hasReplyTo: !!this.inReplyTo?.id,
           });
     },
+    // Resposta pública com a IA conduzindo: assume antes (Assumir e enviar). Se
+    // não der (alguém assumiu antes, erro), o texto continua na caixa.
+    async ensureHumanAttendance(isPrivate) {
+      if (isPrivate || !this.isAiAttending) return true;
+      return this.takeOver({ silent: true });
+    },
     async onSendReply() {
+      if (!(await this.ensureHumanAttendance(this.isPrivate))) return;
       const undefinedVariables = getUndefinedVariablesInMessage({
         message: this.message,
         variables: this.messageVariables,
@@ -907,6 +931,7 @@ export default {
       }
     },
     async onSendWhatsAppReply(messagePayload) {
+      if (!(await this.ensureHumanAttendance(false))) return;
       this.sendMessage({
         conversationId: this.currentChat.id,
         ...messagePayload,
@@ -914,6 +939,7 @@ export default {
       this.hideWhatsappTemplatesModal();
     },
     async onSendContentTemplateReply(messagePayload) {
+      if (!(await this.ensureHumanAttendance(false))) return;
       this.sendMessage({
         conversationId: this.currentChat.id,
         ...messagePayload,
@@ -944,6 +970,23 @@ export default {
     },
     executeCopilotAction(action, data) {
       this.copilot.execute(action, data);
+    },
+    // Finture: agendar envio futuro — o texto atual do editor (sem anexos) ou
+    // um template do WhatsApp (único jeito de enviar com a janela de 24h fechada).
+    openScheduleDialog() {
+      if (this.isPrivate) return;
+      const message = this.isEditorDisabled
+        ? ''
+        : this.getMessagePayload(this.message).message;
+      this.$refs.scheduleDialog?.open({
+        message,
+        preferTemplate: this.isEditorDisabled,
+      });
+    },
+    onMessageScheduled(item) {
+      if (item?.kind === 'template') return;
+      this.clearMessage();
+      this.removeFromDraft();
     },
     clearMessage() {
       this.message = '';
@@ -1418,6 +1461,7 @@ export default {
         :recording-audio-duration-text="recordingAudioDurationText"
         :recording-audio-state="recordingAudioState"
         :send-button-text="replyButtonLabel"
+        :show-schedule="showScheduleButton"
         :show-audio-recorder="showAudioRecorder"
         :show-emoji-picker="showEmojiPicker"
         :show-file-upload="showFileUpload"
@@ -1433,8 +1477,17 @@ export default {
         @select-content-template="openContentTemplateModal"
         @toggle-insert-article="toggleInsertArticle"
         @toggle-quoted-reply="toggleQuotedReply"
+        @schedule="openScheduleDialog"
       />
     </Transition>
+
+    <ScheduleMessageDialog
+      v-if="currentChat.id"
+      ref="scheduleDialog"
+      :conversation-id="currentChat.id"
+      :inbox-id="inboxId"
+      @scheduled="onMessageScheduled"
+    />
 
     <WhatsappTemplates
       :inbox-id="inbox.id"

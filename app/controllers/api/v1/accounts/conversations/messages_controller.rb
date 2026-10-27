@@ -7,8 +7,19 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
 
   def create
     user = Current.user || @resource
-    mb = Messages::MessageBuilder.new(user, @conversation, params)
-    @message = mb.perform
+    bot_revision = Finture::BotMessageGuard.revision_from(params)
+    if bot_revision.nil?
+      @message = Messages::MessageBuilder.new(user, @conversation, params).perform
+    else
+      # Finture: envio do bot só sai se o modo de atendimento ainda permitir.
+      Conversation.transaction do
+        @conversation.reload(lock: true)
+        Finture::BotMessageGuard.allow!(@conversation, bot_revision)
+        @message = Messages::MessageBuilder.new(user, @conversation, params).perform
+      end
+    end
+  rescue CustomExceptions::Finture::BotMessageBlocked => e
+    render json: { error: e.message, attendance: e.state.payload(true) }, status: :conflict
   rescue StandardError => e
     render_could_not_create_error(e.message)
   end

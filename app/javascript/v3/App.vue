@@ -56,17 +56,34 @@ export default {
 @tailwind utilities;
 
 @import '../dashboard/assets/scss/next-colors';
+@import 'shared/assets/fonts/finture';
 
 html,
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-    Oxygen-Sans, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+  font-family:
+    'Space Grotesk',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    Oxygen-Sans,
+    Ubuntu,
+    Cantarell,
+    'Helvetica Neue',
+    sans-serif;
   @apply h-full w-full;
 
   input,
   select {
     outline: none;
   }
+}
+
+// Títulos em IBM Plex Sans (manual de marca Finture)
+h1,
+h2,
+h3 {
+  @apply font-heading;
 }
 
 .text-link {

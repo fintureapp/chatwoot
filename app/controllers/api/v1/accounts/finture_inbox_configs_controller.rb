@@ -9,31 +9,57 @@ class Api::V1::Accounts::FintureInboxConfigsController < Api::V1::Accounts::Base
   before_action :set_inbox
 
   def show
-    render json: { kanban_type: Finture::InboxConfig.type_for(@inbox) }
+    render json: payload(Finture::InboxConfig.find_by(inbox_id: @inbox.id))
   end
 
+  # Aceita `kanban_type`, `ai_enabled` e/ou `audio_transcription_enabled` (o que
+  # não vier fica como está).
   def update
-    kanban_type = params[:kanban_type].to_s
-    return render_error('Tipo inválido.') unless Finture::InboxConfig::KANBAN_TYPES.include?(kanban_type)
+    kanban_type = params[:kanban_type].presence&.to_s
+    return render_error('Tipo inválido.') if kanban_type && Finture::InboxConfig::KANBAN_TYPES.exclude?(kanban_type)
 
     config = Finture::InboxConfig.find_or_initialize_by(inbox_id: @inbox.id)
-    type_changed = config.new_record? || config.kanban_type != kanban_type
-    config.account_id = Current.account.id
-    config.kanban_type = kanban_type
+    type_changed = type_changing?(config, kanban_type)
+    assign_config(config, kanban_type)
     config.save!
 
-    ensure_stages_for_type(kanban_type) if type_changed || stages_missing?
-    render json: { kanban_type: config.kanban_type }
+    ensure_stages_for_type(config.kanban_type) if type_changed || (kanban_type && stages_missing?)
+    render json: payload(config)
   end
 
   private
+
+  def payload(config)
+    {
+      kanban_type: config&.kanban_type || Finture::InboxConfig::DEFAULT_TYPE,
+      ai_enabled: config&.ai_enabled || false,
+      audio_transcription_enabled: config&.audio_transcription_enabled || false
+    }
+  end
+
+  def type_changing?(config, kanban_type)
+    return false if kanban_type.blank?
+
+    config.new_record? || config.kanban_type != kanban_type
+  end
+
+  def assign_config(config, kanban_type)
+    config.account_id = Current.account.id
+    config.kanban_type = kanban_type if kanban_type
+    config.ai_enabled = cast_bool(:ai_enabled) if params.key?(:ai_enabled)
+    config.audio_transcription_enabled = cast_bool(:audio_transcription_enabled) if params.key?(:audio_transcription_enabled)
+  end
+
+  def cast_bool(key)
+    ActiveModel::Type::Boolean.new.cast(params[key])
+  end
 
   def set_inbox
     @inbox = Current.account.inboxes.find(params[:inbox_id])
   end
 
   def stages_missing?
-    !Finture::PipelineStage.where(inbox_id: @inbox.id).exists?
+    !Finture::PipelineStage.exists?(inbox_id: @inbox.id)
   end
 
   def ensure_stages_for_type(kanban_type)

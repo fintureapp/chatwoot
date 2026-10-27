@@ -14,6 +14,12 @@ trigger_scheduled_items_job:
   class: 'TriggerScheduledItemsJob'
   queue: scheduled_jobs
 
+# Finture: dispara mensagens agendadas nas conversas (precisao de minuto)
+finture_scheduled_messages_dispatcher_job:
+  cron: '*/1 * * * *'
+  class: 'Finture::ScheduledMessagesDispatcherJob'
+  queue: scheduled_jobs
+
 # executed hourly for scheduled jobs that do not need minute-level cadence
 trigger_hourly_scheduled_items_job:
   cron: '0 * * * *'

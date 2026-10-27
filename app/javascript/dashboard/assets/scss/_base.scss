@@ -8,7 +8,8 @@ h3,
 h4,
 h5,
 h6 {
-  @apply font-medium text-n-slate-12;
+  // Títulos em IBM Plex Sans (manual de marca Finture)
+  @apply font-heading font-medium text-n-slate-12;
 }
 
 p {
@@ -25,7 +26,7 @@ a {
 }
 
 hr {
-  @apply clear-both max-w-full h-0 my-5 mx-0 border-slate-300 dark:border-slate-600;
+  @apply clear-both max-w-full h-0 my-5 mx-0 border-n-weak;
 }
 
 ul,

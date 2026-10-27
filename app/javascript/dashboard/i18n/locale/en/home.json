@@ -1,0 +1,113 @@
+{
+  "FINTURE_HOME": {
+    "HEADER_TITLE": "Início",
+    "HEADER_SUBTITLE": "Visão geral do atendimento",
+    "UPDATED_AT": "Atualizado às {time} · horário de Brasília",
+    "REFRESH": "Atualizar",
+    "FILTERS": {
+      "ALL_INBOXES": "Todas as caixas",
+      "ALL_PURPOSES": "Todas as finalidades",
+      "PURPOSE_COMMERCIAL": "Comercial",
+      "PURPOSE_OPERATIONAL": "Operacional",
+      "ALL_TEAMS": "Todas as equipes",
+      "NO_TEAM": "Sem time",
+      "PERIOD_TODAY": "Hoje",
+      "PERIOD_7": "7 dias",
+      "PERIOD_30": "30 dias"
+    },
+    "HIGHLIGHTS": {
+      "TITLE": "Resumo",
+      "NOTE": "Chegadas, resoluções e ganhos desde {since}, comparados ao período anterior. Volume em aberto e IA são o retrato de agora.",
+      "ENTERED": "Chegaram no período",
+      "ENTERED_HINT": "Conversas novas",
+      "RESOLVED": "Resolvidas no período",
+      "RESOLVED_HINT": "Conversas encerradas",
+      "WON": "Volume ganho no período",
+      "WON_LIST": "Ganhas no período",
+      "WON_COUNT": "{count} ganha | {count} ganhas",
+      "PIPELINE": "Volume em aberto",
+      "PIPELINE_LIST": "Leads em aberto no funil",
+      "PIPELINE_COUNT": "{count} lead no funil | {count} leads no funil",
+      "WITHOUT_VALUE": "{count} sem valor | {count} sem valor",
+      "NOT_COMMERCIAL": "Não se aplica à finalidade operacional",
+      "WITH_AI": "Com a IA agora",
+      "WITH_AI_HINT": "IA conduzindo a conversa",
+      "WITH_AI_UNAVAILABLE": "Nenhuma caixa com IA ligada",
+      "GROUP_PERIOD": "No período",
+      "GROUP_NOW": "Agora"
+    },
+    "TEAMS": {
+      "TITLE": "Carga por equipe",
+      "NOTE": "Os mesmos times do wallboard, pela equipe da conversa. Clique num número para ver as conversas.",
+      "TEAM": "Equipe",
+      "ONLINE": "Online",
+      "ATTENDING": "Em atendimento",
+      "UNASSIGNED": "Sem responsável",
+      "WAITING": "Aguardando resposta",
+      "OLDEST": "há {time}",
+      "ENTERED": "Chegaram",
+      "RESOLVED": "Resolvidas",
+      "IN_PERIOD": "no período",
+      "TOTAL": "Total",
+      "EMPTY": "Nenhuma equipe com esses filtros.",
+      "OLDEST_TITLE": "Espera mais antiga sem resposta"
+    },
+    "SLA": {
+      "TITLE": "1º contato humano",
+      "NOTE": "Tempo até a primeira resposta humana nas conversas que chegaram no período, por equipe.",
+      "HINT": "Média · meta {target} min",
+      "SAMPLE": "{measured} de {total} conversas medidas",
+      "MINUTES": "{count} min",
+      "ABOVE_TARGET": "acima da meta",
+      "WITHIN_TARGET": "dentro da meta",
+      "NOT_MEASURED": "sem medição",
+      "TARGET_LINE": "meta {target} min",
+      "NO_SAMPLE": "Nenhuma conversa do período teve 1º contato humano medido."
+    },
+    "LOST": {
+      "TITLE": "Motivos de perda",
+      "NOTE": "Leads marcados como perdidos no período.",
+      "NO_REASON": "Sem motivo informado",
+      "EMPTY": "Nenhuma perda no período.",
+      "OPEN_LIST": "Ver perdidas",
+      "LIST_TITLE": "Perdidas no período",
+      "TOTAL": "{count} perdida no período | {count} perdidas no período"
+    },
+    "KPI": {
+      "UNAVAILABLE": "Indisponível",
+      "OPEN_LIST": "Ver conversas",
+      "VS_TODAY": "ontem até esta hora",
+      "VS_7": "nos 7 dias anteriores",
+      "VS_30": "nos 30 dias anteriores",
+      "DELTA_BASE": "vs. {previous} {vs}"
+    },
+    "LIST": {
+      "TOTAL": "{count} conversa | {count} conversas",
+      "TRUNCATED": "Mostrando as {shown} primeiras.",
+      "EMPTY": "Nada aqui com esses filtros.",
+      "ERROR": "Não foi possível carregar a lista.",
+      "NO_ASSIGNEE": "—",
+      "NO_VALUE": "sem valor",
+      "WAITING_FOR": "esperando há {time}",
+      "WON_AT": "ganha em {date}",
+      "LOST_AT": "perdida em {date}",
+      "CREATED": "entrou {date}",
+      "IDLE_FOR": "sem atividade há {time}",
+      "CLOSE": "Fechar"
+    },
+    "ERROR": "Não foi possível carregar a Home. Tente atualizar.",
+    "RETRY": "Tentar de novo",
+    "TREND": {
+      "TITLE": "Chegadas e resoluções",
+      "NOTE_DAY": "Conversas que chegaram e que foram resolvidas em cada dia do período.",
+      "NOTE_HOUR": "Conversas que chegaram e que foram resolvidas em cada hora de hoje.",
+      "ENTERED": "Chegaram",
+      "RESOLVED": "Resolvidas",
+      "WHEN": "Quando",
+      "PEAK": "Pico de chegadas: {when} ({count})",
+      "BACKLOG_UP": "chegaram {count} a mais do que foram resolvidas",
+      "BACKLOG_DOWN": "foram resolvidas {count} a mais do que chegaram",
+      "EMPTY": "Nenhuma conversa chegou ou foi resolvida no período."
+    }
+  }
+}

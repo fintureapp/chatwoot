@@ -1,9 +1,10 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, inject } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useToggle } from '@vueuse/core';
 import { useRoute, useRouter } from 'vue-router';
 import { frontendURL, conversationUrl } from 'dashboard/helper/URLHelper';
+import { KANBAN_VIEW_STATE_KEY } from 'dashboard/routes/dashboard/kanban/composables/useKanbanViewState';
 import {
   visibleCardFields,
   resolveFieldValue,
@@ -35,6 +36,11 @@ const props = defineProps({
     type: String,
     default: 'comercial',
   },
+  // Card ancora ao voltar de uma conversa: destaque temporario.
+  isHighlighted: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(['open', 'won', 'lost']);
@@ -42,6 +48,9 @@ const emit = defineEmits(['open', 'won', 'lost']);
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
+// Estado de trabalho do Kanban (pagina): guarda este card como ancora antes
+// de navegar para a conversa, para o board voltar nele.
+const viewState = inject(KANBAN_VIEW_STATE_KEY, null);
 
 const fields = visibleCardFields();
 
@@ -54,12 +63,21 @@ const enrichedConversation = computed(() => ({
 const isOperational = computed(() => props.kanbanType === 'operacional');
 
 const contactName = computed(() => props.conversation?.meta?.sender?.name);
+// Finture: IA conduzindo (caixa com atendimento por IA) — chip no lugar de "sem responsável".
+const isAiAttending = computed(() => {
+  const attendance = props.conversation?.finture_attendance;
+  return !!attendance?.ai_enabled && attendance.mode === 'ia';
+});
 const contactThumbnail = computed(
   () => props.conversation?.meta?.sender?.thumbnail
 );
 const nextAction = computed(
   () => props.conversation?.custom_attributes?.[NEXT_ACTION_ATTRIBUTE_KEY]
 );
+
+// Responsável em destaque (decisão de 20/10/2026): sai da lista genérica de
+// campos e vira um chip próprio com avatar. Sem responsável, o chip avisa.
+const assignee = computed(() => props.conversation?.meta?.assignee || null);
 
 // Espelhos do CRM Fase 1 (gravados pelo backend em custom_attributes).
 const quoteSummary = computed(
@@ -90,6 +108,7 @@ const open = (intent = 'detail') =>
   emit('open', { conversation: props.conversation, intent });
 
 const goToConversation = () => {
+  viewState?.rememberAnchor('card', props.conversation.id);
   const path = frontendURL(
     conversationUrl({
       accountId: route.params.accountId,
@@ -133,7 +152,13 @@ const onMenuAction = ({ action }) => {
 
 <template>
   <div
-    class="relative flex flex-col gap-2 p-3 mb-2 transition-shadow bg-n-solid-2 rounded-xl outline outline-1 -outline-offset-1 outline-n-container cursor-grab hover:shadow-md"
+    :data-kanban-card="conversation.id"
+    class="relative flex flex-col gap-2 p-3 mb-2 transition-shadow bg-n-solid-2 rounded-xl outline outline-1 -outline-offset-1 cursor-grab hover:shadow-md"
+    :class="
+      isHighlighted
+        ? 'outline-n-brand ring-2 ring-n-brand/40 shadow-md'
+        : 'outline-n-container'
+    "
     role="button"
     tabindex="0"
     @click="open('detail')"
@@ -180,6 +205,36 @@ const onMenuAction = ({ action }) => {
         />
       </div>
     </div>
+    <!-- Responsável em destaque: chip com avatar do agente. -->
+    <div class="flex items-center min-w-0">
+      <span
+        v-if="assignee"
+        class="inline-flex items-center gap-1.5 max-w-full px-2 py-1 text-xs font-semibold rounded-full bg-n-blue-3 text-n-blue-11 outline outline-1 -outline-offset-1 outline-n-blue-6"
+        :title="$t('KANBAN.CARD.ASSIGNEE')"
+      >
+        <Avatar
+          :name="assignee.name"
+          :src="assignee.thumbnail"
+          :size="16"
+          rounded-full
+        />
+        <span class="truncate">{{ assignee.name }}</span>
+      </span>
+      <span
+        v-else-if="isAiAttending"
+        class="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-semibold rounded-full bg-n-brand/10 text-n-blue-11"
+      >
+        <Icon icon="i-lucide-bot" class="size-3.5 shrink-0" />
+        {{ $t('CONVERSATION.ATTENDANCE.AI_ATTENDING') }}
+      </span>
+      <span
+        v-else
+        class="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium border border-dashed rounded-full text-n-slate-10 border-n-slate-7"
+      >
+        <Icon icon="i-lucide-user-round" class="size-3.5 shrink-0" />
+        {{ $t('KANBAN.CARD.UNASSIGNED') }}
+      </span>
+    </div>
     <!-- Badges do CRM: resumo da cotação e follow-up (vencido em destaque). -->
     <div
       v-if="quoteSummary || followUpDueAt"
@@ -210,13 +265,27 @@ const onMenuAction = ({ action }) => {
         {{ followUpLabel }}
       </span>
     </div>
-    <!-- Dica de próxima ação, quando existir (discreta, no rodapé do card). -->
+    <!-- Plano de ação em destaque: bloco âmbar com rótulo, para o SDR bater o
+         olho e saber o próximo passo sem abrir o card. -->
     <div
       v-if="nextAction"
-      class="flex items-center gap-1 pt-1 mt-1 text-n-slate-11"
+      class="flex items-start gap-2 px-2.5 py-2 rounded-lg bg-n-amber-3 text-n-amber-12 ltr:border-l-[3px] rtl:border-r-[3px] border-n-amber-9"
+      :title="nextAction"
     >
-      <Icon icon="i-lucide-arrow-right-circle" class="size-3 shrink-0" />
-      <span class="text-xs truncate">{{ nextAction }}</span>
+      <Icon
+        icon="i-lucide-list-checks"
+        class="size-3.5 mt-0.5 shrink-0 text-n-amber-11"
+      />
+      <div class="flex flex-col min-w-0 gap-0.5">
+        <span
+          class="text-[10px] font-semibold tracking-wide uppercase text-n-amber-11"
+        >
+          {{ $t('KANBAN.CARD.NEXT_ACTION') }}
+        </span>
+        <span class="text-xs font-medium leading-snug line-clamp-2">
+          {{ nextAction }}
+        </span>
+      </div>
     </div>
     <!-- Barra de desfecho: Ganho/Perdido com rótulo (decisão do SDR). As ações
          utilitárias foram para o menu "⋯" no topo. stop em click E pointerdown

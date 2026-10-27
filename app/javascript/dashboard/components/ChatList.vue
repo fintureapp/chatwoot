@@ -645,6 +645,43 @@ function onBasicFilterChange(value, type) {
 
 const quickFiltersCount = computed(() => countQuickFilters(quickFilters.value));
 
+// ---- Filtros rápidos lembrados (por conta + usuário) -------------------------
+// A barra "Filtros" vivia só na memória do componente: sair para outra tela
+// (Acompanhamento, Contatos…) e voltar perdia Tipo/Caixa/Status escolhidos.
+// Guardamos no localStorage e reaplicamos ao montar. Chave por usuário e conta
+// para nunca reaproveitar filtros de outra pessoa/conta.
+const quickFiltersStorageKey = computed(
+  () =>
+    `finture:chat-quick-filters:${currentAccountId.value || 'na'}:${
+      currentUser.value?.id || 'na'
+    }`
+);
+
+function readSavedQuickFilters() {
+  try {
+    const raw = window.localStorage.getItem(quickFiltersStorageKey.value);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveQuickFilters() {
+  try {
+    window.localStorage.setItem(
+      quickFiltersStorageKey.value,
+      JSON.stringify({
+        filters: quickFilters.value,
+        open: showQuickFilters.value,
+      })
+    );
+  } catch {
+    // storage bloqueado/cheio: segue sem lembrar
+  }
+}
+
+watch([quickFilters, showQuickFilters], saveQuickFilters, { deep: true });
+
 function onToggleQuickFilters() {
   if (!showQuickFilters.value && !countQuickFilters(quickFilters.value)) {
     // Abre já refletindo a visão atual (status da lista e caixa/etiqueta/time da rota).
@@ -688,6 +725,19 @@ function onQuickFiltersChange(filters) {
     JSON.parse(JSON.stringify(conditions))
   );
   onApplyFilter(conditions);
+}
+
+// Reaplica os filtros lembrados (depois do reset do mount). Atalho da sidebar
+// (?tipo) e pastas têm precedência.
+function restoreSavedQuickFilters() {
+  if (route.query.tipo || props.foldersId) return;
+  const saved = readSavedQuickFilters();
+  if (!saved?.filters) return;
+  const filters = { ...emptyQuickFilters(), ...saved.filters };
+  if (!countQuickFilters(filters)) return;
+  quickFilters.value = filters;
+  showQuickFilters.value = saved.open !== false;
+  onQuickFiltersChange(quickFilters.value);
 }
 
 // Atalho da sidebar (WhatsApp / E-mail / Outros): abre a barra já com o Tipo.
@@ -902,6 +952,7 @@ onMounted(() => {
   store.dispatch('setChatSortFilter', activeSortBy.value);
   resetAndFetchData();
   applyTipoFromRoute();
+  restoreSavedQuickFilters();
   if (hasActiveFolders.value) {
     store.dispatch('campaigns/get');
   }

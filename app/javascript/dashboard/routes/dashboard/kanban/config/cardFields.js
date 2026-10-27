@@ -19,6 +19,10 @@
  * IMPORTANTE: por decisão de produto, o card NÃO expõe temperatura, score,
  * resumo de IA nem prazo de follow-up — esses campos simplesmente não existem
  * nesta configuração.
+ *
+ * Telefone e nome da caixa ficam ocultos (decisão de 20/10/2026: card mais
+ * limpo). O responsável (assignee) e a próxima ação NÃO passam por esta lista:
+ * o `KanbanCard` os renderiza em destaque, com layout próprio.
  */
 export const KANBAN_CARD_FIELDS = [
   {
@@ -42,7 +46,7 @@ export const KANBAN_CARD_FIELDS = [
     path: 'meta.sender.phone_number',
     type: 'text',
     primary: false,
-    visible: true,
+    visible: false,
     order: 3,
   },
   {
@@ -58,7 +62,7 @@ export const KANBAN_CARD_FIELDS = [
     path: 'inbox.name',
     type: 'text',
     primary: false,
-    visible: true,
+    visible: false,
     order: 5,
   },
   {
@@ -66,7 +70,7 @@ export const KANBAN_CARD_FIELDS = [
     path: 'meta.assignee.name',
     type: 'text',
     primary: false,
-    visible: true,
+    visible: false,
     order: 6,
   },
   {
@@ -118,8 +122,5 @@ export const resolveFieldValue = (conversation, field) => {
   if (!conversation || !field?.path) return undefined;
   return field.path
     .split('.')
-    .reduce(
-      (acc, key) => (acc == null ? undefined : acc[key]),
-      conversation
-    );
+    .reduce((acc, key) => (acc == null ? undefined : acc[key]), conversation);
 };

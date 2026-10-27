@@ -17,6 +17,7 @@ import ComposeConversation from 'dashboard/components-next/NewConversation/Compo
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import VoiceCallButton from 'dashboard/components-next/Contacts/VoiceCallButton.vue';
 import InlineInput from 'dashboard/components-next/inline-input/InlineInput.vue';
+import ContactProfileDialog from 'dashboard/components-next/Contacts/ContactProfileDialog.vue';
 
 export default {
   components: {
@@ -30,6 +31,7 @@ export default {
     ContactDeleteModal,
     VoiceCallButton,
     InlineInput,
+    ContactProfileDialog,
   },
   props: {
     contact: {
@@ -106,6 +108,9 @@ export default {
   },
   methods: {
     dynamicTime,
+    openProfile() {
+      this.$refs.profileDialog?.open({ ...this.contact });
+    },
     toggleEditModal() {
       this.showEditModal = !this.showEditModal;
     },
@@ -293,6 +298,14 @@ export default {
         </div>
       </div>
       <div class="flex items-center w-full mt-0.5 gap-2">
+        <NextButton
+          v-tooltip.top-end="$t('CONTACT_PROFILE.VIEW_PROFILE')"
+          icon="i-lucide-id-card"
+          slate
+          faded
+          sm
+          @click="openProfile"
+        />
         <ComposeConversation :contact-id="String(contact.id)">
           <template #trigger>
             <NextButton
@@ -352,6 +365,7 @@ export default {
           </template>
         </ContactDeleteModal>
       </div>
+      <ContactProfileDialog ref="profileDialog" />
       <EditContact
         :show="showEditModal"
         :contact="contact"

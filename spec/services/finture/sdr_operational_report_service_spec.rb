@@ -10,9 +10,10 @@ RSpec.describe Finture::SdrOperationalReportService do
   let(:now) { Time.zone.parse('2026-09-29 12:00:00') }
   let(:since) { (now - 7.days).to_i }
   let(:until_at) { now.to_i }
+  let(:admin) { create(:user, account: account, role: :administrator) }
 
-  def report(scoped_inbox: inbox)
-    described_class.new(account: account, current_user: nil, inbox_id: scoped_inbox&.id,
+  def report(scoped_inbox: inbox, user: admin)
+    described_class.new(account: account, current_user: user, inbox_id: scoped_inbox&.id,
                         since: since, until_at: until_at).perform
   end
 
@@ -66,11 +67,46 @@ RSpec.describe Finture::SdrOperationalReportService do
       end
     end
 
-    it 'respects the selected period' do
+    # Backlog é foto de agora: lead criado antes do período e ainda aberto é o
+    # que mais precisa de ação — o filtro de período o escondia.
+    it 'keeps old open leads regardless of the selected period' do
       conversation(created_at: now - 3.days, assignee: nil)
-      conversation(created_at: now - 40.days, assignee: nil)
+      conversation(created_at: now - 40.days, last_activity_at: now - 30.days, assignee: nil)
 
-      expect(report[:kpis][:unassigned]).to eq(1)
+      result = report
+
+      expect(result[:kpis][:unassigned]).to eq(2)
+      expect(result[:kpis][:stalled]).to eq(1)
+      expect(result[:stalled].map { |row| row[:days] }).to eq([30])
+    end
+  end
+
+  describe 'visibilidade por usuário' do
+    let(:other_inbox) { create(:inbox, account: account) }
+    let(:agent) { create(:user, account: account, role: :agent) }
+
+    before do
+      create(:inbox_member, user: agent, inbox: inbox)
+      # update_columns: o agente é membro da caixa e a auto-atribuição o pegaria.
+      own = conversation(created_at: now - 40.days, last_activity_at: now - 30.days)
+      own.update_columns(assignee_id: nil) # rubocop:disable Rails/SkipsModelValidations
+      other = create(:conversation, account: account, inbox: other_inbox)
+      other.update_columns(assignee_id: nil, created_at: now - 40.days, last_activity_at: now - 30.days) # rubocop:disable Rails/SkipsModelValidations
+    end
+
+    it 'shows an agent only the inboxes they belong to in the overall view' do
+      result = report(scoped_inbox: nil, user: agent)
+
+      expect(result[:kpis][:unassigned]).to eq(1)
+      expect(result[:stalled].size).to eq(1)
+    end
+
+    it 'shows an administrator the whole account' do
+      expect(report(scoped_inbox: nil)[:kpis][:unassigned]).to eq(2)
+    end
+
+    it 'returns nothing without a user' do
+      expect(report(scoped_inbox: nil, user: nil)[:kpis][:unassigned]).to eq(0)
     end
   end
 

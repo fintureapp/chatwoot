@@ -14,6 +14,7 @@ import { mapGetters } from 'vuex';
 // utils & constants
 import { LocalStorage } from 'shared/helpers/localStorage';
 import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
+import { FINTURE_COLORS } from 'dashboard/constants/brand';
 import { CAPTAIN_EVENTS } from '../../../../helper/AnalyticsHelper/events';
 
 export default {
@@ -37,7 +38,11 @@ export default {
     const { captainTasksEnabled } = useCaptain();
     const { replaceInstallationName } = useBranding();
 
-    return { captainTasksEnabled, replaceInstallationName };
+    return {
+      captainTasksEnabled,
+      replaceInstallationName,
+      brandColor: FINTURE_COLORS.orange,
+    };
   },
   data() {
     return {
@@ -182,7 +187,7 @@ export default {
             <woot-label
               variant="dashed"
               v-bind="label"
-              :bg-color="selectedLabels.includes(label.title) ? '#2781F6' : ''"
+              :bg-color="selectedLabels.includes(label.title) ? brandColor : ''"
             />
           </button>
           <NextButton

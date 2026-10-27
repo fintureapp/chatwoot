@@ -6,8 +6,11 @@
 # - conversion_rate: won / (won + lost)
 # - ticket_medio: média de finture_quotes.total_value dos leads ganhos
 # - avg_time_per_stage: tempo médio em cada etapa (diferença entre transições)
+# Conversas e transições vêm do escopo de visibilidade (Finture::SdrShared).
 class Finture::SdrReportService
-  pattr_initialize [:account!, :inbox_id, :since, :until_at]
+  include Finture::SdrShared
+
+  pattr_initialize [:account!, :current_user, :inbox_id, :since, :until_at]
 
   def perform
     {
@@ -29,16 +32,6 @@ class Finture::SdrReportService
       to = until_at.present? ? Time.zone.at(until_at.to_i) : Time.current
       from..to
     end
-  end
-
-  def conversations_scope
-    scope = account.conversations
-    inbox_id.present? ? scope.where(inbox_id: inbox_id) : scope
-  end
-
-  def transitions_scope
-    scope = Finture::StageTransition.where(account_id: account.id)
-    inbox_id.present? ? scope.where(inbox_id: inbox_id) : scope
   end
 
   def leads_identified

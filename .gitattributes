@@ -1,0 +1,7 @@
+# Finture: scripts executados dentro de containers Linux precisam de LF,
+# mesmo em clones Windows com core.autocrlf=true.
+script/local-dev text eol=lf
+docker/local/** text eol=lf
+docker-compose.local*.yaml text eol=lf
+# Scripts do Windows precisam de CRLF.
+*.cmd text eol=crlf

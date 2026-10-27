@@ -1,0 +1,253 @@
+# Finture — ambiente LOCAL de desenvolvimento do fork do Chatwoot.
+# Guia: docs/LOCAL_DEVELOPMENT.md. Comandos: make <alvo> ou script/local-dev <alvo>.
+#
+# Isolamento de produção (não remova):
+# - Rails, Sidekiq e Vite ficam SOMENTE na rede "app" (internal: true): não
+#   existe rota para a internet a partir deles.
+# - O navegador acessa tudo pelo proxy "edge", que publica apenas em 127.0.0.1.
+# - Hosts de banco/Redis/SMTP/storage são fixados aqui em "environment" e
+#   sobrescrevem qualquer valor do .env.local. O Rails ainda valida tudo no boot
+#   (config/initializers/000_finture_local_isolation.rb).
+# - O .env.local (gerado por `make setup`) só guarda segredos LOCAIS aleatórios.
+name: chatwoot-finture-local
+
+x-app-env: &app-env
+  RAILS_ENV: development
+  NODE_ENV: development
+  FINTURE_LOCAL_ISOLATION: enforce
+  FINTURE_LOCAL_DOCKER: 'true'
+  INSTALLATION_ENV: docker
+  FRONTEND_URL: http://localhost:3000
+  FORCE_SSL: 'false'
+  DEFAULT_LOCALE: pt_BR
+  ENABLE_ACCOUNT_SIGNUP: 'false'
+  # Banco e Redis exclusivamente locais
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: '5432'
+  POSTGRES_USERNAME: chatwoot_local
+  POSTGRES_DATABASE: chatwoot_local_dev
+  # db:create/drop/schema:load em development não devem tocar a config "test"
+  # (com POSTGRES_DATABASE fixo, ela resolveria para o mesmo banco).
+  SKIP_TEST_DATABASE: 'true'
+  # Não reescrever as anotações de schema dos models a cada db:migrate local.
+  ANNOTATERB_SKIP_ON_DB_TASKS: '1'
+  REDIS_URL: redis://redis:6379/0
+  # Storage em disco (volume "storage")
+  ACTIVE_STORAGE_SERVICE: local
+  # E-mail capturado pelo Mailpit (UI em http://localhost:8025)
+  SMTP_ADDRESS: mailpit
+  SMTP_PORT: '1025'
+  SMTP_ENABLE_STARTTLS_AUTO: 'false'
+  MAILER_SENDER_EMAIL: Finture Local <nao-responda@finture.example>
+  MAILER_INBOUND_EMAIL_DOMAIN: inbound.finture.example
+  # Integrações externas apontadas para o simulador local
+  WHATSAPP_CLOUD_BASE_URL: http://webhook-sink:8080
+  SAFE_FETCH_ALLOW_PRIVATE_NETWORK: 'true'
+  ENABLE_PUSH_RELAY_SERVER: 'false'
+  DISABLE_TELEMETRY: 'true'
+  # Dev experience
+  RAILS_LOG_TO_STDOUT: 'true'
+  RAILS_FILE_WATCHER_POLLING: ${LOCAL_RAILS_FILE_WATCHER_POLLING:-false}
+  LOG_LEVEL: info
+  RACK_TIMEOUT_SERVICE_TIMEOUT: '0'
+  RAILS_MAX_THREADS: '5'
+  SIDEKIQ_CONCURRENCY: '5'
+  VITE_RUBY_HOST: vite
+
+x-app: &app
+  image: finture-chatwoot-dev:local
+  build:
+    context: .
+    dockerfile: docker/local/Dockerfile
+  env_file:
+    - path: .env.local
+      required: true
+  entrypoint: ['bash', 'docker/local/entrypoint.sh']
+  volumes:
+    - .:/app
+    - node_modules:/app/node_modules
+    - rails_tmp:/app/tmp
+    - rails_log:/app/log
+    - storage:/app/storage
+  networks:
+    - app
+
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.7-pg16
+    command: ['postgres', '-c', 'shared_preload_libraries=pg_stat_statements']
+    env_file:
+      - path: .env.local
+        required: true
+    environment:
+      POSTGRES_USER: chatwoot_local
+      POSTGRES_DB: chatwoot_local_dev
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - '127.0.0.1:${LOCAL_POSTGRES_PORT:-5432}:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U chatwoot_local -d chatwoot_local_dev']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [app, edge]
+
+  redis:
+    image: redis:7.4.11-alpine
+    command: ['sh', '-c', 'exec redis-server --requirepass "$$REDIS_PASSWORD" --appendonly yes']
+    env_file:
+      - path: .env.local
+        required: true
+    volumes:
+      - redis_data:/data
+    ports:
+      - '127.0.0.1:${LOCAL_REDIS_PORT:-6379}:6379'
+    healthcheck:
+      test: ['CMD-SHELL', 'redis-cli -a "$$REDIS_PASSWORD" --no-auth-warning ping | grep -q PONG']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [app, edge]
+
+  mailpit:
+    image: axllent/mailpit:v1.31
+    environment:
+      MP_DATABASE: /data/mailpit.db
+      MP_MAX_MESSAGES: '2000'
+      MP_SMTP_AUTH_ACCEPT_ANY: 'true'
+      MP_SMTP_AUTH_ALLOW_INSECURE: 'true'
+    volumes:
+      - mailpit_data:/data
+    ports:
+      - '127.0.0.1:${LOCAL_MAILPIT_PORT:-8025}:8025'
+    healthcheck:
+      test: ['CMD', '/mailpit', 'readyz']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [app, edge]
+
+  webhook-sink:
+    image: node:24.13.0-bookworm-slim
+    command: ['node', '/sink/server.js']
+    volumes:
+      - ./docker/local/webhook-sink:/sink:ro
+    ports:
+      - '127.0.0.1:${LOCAL_WEBHOOK_SINK_PORT:-8099}:8080'
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://localhost:8080/_health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [app, edge]
+
+  # One-shot: instala node_modules no volume. Único serviço com internet e sem
+  # nenhuma variável da aplicação.
+  deps:
+    image: finture-chatwoot-dev:local
+    build:
+      context: .
+      dockerfile: docker/local/Dockerfile
+    entrypoint: ['bash', 'docker/local/deps.sh']
+    environment:
+      HUSKY: '0'
+      FORCE_DEPS: ${FORCE_DEPS:-false}
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+    networks: [edge]
+    restart: 'no'
+
+  # One-shot: prepara o banco (db:chatwoot_prepare = schema + seeds upstream na
+  # primeira vez, migrations sempre) e aplica as seeds sintéticas Finture.
+  db-prepare:
+    <<: *app
+    command: ['bash', '-c', 'ruby bin/rails db:chatwoot_prepare && ruby bin/rails finture:local:seed']
+    environment:
+      <<: *app-env
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      webhook-sink: { condition: service_healthy }
+      deps: { condition: service_completed_successfully }
+    restart: 'no'
+
+  rails:
+    <<: *app
+    command: ['ruby', 'bin/rails', 'server', '-b', '0.0.0.0', '-p', '3000']
+    environment:
+      <<: *app-env
+    stdin_open: true
+    tty: true
+    depends_on:
+      db-prepare: { condition: service_completed_successfully }
+      mailpit: { condition: service_healthy }
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://localhost:3000/api > /dev/null']
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    restart: unless-stopped
+
+  sidekiq:
+    <<: *app
+    command: ['bundle', 'exec', 'sidekiq', '-C', 'config/sidekiq.yml']
+    environment:
+      <<: *app-env
+    stdin_open: true
+    tty: true
+    depends_on:
+      db-prepare: { condition: service_completed_successfully }
+      mailpit: { condition: service_healthy }
+    restart: unless-stopped
+
+  vite:
+    <<: *app
+    env_file: []
+    command: ['ruby', 'bin/vite', 'dev']
+    environment:
+      <<: *app-env
+      VITE_RUBY_HOST: 0.0.0.0
+      VITE_USE_POLLING: ${LOCAL_VITE_USE_POLLING:-false}
+      VITE_ALLOWED_HOSTS: vite,localhost
+    depends_on:
+      deps: { condition: service_completed_successfully }
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://localhost:3036/vite-dev/@vite/client > /dev/null']
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    restart: unless-stopped
+
+  edge:
+    image: nginx:1.28-alpine
+    volumes:
+      - ./docker/local/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    # Portas fixas: FRONTEND_URL (cookies/ActionCable) e o HMR do Vite dependem delas.
+    ports:
+      - '127.0.0.1:3000:3000'
+      - '127.0.0.1:3036:3036'
+    depends_on:
+      rails: { condition: service_started }
+      vite: { condition: service_started }
+    restart: unless-stopped
+    networks: [app, edge]
+
+networks:
+  # Sem rota para a internet: Rails, Sidekiq e Vite vivem só aqui.
+  app:
+    internal: true
+  # Rede com saída, usada só para publicar portas em 127.0.0.1 e pelo "deps".
+  edge: {}
+
+volumes:
+  postgres_data:
+  redis_data:
+  mailpit_data:
+  node_modules:
+  rails_tmp:
+  rails_log:
+  storage:

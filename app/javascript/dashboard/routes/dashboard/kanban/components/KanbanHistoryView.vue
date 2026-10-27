@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, inject, nextTick, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useDebounceFn } from '@vueuse/core';
 import { useStore } from 'dashboard/composables/store';
@@ -8,18 +8,23 @@ import {
   groupHistoryByContact,
   summaryStateOf,
 } from 'dashboard/routes/dashboard/kanban/helper/historyGrouping';
+import { KANBAN_VIEW_STATE_KEY } from 'dashboard/routes/dashboard/kanban/composables/useKanbanViewState';
+import { useKanbanExport } from 'dashboard/routes/dashboard/kanban/composables/useKanbanExport';
 
 import Button from 'dashboard/components-next/button/Button.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import EmptyStateLayout from 'dashboard/components-next/EmptyStateLayout.vue';
-import ContactHistoryDialog from './ContactHistoryDialog.vue';
+import ContactProfileDialog from 'dashboard/components-next/Contacts/ContactProfileDialog.vue';
+import KanbanExportMenu from './KanbanExportMenu.vue';
 
 // Histórico da caixa ativa, agrupado por CONTATO (uma linha por número). No
 // COMERCIAL, leads fechados por desfecho (ganho/perdido), filtráveis; no
 // OPERACIONAL, demandas resolvidas com o resumo da IA (sdr_resumo). Busca por
 // nome/e-mail/telefone no servidor (conversations/kanban_history). Clicar na
 // linha abre o modal com todas as conversas do contato e seus resumos.
+// Busca, filtro de desfecho, rolagem e contato âncora ficam no estado de
+// trabalho persistido da página (voltar da conversa cai no mesmo lugar).
 const props = defineProps({
   inboxId: {
     type: [Number, String],
@@ -35,10 +40,23 @@ const isOperational = computed(() => props.kanbanType === 'operacional');
 
 const store = useStore();
 const { t } = useI18n();
+const viewState = inject(KANBAN_VIEW_STATE_KEY, null);
+const persisted = viewState?.state.history;
 
-const query = ref('');
-const outcome = ref('');
+const query = ref(persisted?.query || '');
+const outcome = ref(persisted?.outcome || '');
 const dialogRef = ref(null);
+const listRef = ref(null);
+const highlightedContactId = ref(null);
+let highlightTimer = null;
+let restored = false;
+
+watch(query, value => {
+  if (persisted) persisted.query = value;
+});
+watch(outcome, value => {
+  if (persisted) persisted.outcome = value;
+});
 
 const items = computed(() =>
   store.getters['kanban/getHistoryForInbox'](props.inboxId)
@@ -64,6 +82,53 @@ const debouncedLoad = useDebounceFn(load, 300);
 watch(() => props.inboxId, load, { immediate: true });
 watch(outcome, load);
 watch(query, debouncedLoad);
+
+const clearFilters = () => {
+  query.value = '';
+  outcome.value = '';
+};
+
+// ---- Rolagem / contato âncora ---------------------------------------------
+const onScroll = () => {
+  if (!viewState || !listRef.value) return;
+  viewState.state.scroll.historyTop = listRef.value.scrollTop;
+};
+
+const restorePosition = async () => {
+  if (restored || !viewState || !groups.value.length) return;
+  restored = true;
+  await nextTick();
+  const list = listRef.value;
+  if (list) list.scrollTop = viewState.state.scroll.historyTop || 0;
+
+  const anchorId = viewState.consumeAnchor('history');
+  if (!anchorId) return;
+  const element = list?.querySelector(`[data-history-contact="${anchorId}"]`);
+  if (!element) return;
+  element.scrollIntoView({ block: 'center' });
+  highlightedContactId.value = anchorId;
+  highlightTimer = setTimeout(() => {
+    highlightedContactId.value = null;
+  }, 2500);
+};
+
+watch(() => groups.value.length, restorePosition, { immediate: true });
+
+onBeforeUnmount(() => {
+  if (highlightTimer) clearTimeout(highlightTimer);
+});
+
+// ---- Exportação Excel (servidor, respeita busca e desfecho) -----------------
+const { isExporting, exportCsv } = useKanbanExport();
+const exportHistory = () =>
+  exportCsv({
+    inboxId: props.inboxId,
+    scope: 'history',
+    filters: {
+      q: query.value.trim(),
+      outcome: isOperational.value ? '' : outcome.value,
+    },
+  });
 
 const outcomeOptions = computed(() => [
   { value: '', label: t('KANBAN.HISTORY.FILTER_ALL') },
@@ -181,8 +246,25 @@ const openContact = group => {
         </button>
       </div>
 
+      <!-- Limpar busca/filtro (sempre visível quando há algo ativo) -->
+      <button
+        v-if="hasFilters"
+        type="button"
+        class="flex items-center h-8 gap-1 px-2.5 text-sm rounded-lg text-n-slate-11 hover:bg-n-alpha-2"
+        @click="clearFilters"
+      >
+        <Icon icon="i-lucide-x" class="size-4" />
+        {{ t('KANBAN.TOOLBAR.CLEAR') }}
+      </button>
+
       <div class="flex items-center gap-2 ltr:ml-auto rtl:mr-auto">
         <p class="text-sm text-n-slate-11">{{ countLabel }}</p>
+        <KanbanExportMenu
+          v-if="items.length"
+          :has-active-filters="hasFilters"
+          :is-exporting="isExporting"
+          @export="exportHistory"
+        />
         <Button
           color="slate"
           variant="ghost"
@@ -205,12 +287,23 @@ const openContact = group => {
 
     <ul
       v-else
+      ref="listRef"
       class="flex flex-col flex-1 min-h-0 gap-2 overflow-y-auto [&_p]:mb-0"
+      @scroll.passive="onScroll"
     >
-      <li v-for="group in groups" :key="group.key">
+      <li
+        v-for="group in groups"
+        :key="group.key"
+        :data-history-contact="group.contact.id"
+      >
         <button
           type="button"
-          class="flex items-start w-full gap-3 p-3 transition-colors rounded-xl text-start bg-n-solid-1 outline outline-1 -outline-offset-1 outline-n-weak hover:bg-n-alpha-1"
+          class="flex items-start w-full gap-3 p-3 transition-colors rounded-xl text-start bg-n-solid-1 outline outline-1 -outline-offset-1 hover:bg-n-alpha-1"
+          :class="
+            highlightedContactId === group.contact.id
+              ? 'outline-n-brand ring-2 ring-n-brand/40'
+              : 'outline-n-weak'
+          "
           @click="openContact(group)"
         >
           <Avatar
@@ -307,6 +400,6 @@ const openContact = group => {
       </li>
     </ul>
 
-    <ContactHistoryDialog ref="dialogRef" :inbox-id="inboxId" />
+    <ContactProfileDialog ref="dialogRef" :inbox-id="inboxId" />
   </div>
 </template>

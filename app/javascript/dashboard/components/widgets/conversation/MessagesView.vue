@@ -7,6 +7,7 @@ import { useSnakeCase } from 'dashboard/composables/useTransformKeys';
 
 // components
 import ReplyBox from './ReplyBox.vue';
+import ScheduledMessagesPanel from './ScheduledMessagesPanel.vue';
 import MessageList from 'next/message/MessageList.vue';
 import ConversationLabelSuggestion from './conversation/LabelSuggestion.vue';
 import Banner from 'dashboard/components/ui/Banner.vue';
@@ -41,6 +42,7 @@ export default {
   components: {
     MessageList,
     ReplyBox,
+    ScheduledMessagesPanel,
     Banner,
     ConversationLabelSuggestion,
     Spinner,
@@ -495,7 +497,7 @@ export default {
           class="list-none flex justify-center items-center"
         >
           <span
-            class="shadow-lg rounded-full bg-n-brand text-white text-xs font-medium my-2.5 mx-auto px-2.5 py-1.5"
+            class="shadow-lg rounded-full bg-n-brand text-n-brand-contrast text-xs font-medium my-2.5 mx-auto px-2.5 py-1.5"
           >
             {{ unreadMessageLabel }}
           </span>
@@ -526,6 +528,10 @@ export default {
           />
         </div>
       </div>
+      <ScheduledMessagesPanel
+        v-if="currentChat.id"
+        :conversation-id="currentChat.id"
+      />
       <ResizableEditorWrapper
         ref="resizableEditorWrapperRef"
         :container-height="Math.max(0, containerHeight - topBannerHeight)"

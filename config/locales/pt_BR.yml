@@ -549,3 +549,41 @@ pt_BR:
       no_subscriptions_to_test: 'Selecione pelo menos uma assinatura para teste.'
       no_subscriptions_to_delete: 'Selecione pelo menos uma assinatura para excluir.'
       subscriptions_deleted: "Excluída(s) %{count} inscrição(ões). O(s) dispositivo(s) do usuário será(ão) registrado(s) novamente na próxima inicialização do aplicativo."
+
+  finture:
+    scheduled_messages:
+      unknown_author: "um agente"
+      activity:
+        scheduled: "%{user_name} agendou uma mensagem para %{time}"
+        updated: "%{user_name} alterou uma mensagem agendada (agora para %{time})"
+        cancelled: "%{user_name} cancelou a mensagem agendada para %{time}"
+        auto_cancelled: "Mensagem agendada para %{time} foi cancelada automaticamente porque o cliente respondeu antes"
+        sent: "Mensagem agendada por %{user_name} para %{time} foi enviada"
+        failed: "Mensagem agendada para %{time} NÃO foi enviada: %{reason}"
+      notes:
+        auto_cancelled: "sua mensagem agendada para %{time} foi cancelada porque o cliente respondeu antes. Revise e reagende se fizer sentido. Prévia: \"%{preview}\""
+        failed: "sua mensagem agendada para %{time} NÃO foi enviada (%{reason}). Prévia: \"%{preview}\""
+      errors:
+        not_pending: "Só é possível alterar ou cancelar agendamentos pendentes."
+        window_closed: "a janela de resposta do canal está fechada (ex.: 24h do WhatsApp) e o cliente não respondeu"
+        interrupted: "o processamento foi interrompido antes do envio"
+    attendance:
+      actors:
+        bot: "IA (triagem)"
+        system: "Sistema"
+        user: "um agente"
+      activity:
+        take_over: "%{user_name} assumiu o atendimento — a IA foi pausada nesta conversa"
+        return_to_ai: "%{user_name} devolveu a conversa à IA. Motivo: %{reason}"
+        return_to_ai_with_notes: "%{user_name} devolveu a conversa à IA. Motivo: %{reason}. Pendências: %{notes}"
+        bot_handoff: "A IA transferiu a conversa para atendimento humano (%{reason})"
+        escalated: "Conversa passou para atendimento humano (%{user_name}) — a IA foi pausada"
+        reopened: "Cliente reabriu a conversa — a IA voltou a atender"
+      errors:
+        conflict_human: "%{name} já assumiu esta conversa às %{time}."
+        conflict_ai: "A conversa voltou para a IA às %{time} (%{name})."
+        reason_required: "Informe o motivo para devolver à IA."
+        ai_disabled: "Esta caixa não tem atendimento com IA ativo."
+        not_open: "Só é possível devolver à IA uma conversa aberta."
+        already_ai: "Esta conversa já está com a IA."
+        bot_blocked: "Envio do bot recusado: a conversa está em atendimento humano ou o estado mudou."

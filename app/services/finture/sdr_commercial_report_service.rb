@@ -57,17 +57,6 @@ class Finture::SdrCommercialReportService
     end
   end
 
-  # ---- Scopes ---------------------------------------------------------------
-  def conversations_scope
-    scope = account.conversations
-    inbox_id.present? ? scope.where(inbox_id: inbox_id) : scope
-  end
-
-  def transitions_scope
-    scope = Finture::StageTransition.where(account_id: account.id)
-    inbox_id.present? ? scope.where(inbox_id: inbox_id) : scope
-  end
-
   # ---- KPIs -----------------------------------------------------------------
   def kpis
     cur = window_metrics(range)

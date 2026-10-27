@@ -29,6 +29,15 @@ master.key
 
 # Ignore env files
 .env
+# Finture: nenhum .env real (prod, local, backups) vai para o Git; só os exemplos.
+.env.*
+!.env.example
+!.env.local.example
+# Finture: dumps e backups de banco nunca entram no repositório.
+*.pgdump
+*.sql.gz
+/backups/
+/dumps/
 
 public/uploads
 public/packs*
@@ -103,4 +112,8 @@ CLAUDE.local.md
 .histoire
 .pnpm-store/*
 local/
+# Finture: o ambiente Docker local é versionado.
+!/docker/local/
 Procfile.worktree
+# Finture: capturas e logs do Playwright MCP (ferramenta local).
+.playwright-mcp/

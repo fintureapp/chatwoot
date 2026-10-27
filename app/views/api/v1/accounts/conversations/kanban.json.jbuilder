@@ -4,6 +4,7 @@
 # Mantém o mesmo formato `meta.sender` / `meta.assignee` do endpoint de lista para que
 # o KanbanCard continue lendo os mesmos dot-paths, mas SEM as partes pesadas que causam
 # N+1 no #index: `messages[]`, `last_non_activity_message` e `unread_count`.
+ai_enabled_map = Finture::InboxConfig.ai_enabled_map(@conversations.map(&:inbox_id).uniq)
 json.payload do
   json.array! @conversations do |conversation|
     json.id conversation.display_id
@@ -12,6 +13,7 @@ json.payload do
     json.priority conversation.priority
     json.labels conversation.cached_label_list_array
     json.custom_attributes conversation.custom_attributes
+    json.finture_attendance Finture::AttendanceState.payload_for(conversation, ai_enabled: ai_enabled_map.fetch(conversation.inbox_id, false))
     json.created_at conversation.created_at.to_i
     json.last_activity_at conversation.last_activity_at.to_i
     json.timestamp conversation.last_activity_at.to_i

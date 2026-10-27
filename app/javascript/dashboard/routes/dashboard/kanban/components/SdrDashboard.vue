@@ -71,7 +71,10 @@ const compareLabel = computed(() =>
 const load = () => {
   const until = Math.floor(Date.now() / 1000);
   const since = until - Number(period.value) * 86400;
-  const params = { view: activeView.value, since, until };
+  // Fuso do navegador: o servidor agrupa dias e calcula "hoje" nele (UTC
+  // virava o dia às 21h de Brasília).
+  const { timeZone } = Intl.DateTimeFormat().resolvedOptions();
+  const params = { view: activeView.value, since, until, timezone: timeZone };
   if (selectedInboxId.value) params.inbox_id = selectedInboxId.value;
   if (activeView.value === 'commercial' && compareWith.value === 'year') {
     params.compare_since = since - 365 * 86400;
@@ -281,7 +284,7 @@ const opKpis = computed(() => {
       icon: 'i-lucide-user-x',
       value: fmtNum(k.unassigned),
       emphasis: 'warn',
-      delta: { text: t('KANBAN.DASHBOARD.OP_IN_PERIOD'), tone: 'neutral' },
+      delta: { text: t('KANBAN.DASHBOARD.OP_OPEN_NOW'), tone: 'neutral' },
     },
     {
       key: 'stalled',
@@ -289,7 +292,7 @@ const opKpis = computed(() => {
       icon: 'i-lucide-timer-off',
       value: fmtNum(k.stalled),
       emphasis: 'warn',
-      delta: { text: t('KANBAN.DASHBOARD.OP_IN_PERIOD'), tone: 'neutral' },
+      delta: { text: t('KANBAN.DASHBOARD.OP_OPEN_NOW'), tone: 'neutral' },
     },
     {
       key: 'sla',
@@ -451,7 +454,7 @@ const views = computed(() => [
           class="px-3 py-1 text-[13px] font-medium rounded-md transition-colors"
           :class="
             period === opt.value
-              ? 'bg-n-brand text-white shadow-sm'
+              ? 'bg-n-brand text-n-brand-contrast shadow-sm'
               : 'text-n-slate-11 hover:text-n-slate-12 hover:bg-n-alpha-1'
           "
           @click="period = opt.value"
