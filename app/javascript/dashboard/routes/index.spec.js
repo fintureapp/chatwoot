@@ -62,7 +62,7 @@ describe('#validateAuthenticateRoutePermission', () => {
     });
 
     describe('when route is not accessible to current user', () => {
-      it('should redirect to dashboard', async () => {
+      it('should redirect to home', async () => {
         const to = {
           name: 'general_settings_index',
           params: { accountId: 1 },
@@ -71,7 +71,7 @@ describe('#validateAuthenticateRoutePermission', () => {
 
         await validateAuthenticateRoutePermission(to, next);
 
-        expect(next).toHaveBeenCalledWith('/app/accounts/1/dashboard');
+        expect(next).toHaveBeenCalledWith('/app/accounts/1/inicio');
       });
     });
 

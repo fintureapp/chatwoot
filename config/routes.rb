@@ -271,6 +271,9 @@ Rails.application.routes.draw do
             end
           end
           resource :finture_sdr_dashboard, only: [:show], controller: 'finture_sdr_dashboard'
+          resource :finture_home, only: [:show], controller: 'finture_home' do
+            get :list
+          end
           resource :finture_inbox_config, only: [:show, :update], controller: 'finture_inbox_configs'
           resources :inboxes, only: [:index, :show, :create, :update, :destroy] do
             get :assignable_agents, on: :member

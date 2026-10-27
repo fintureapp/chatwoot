@@ -23,7 +23,7 @@ export const defaultRedirectPage = (to, permissions) => {
   const permissionRoutes = [
     {
       permissions: [...ROLES, ...CONVERSATION_PERMISSIONS],
-      path: 'dashboard',
+      path: 'inicio',
     },
     { permissions: [CONTACT_PERMISSIONS], path: 'contacts' },
     { permissions: [REPORTS_PERMISSIONS], path: 'reports/overview' },
@@ -39,7 +39,7 @@ export const defaultRedirectPage = (to, permissions) => {
 
 const validateActiveAccountRoutes = (to, user) => {
   // If the current account is active, then check for the route permissions
-  const accountDashboardURL = `accounts/${to.params.accountId}/dashboard`;
+  const accountDashboardURL = `accounts/${to.params.accountId}/inicio`;
 
   // If the user is trying to access suspended route, redirect them to dashboard
   if (to.name === 'account_suspended') {

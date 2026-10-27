@@ -22,9 +22,9 @@ describe('#defaultRedirectPage', () => {
     name: 'home',
   };
 
-  it('should return dashboard route for users with conversation permissions', () => {
+  it('should return home route for users with conversation permissions', () => {
     const permissions = ['conversation_manage', 'agent'];
-    expect(defaultRedirectPage(to, permissions)).toBe('accounts/2/dashboard');
+    expect(defaultRedirectPage(to, permissions)).toBe('accounts/2/inicio');
   });
 
   it('should return contacts route for users with contact permissions', () => {
@@ -49,12 +49,12 @@ describe('#defaultRedirectPage', () => {
     expect(defaultRedirectPage(to, permissions)).toBe('accounts/2/dashboard');
   });
 
-  it('should return dashboard route for users with administrator role', () => {
+  it('should return home route for users with administrator role', () => {
     const permissions = ['administrator'];
-    expect(defaultRedirectPage(to, permissions)).toBe('accounts/2/dashboard');
+    expect(defaultRedirectPage(to, permissions)).toBe('accounts/2/inicio');
   });
 
-  it('should return dashboard route for users with multiple permissions', () => {
+  it('should return home route for users with multiple permissions', () => {
     const permissions = [
       'contact_manage',
       'custom_role',
@@ -62,7 +62,7 @@ describe('#defaultRedirectPage', () => {
       'agent',
       'administrator',
     ];
-    expect(defaultRedirectPage(to, permissions)).toBe('accounts/2/dashboard');
+    expect(defaultRedirectPage(to, permissions)).toBe('accounts/2/inicio');
   });
 });
 
@@ -129,13 +129,13 @@ describe('#validateLoggedInRoutes', () => {
         });
       });
       describe('when route is suspended route', () => {
-        it('returns dashboard url', () => {
+        it('returns home url', () => {
           expect(
             validateLoggedInRoutes(
               { name: 'account_suspended', params: { accountId: 1 } },
               { accounts: [{ id: 1, role: 'agent', status: 'active' }] }
             )
-          ).toEqual(`accounts/1/dashboard`);
+          ).toEqual(`accounts/1/inicio`);
         });
       });
     });

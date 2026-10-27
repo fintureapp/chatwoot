@@ -336,6 +336,13 @@ const reportRoutes = computed(() => newReportRoutes());
 const menuItems = computed(() => {
   return [
     {
+      name: 'Finture Home',
+      label: t('SIDEBAR.FINTURE_HOME'),
+      icon: 'i-lucide-layout-dashboard',
+      to: accountScopedRoute('finture_home'),
+      activeOn: ['finture_home'],
+    },
+    {
       name: 'Inbox',
       label: t('SIDEBAR.NOTIFICATIONS'),
       icon: 'i-lucide-bell',
