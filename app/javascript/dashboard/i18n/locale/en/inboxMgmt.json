@@ -528,7 +528,13 @@
         "DESCRIPTION": "Click on the Sign in with Microsoft button to get started. You will redirected to the email sign in page. Once you accept the requested permissions, you would be redirected back to the inbox creation step.",
         "EMAIL_PLACEHOLDER": "Enter email address",
         "SIGN_IN": "Sign in with Microsoft",
-        "ERROR_MESSAGE": "There was an error connecting to Microsoft, please try again"
+        "ERROR_MESSAGE": "There was an error connecting to Microsoft, please try again",
+        "SHARED_MAILBOX": {
+          "LABEL": "Shared mailbox (optional)",
+          "PLACEHOLDER": "e.g. sales{'@'}yourcompany.com",
+          "HELP": "Leave empty to connect the mailbox of the account you sign in with. To connect a shared mailbox, enter its address and sign in with an account that has Full Access and Send As on it.",
+          "ACCESS_ERROR": "The signed-in account could not open {mailbox}. Check that it has Full Access and Send As on this mailbox (permission changes can take a while to apply) and try again."
+        }
       },
       "GOOGLE": {
         "TITLE": "Google Email",

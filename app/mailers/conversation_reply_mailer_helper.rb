@@ -48,7 +48,7 @@ module ConversationReplyMailerHelper
     {
       address: domain,
       port: 587,
-      user_name: @channel.imap_login,
+      user_name: oauth_smtp_login,
       password: @channel.provider_config['access_token'],
       domain: domain,
       tls: false,
@@ -57,6 +57,14 @@ module ConversationReplyMailerHelper
       **smtp_timeout_settings,
       authentication: 'xoauth2'
     }
+  end
+
+  # A Microsoft shared mailbox reads with `imap_login` = the mailbox itself, but SMTP must
+  # authenticate as the token owner (the delegate, stored in `smtp_login`) and send as the mailbox.
+  def oauth_smtp_login
+    return @channel.smtp_login if @channel.microsoft? && @channel.smtp_login.present?
+
+    @channel.imap_login
   end
 
   def set_delivery_method

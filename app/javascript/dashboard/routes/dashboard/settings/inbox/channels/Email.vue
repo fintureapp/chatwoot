@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue';
+import { useRoute } from 'vue-router';
 import ForwardToOption from './emailChannels/ForwardToOption.vue';
 import Microsoft from './emailChannels/Microsoft.vue';
 import Google from './emailChannels/Google.vue';
@@ -47,6 +48,14 @@ const emailProviderList = computed(() => {
     return providerConfig.isEnabled;
   });
 });
+
+// The Microsoft callback sends the admin back here (?provider=microsoft) when a shared
+// mailbox could not be opened, so the form reopens with the error instead of the picker.
+const route = useRoute();
+const requestedProvider = emailProviderList.value.find(
+  item => item.isEnabled && item.key === route.query.provider
+);
+if (requestedProvider) provider.value = requestedProvider.key;
 
 function onClick(emailProvider) {
   if (emailProvider.isEnabled) {
