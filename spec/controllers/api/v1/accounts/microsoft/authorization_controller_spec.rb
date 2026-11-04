@@ -50,6 +50,29 @@ RSpec.describe 'Microsoft Authorization API', type: :request do
         decoded_account = GlobalID::Locator.locate_signed(params['state'].first, for: 'default')
         expect(decoded_account).to eq(account)
       end
+
+      it 'signs the requested shared mailbox together with the account in the state' do
+        post "/api/v1/accounts/#{account.id}/microsoft/authorization",
+             params: { email: ' Comercial@Finture.example ' },
+             headers: administrator.create_new_auth_token,
+             as: :json
+
+        expect(response).to have_http_status(:success)
+        query = CGI.parse(URI.parse(response.parsed_body['url']).query)
+        expect(query['prompt']).to eq(['select_account'])
+        account_state, mailbox = Microsoft::OauthState.unwrap(query['state'].first)
+        expect(mailbox).to eq('comercial@finture.example')
+        expect(GlobalID::Locator.locate_signed(account_state, for: 'default')).to eq(account)
+      end
+
+      it 'rejects an invalid mailbox address' do
+        post "/api/v1/accounts/#{account.id}/microsoft/authorization",
+             params: { email: 'not-an-email' },
+             headers: administrator.create_new_auth_token,
+             as: :json
+
+        expect(response).to have_http_status(:unprocessable_entity)
+      end
     end
   end
 end

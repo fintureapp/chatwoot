@@ -597,6 +597,23 @@ RSpec.describe ConversationReplyMailer do
       end
     end
 
+    context 'when the microsoft email channel is a shared mailbox' do
+      let(:shared_channel) do
+        create(:channel_email, email: 'comercial@finture.example', imap_login: 'comercial@finture.example',
+                               smtp_login: 'delegate@finture.example', imap_enabled: true, account: account,
+                               provider: 'microsoft', provider_config: { access_token: 'access_token' })
+      end
+      let(:conversation) { create(:conversation, assignee: agent, inbox: shared_channel.inbox, account: account).reload }
+      let(:message) { create(:message, conversation: conversation, account: account, message_type: 'outgoing', content: 'Outgoing Message 3') }
+
+      it 'authenticates smtp as the delegate and sends from the shared mailbox' do
+        mail = described_class.email_reply(message)
+
+        expect(mail.delivery_method.settings[:user_name]).to eq 'delegate@finture.example'
+        expect(mail.from).to eq ['comercial@finture.example']
+      end
+    end
+
     context 'when smtp enabled for google email channel' do
       let(:ms_smtp_channel) do
         create(:channel_email, imap_login: 'smtp@gmail.com',

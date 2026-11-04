@@ -41,7 +41,13 @@ class OauthCallbackController < ApplicationController
   end
 
   def find_channel_by_email
-    Channel::Email.find_by(email: users_data['email'], account: account)
+    Channel::Email.find_by(email: channel_email_address, account: account)
+  end
+
+  # Address of the mailbox being connected. Defaults to the signed-in identity's mailbox;
+  # providers override it to connect a mailbox the identity was delegated access to.
+  def channel_email_address
+    users_data['email']
   end
 
   def update_channel(channel_email)
@@ -53,8 +59,13 @@ class OauthCallbackController < ApplicationController
                               access_token: parsed_body['access_token'],
                               refresh_token: parsed_body['refresh_token'],
                               expires_on: (Time.current.utc + 1.hour).to_s
-                            }
+                            },
+                            **additional_channel_attributes
                           })
+  end
+
+  def additional_channel_attributes
+    {}
   end
 
   # Identity used as the IMAP/SMTP login (SASL XOAUTH2 `user=` field). Defaults to the
@@ -74,15 +85,19 @@ class OauthCallbackController < ApplicationController
 
   def create_channel_with_inbox
     ActiveRecord::Base.transaction do
-      channel_email = Channel::Email.create!(email: users_data['email'], account: account)
+      channel_email = Channel::Email.create!(email: channel_email_address, account: account)
 
       account.inboxes.create!(
         account: account,
         channel: channel_email,
-        name: users_data['name'] || fallback_name
+        name: inbox_name
       )
       channel_email
     end
+  end
+
+  def inbox_name
+    users_data['name'] || fallback_name
   end
 
   def users_data
@@ -95,17 +110,22 @@ class OauthCallbackController < ApplicationController
   # both resolves the account and records the return target — then fall back to the
   # default purpose used by every other caller.
   def account_from_signed_id
-    raise ActionController::BadRequest, 'Missing state variable' if params[:state].blank?
+    raise ActionController::BadRequest, 'Missing state variable' if signed_state.blank?
 
-    if (account = GlobalID::Locator.locate_signed(params[:state], for: 'onboarding'))
+    if (account = GlobalID::Locator.locate_signed(signed_state, for: 'onboarding'))
       @return_to = 'onboarding'
     else
-      account = GlobalID::Locator.locate_signed(params[:state])
+      account = GlobalID::Locator.locate_signed(signed_state)
     end
 
     raise 'Invalid or expired state' if account.nil?
 
     account
+  end
+
+  # The account sgid carried in `state`; providers that wrap extra data around it unwrap it here.
+  def signed_state
+    params[:state]
   end
 
   def account
@@ -119,7 +139,7 @@ class OauthCallbackController < ApplicationController
 
   # Fallback name, for when name field is missing from users_data
   def fallback_name
-    users_data['email'].split('@').first.parameterize.titleize
+    channel_email_address.split('@').first.parameterize.titleize
   end
 
   def oauth_code

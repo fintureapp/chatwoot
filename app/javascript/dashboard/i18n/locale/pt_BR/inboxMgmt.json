@@ -528,7 +528,13 @@
         "DESCRIPTION": "Clique no botão Entrar com a Microsoft para começar. Você será redirecionado para o login do e-mail. Após aceitar as permissões solicitadas, você será redirecionado de volta para a etapa de criação da caixa de entrada.",
         "EMAIL_PLACEHOLDER": "Digite o endereço de e-mail",
         "SIGN_IN": "Entre com uma conta Microsoft",
-        "ERROR_MESSAGE": "Ocorreu um erro ao conectar com a Microsoft, por favor, tente novamente"
+        "ERROR_MESSAGE": "Ocorreu um erro ao conectar com a Microsoft, por favor, tente novamente",
+        "SHARED_MAILBOX": {
+          "LABEL": "Caixa compartilhada (opcional)",
+          "PLACEHOLDER": "ex.: comercial{'@'}suaempresa.com",
+          "HELP": "Deixe em branco para conectar a caixa da conta usada no login. Para conectar uma caixa compartilhada, informe o endereço dela e entre com uma conta que tenha Full Access e Send As nessa caixa.",
+          "ACCESS_ERROR": "A conta usada no login não conseguiu abrir {mailbox}. Confira se ela tem Full Access e Send As nessa caixa (a permissão pode levar um tempo para valer) e tente de novo."
+        }
       },
       "GOOGLE": {
         "TITLE": "E-mail do Google",
