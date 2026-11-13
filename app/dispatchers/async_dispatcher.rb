@@ -14,6 +14,7 @@ class AsyncDispatcher < BaseDispatcher
       CampaignListener.instance,
       CsatSurveyListener.instance,
       Finture::AttendanceListener.instance,
+      Finture::DemandaListener.instance,
       HookListener.instance,
       InstallationWebhookListener.instance,
       NotificationListener.instance,

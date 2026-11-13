@@ -118,6 +118,8 @@ class Conversation < ApplicationRecord
   has_many :reporting_events, dependent: :destroy_async
   # Finture: modo de atendimento IA x humano (ver Finture::AttendanceModeService).
   has_one :finture_attendance_state, class_name: 'Finture::AttendanceState', dependent: :delete
+  # Finture: estado do envio desta conversa como demanda ao HUB (ver Finture::DemandaSyncService).
+  has_one :finture_demanda_sync, class_name: 'Finture::DemandaSync', dependent: :delete
 
   before_save :ensure_snooze_until_reset
   before_create :determine_conversation_status

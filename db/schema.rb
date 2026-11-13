@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_10_22_130000) do
+ActiveRecord::Schema[7.1].define(version: 2026_11_12_120000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -882,6 +882,25 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_22_130000) do
     t.index ["conversation_id", "occurred_at"], name: "index_finture_attendance_transitions_on_conv_occurred"
   end
 
+  create_table "finture_demanda_syncs", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "conversation_id", null: false
+    t.bigint "inbox_id"
+    t.string "external_id", null: false
+    t.string "hub_demanda_id"
+    t.string "status", default: "pending", null: false
+    t.string "last_event"
+    t.string "last_payload_hash"
+    t.datetime "last_sent_at"
+    t.text "last_error"
+    t.integer "attempts", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "status"], name: "index_finture_demanda_syncs_on_account_id_and_status"
+    t.index ["conversation_id"], name: "index_finture_demanda_syncs_on_conversation_id", unique: true
+    t.index ["external_id"], name: "index_finture_demanda_syncs_on_external_id", unique: true
+  end
+
   create_table "finture_follow_ups", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "conversation_id", null: false
@@ -1484,6 +1503,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_22_130000) do
   add_foreign_key "finture_attendance_transitions", "conversations", on_delete: :cascade
   add_foreign_key "finture_attendance_transitions", "inboxes", on_delete: :nullify
   add_foreign_key "finture_attendance_transitions", "users", on_delete: :nullify
+  add_foreign_key "finture_demanda_syncs", "accounts", on_delete: :cascade
+  add_foreign_key "finture_demanda_syncs", "conversations", on_delete: :cascade
   add_foreign_key "finture_follow_ups", "accounts", on_delete: :cascade
   add_foreign_key "finture_follow_ups", "conversations", on_delete: :cascade
   add_foreign_key "finture_follow_ups", "users", on_delete: :nullify
