@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_11_12_120000) do
+ActiveRecord::Schema[7.1].define(version: 2026_11_19_120000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -896,6 +896,13 @@ ActiveRecord::Schema[7.1].define(version: 2026_11_12_120000) do
     t.integer "attempts", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "sequencia", default: 0, null: false
+    t.string "attempt_hash"
+    t.datetime "elegivel_em"
+    t.string "hub_motivo"
+    t.string "recovery_state"
+    t.datetime "rejected_at"
+    t.datetime "recovered_at"
     t.index ["account_id", "status"], name: "index_finture_demanda_syncs_on_account_id_and_status"
     t.index ["conversation_id"], name: "index_finture_demanda_syncs_on_conversation_id", unique: true
     t.index ["external_id"], name: "index_finture_demanda_syncs_on_external_id", unique: true

@@ -18,6 +18,7 @@ module AccessTokenAuthHelper
     # NOTE: This ensures that current_user is set and available for the rest of the controller actions
     @resource = @access_token.owner
     Current.user = @resource if allowed_current_user_type?(@resource)
+    Current.api_access_token_auth = true
   end
 
   def allowed_current_user_type?(resource)
