@@ -3,7 +3,7 @@
 # segredo compartilhado no cabeçalho `X-Ingest-Secret`. Tudo por variável de
 # ambiente; sem as duas a integração fica desligada:
 #
-#   FINTURE_HUB_BASE_URL        ex.: https://finture-api.azurewebsites.net
+#   FINTURE_HUB_BASE_URL        ex.: https://hub.example.test
 #   FINTURE_HUB_INGEST_SECRET   mesmo valor de DEMANDAS_INGEST_SECRET no HUB
 #
 # Erro passageiro (rede, 429, 5xx — inclui o 503 "not_configured" do HUB)
